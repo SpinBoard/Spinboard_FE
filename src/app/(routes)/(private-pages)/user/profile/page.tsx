@@ -450,27 +450,7 @@ export default function ProfilePage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="text-center p-4 rounded-lg bg-white/5">
-                <p className="text-2xl font-bold text-white font-fredoka">
-                  {profileData?.analytics?.lifetime?.puzzlesSolved || 0}
-                </p>
-                <p className="text-white/60 text-sm">Puzzles Solved</p>
-              </div>
-              <div className="text-center p-4 rounded-lg bg-white/5">
-                <p className="text-2xl font-bold text-white font-fredoka">
-                  {profileData?.analytics?.lifetime?.totalPoints || 0}
-                </p>
-                <p className="text-white/60 text-sm">Total Points</p>
-              </div>
-              <div className="text-center p-4 rounded-lg bg-white/5">
-                <p className="text-2xl font-bold text-white font-fredoka">
-                  ₦{profileData?.analytics?.lifetime?.totalEarnings || 0}
-                </p>
-                <p className="text-white/60 text-sm">Total Earnings</p>
-              </div>
-            </div>
-            <div className={`mt-6 p-4 rounded-lg border ${
+            <div className={`p-4 rounded-lg border ${
               profileData?.isVerified 
                 ? 'bg-green-500/10 border-green-500/20' 
                 : 'bg-yellow-500/10 border-yellow-500/20'

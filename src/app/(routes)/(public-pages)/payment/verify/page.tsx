@@ -14,9 +14,8 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { routes } from '@/app/_utils/routes'
-import { useMutation, useQuery } from '@tanstack/react-query'
-import axios from 'axios'
-import { endpointUrl } from '@/app/_utils/helper'
+import { useMutation } from '@tanstack/react-query'
+import { api } from '@/lib/api'
 import { ENDPOINTS } from '@/app/_utils/endpoints'
 import { useAtomValue } from 'jotai'
 import { userAtom } from '@/atom/user'
@@ -42,17 +41,12 @@ function PaymentVerify() {
   const reference = searchParams.get('reference')
   const trxref = searchParams.get('trxref')
 
-  // Payment verification mutation
+  // Payment verification mutation — ad-campaign payments only (brand-side).
+  // Marketplace checkout has no dedicated verify page; GET /marketplace/orders/mine
+  // is the source of truth once the webhook processes the payment.
   const verifyPaymentMutation = useMutation({
     mutationFn: async () => {
-      return axios.get<PaymentVerificationResponse>(
-        endpointUrl(`${ENDPOINTS.VERIFY_PAYMENT}/${reference}`),
-        {
-          headers:{
-            Authorization: `Bearer ${user?.accessToken}`
-          }
-        }
-      )
+      return api.get<PaymentVerificationResponse>(ENDPOINTS.AD_PAYMENTS_VERIFY(reference!))
     },
     onSuccess: (response) => {
       const data = response.data
@@ -70,19 +64,6 @@ function PaymentVerify() {
     },
   })
 
-  // const { data: verifyPaymentData, error: verifyPaymentError, isLoading: loadingVerifyPayment } = useQuery<PaymentVerificationResponse>({
-  //   queryKey: ["brand-campaigns", user?.id],
-  //   queryFn: () => axios.get<PaymentVerificationResponse>(endpointUrl(`${ENDPOINTS.VERIFY_PAYMENT}/${reference}`),
-  //     {
-  //       headers: {
-  //         Authorization: `Bearer ${user?.accessToken}`,
-  //       },
-  //     }).then((res) => {
-  //       return res.data;
-  //     }),
-  //   enabled: !!reference && !!user?.accessToken,
-  // })
-
   useEffect(() => {
     if (reference && trxref && user?.accessToken) {
       verifyPaymentMutation.mutate()
@@ -92,11 +73,7 @@ function PaymentVerify() {
   }, [reference, trxref, user?.accessToken])
 
   const handleReturnToCampaigns = () => {
-    if (user?.userType === 'brand') {
-      router.push(routes.BRAND.CAMPAIGNS)
-    } else {
-      router.push(routes.CAMPAIGNS)
-    }
+    router.push(user?.userType === 'brand' ? routes.BRAND.CAMPAIGNS : routes.WATCH)
   }
 
   const formatCurrency = (amount: number) => `₦${amount.toLocaleString()}`

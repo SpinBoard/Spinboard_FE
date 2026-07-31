@@ -48,8 +48,8 @@ const events = {
   ],
 };
 
-vi.mock("axios", () => ({
-  default: {
+vi.mock("axios", () => {
+  const instance = {
     get: vi.fn((url: string) => {
       if (url.includes("/referrals/my-stats")) {
         return Promise.resolve({ data: myStats });
@@ -59,8 +59,10 @@ vi.mock("axios", () => ({
       }
       return Promise.reject(new Error(`Unhandled GET ${url}`));
     }),
-  },
-}));
+    interceptors: { request: { use: vi.fn() }, response: { use: vi.fn() } },
+  };
+  return { default: { ...instance, create: () => instance } };
+});
 
 import ReferralsPage from "./page";
 
@@ -88,33 +90,34 @@ function renderPage() {
 }
 
 describe("ReferralsPage", () => {
-  it("explains the 5pt/21pt mechanic and drops the removed +1 signup bonus", async () => {
+  it("explains qualification (email verified + profile complete + 1 full ad cycle), not the old points mechanic", async () => {
     renderPage();
     expect(
-      await screen.findByText(/you earn \+5 bonus points/i)
+      await screen.findByText(/verifies their email, completes their profile, and/i)
     ).toBeInTheDocument();
-    expect(screen.getAllByText(/21 lifetime points/i).length).toBeGreaterThan(0);
-    expect(screen.queryByText(/\+1 point/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/first puzzle/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/21 lifetime points/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/bonus points/i)).not.toBeInTheDocument();
   });
 
-  it("shows pending and credited referral counts distinctly", async () => {
+  it("shows progress toward the 20 and 40 qualified-referral discount thresholds", async () => {
     renderPage();
-    await screen.findByText(/you earn \+5 bonus points/i);
+    await screen.findByText(/verifies their email/i);
 
-    expect(screen.getByText("3")).toBeInTheDocument(); // credited count
-    expect(screen.getAllByText("Credited Referrals").length).toBeGreaterThan(0);
+    expect(screen.getByText("3")).toBeInTheDocument(); // qualified count
+    expect(screen.getAllByText("Qualified Referrals").length).toBeGreaterThan(0);
+    // 3 qualified so far → 17 more to the 20% off threshold
+    expect(screen.getByText("17")).toBeInTheDocument();
+    expect(screen.getByText("To next 20% off")).toBeInTheDocument();
     expect(screen.getByText("2")).toBeInTheDocument(); // pending count
-    expect(screen.getByText("Pending (not yet at 21 pts)")).toBeInTheDocument();
+    expect(screen.getByText("Pending")).toBeInTheDocument();
   });
 
-  it("labels recent activity events using the new mechanic instead of 'first puzzle'", async () => {
+  it("labels recent activity events using qualification language, not points", async () => {
     renderPage();
     expect(
-      await screen.findByText(/pending until they reach 21 points/i)
+      await screen.findByText(/pending until they qualify/i)
     ).toBeInTheDocument();
-    expect(
-      screen.getByText(/reached 21 points — you earned \+5 pts/i)
-    ).toBeInTheDocument();
+    expect(screen.getByText(/one step closer to your next discount code/i)).toBeInTheDocument();
+    expect(screen.queryByText(/pts/i)).not.toBeInTheDocument();
   });
 });

@@ -78,7 +78,7 @@ export default function BrandLayout({
             {/* Logo */}
             <div className="flex items-center gap-2 text-2xl font-bold text-white font-fredoka mb-8">
               <LogoIcon />
-              Pazzell
+              Spinboard
             </div>
             
             {/* Navigation */}
@@ -133,7 +133,7 @@ export default function BrandLayout({
             <div className="flex items-center justify-between mb-8">
               <div className="flex items-center gap-2 text-xl font-bold text-white font-fredoka">
                 <LogoIcon />
-                Pazzell
+                Spinboard
               </div>
               <Button
                 variant="ghost"

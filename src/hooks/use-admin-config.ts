@@ -1,33 +1,43 @@
 import { useQuery } from "@tanstack/react-query";
-import axios from "axios";
 import { useAtomValue } from "jotai";
 import { userAtom } from "@/atom/user";
 import { ENDPOINTS } from "@/app/_utils/endpoints";
-import { endpointUrl } from "@/app/_utils/helper";
+import { api } from "@/lib/api";
 import { AdminConfigResponse } from "@/types";
 
-// Documented defaults from API_CONTRACT_WEEKLY_MIGRATION.md §7/§10.
+// Documented defaults from API_CONTRACT_ADS_REWARD_PLATFORM.md §10.
 // GET /admin/config is admin-only, and this app has no admin user type,
 // so for everyone else these defaults are the only source of truth
-// until a public config-subset endpoint exists. Weekly campaign pricing
-// specifically should prefer GET /payments/calculate-weekly-price (public)
-// over this hook, since that endpoint is live and package/week-aware.
+// until a public config-subset endpoint exists.
 export const ADMIN_CONFIG_DEFAULTS = {
-  "pricing.basic.weeklyPrice": 7000,
-  "pricing.premium.weeklyPrice": 10000,
-  "payout.playerSharePercent": 50,
-  "payout.platformSharePercent": 50,
-  "payout.rankDistribution": [
-    30, 20, 15, 10, 8, 6, 4, 3, 2, 2,
-  ] as number[],
-  "raffle.eligibilityFloorCap": 3,
-  "referral.pointsThreshold": 21,
-  "referral.referrerBonusPoints": 5,
-  "points.sessionCompletionPoints": 7,
-  "forum.winnerShareBonusPoints": 5,
-  "campaign.quizQuestionCount": 3,
-  "video.maxDurationSeconds": 130,
+  "video.maxDurationSeconds": 95,
   "video.maxSizeBytes": 100 * 1024 * 1024,
+  "campaign.tierPrices": { basic: 20, premium: 30, pro: 50 } as Record<
+    "basic" | "premium" | "pro",
+    number
+  >,
+  "payment.usdToNgnRate": 1600,
+  "campaign.activeDays": 30,
+  "campaign.tierWeights": { basic: 1, premium: 2, pro: 3 } as Record<
+    "basic" | "premium" | "pro",
+    number
+  >,
+  "spin.adsPerCycle": 5,
+  "spin.winTypeDistribution": {
+    cash: 0.4,
+    brand_product: 0.2,
+    discount30: 0.25,
+    discount50: 0.15,
+  } as Record<string, number>,
+  "spin.tryAgainBenchmarks": { "50": "discount20", "100": "discount50" } as Record<
+    string,
+    string
+  >,
+  "referral.qualifiedThresholds": {
+    "20": "discount20",
+    "40": "discount50",
+  } as Record<string, string>,
+  "prizePool.defaultDailyCount": 100,
 } as const;
 
 export type AdminConfigKey = keyof typeof ADMIN_CONFIG_DEFAULTS;
@@ -46,10 +56,7 @@ export function useAdminConfig() {
   const query = useQuery({
     queryKey: ["admin-config"],
     queryFn: async () => {
-      const res = await axios.get<AdminConfigResponse>(
-        endpointUrl(ENDPOINTS.ADMIN_CONFIG),
-        { headers: { Authorization: `Bearer ${user?.accessToken}` } }
-      );
+      const res = await api.get<AdminConfigResponse>(ENDPOINTS.ADMIN_CONFIG);
       return res.data.config;
     },
     enabled: !!user?.accessToken,

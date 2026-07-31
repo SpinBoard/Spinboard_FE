@@ -187,7 +187,7 @@ export default function WalletPage() {
     <MainLayout maxWidth="4xl">
       <div className="space-y-8">
         <div>
-          <h1 className="text-3xl font-bold text-white mb-2 font-fredoka flex items-center gap-3">
+          <h1 className="text-3xl font-bold text-white mb-2 font-sora flex items-center gap-3">
             <WalletIcon className="h-8 w-8 text-secondary" />
             Wallet
           </h1>
@@ -202,7 +202,7 @@ export default function WalletPage() {
             <p className="text-white/60 text-xs uppercase tracking-wider mb-1">
               Available Balance
             </p>
-            <p className="text-4xl font-bold text-white font-fredoka" data-testid="wallet-balance">
+            <p className="text-4xl font-bold text-white font-sora" data-testid="wallet-balance">
               {formatCurrency(balance?.balance ?? 0, balance?.currency ?? "NGN")}
             </p>
           </CardContent>
@@ -211,7 +211,7 @@ export default function WalletPage() {
         {/* Bank Accounts */}
         <Card className="bg-card/50 backdrop-blur-sm border-white/10">
           <CardHeader>
-            <CardTitle className="text-white font-fredoka flex items-center gap-2">
+            <CardTitle className="text-white font-sora flex items-center gap-2">
               <Landmark className="h-5 w-5 text-secondary" />
               Bank Accounts
             </CardTitle>
@@ -303,7 +303,7 @@ export default function WalletPage() {
         {/* Withdraw */}
         <Card className="bg-card/50 backdrop-blur-sm border-white/10">
           <CardHeader>
-            <CardTitle className="text-white font-fredoka flex items-center gap-2">
+            <CardTitle className="text-white font-sora flex items-center gap-2">
               <ArrowDownToLine className="h-5 w-5 text-secondary" />
               Withdraw
             </CardTitle>
@@ -366,7 +366,7 @@ export default function WalletPage() {
         {/* Withdrawal history */}
         <Card className="bg-card/50 backdrop-blur-sm border-white/10">
           <CardHeader>
-            <CardTitle className="text-white font-fredoka">Withdrawal History</CardTitle>
+            <CardTitle className="text-white font-sora">Withdrawal History</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             {loadingWithdrawals ? (
@@ -402,7 +402,7 @@ export default function WalletPage() {
         {/* Transaction history */}
         <Card className="bg-card/50 backdrop-blur-sm border-white/10">
           <CardHeader>
-            <CardTitle className="text-white font-fredoka flex items-center gap-2">
+            <CardTitle className="text-white font-sora flex items-center gap-2">
               <Receipt className="h-5 w-5 text-secondary" />
               Transaction History
             </CardTitle>

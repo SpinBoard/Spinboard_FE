@@ -1,16 +1,16 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Inter, Sora } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/providers/theme-provider";
 import TanstackProvider from "@/providers/tanstack-provider";
 import { Toaster } from "@/components/ui/sonner";
-import { FloatingAnalytics } from "@/components/analytics/floating-analytics";
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
+const sora = Sora({ subsets: ["latin"], variable: "--font-sora" });
 
 export const metadata: Metadata = {
-  title: "Pazzell - Gamified Marketing Platform",
-  description: "Play branded puzzle games and earn real rewards. Where brands create engaging campaigns and users earn money through fun puzzles.",
+  title: "Spinboard - Watch Ads, Earn Rewards",
+  description: "Watch brand video ads, pass a quick quiz, and spin to win cash, discounts, and prizes. Brands run ad campaigns and reach real, engaged viewers.",
 };
 
 export default function RootLayout({
@@ -20,7 +20,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning className="dark">
-      <body className={inter.className}>
+      <body className={`${inter.variable} ${sora.variable} ${inter.className}`}>
       <TanstackProvider>
       <ThemeProvider
           attribute="class"
@@ -29,7 +29,6 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           {children}
-          <FloatingAnalytics />
           <Toaster richColors/>
         </ThemeProvider>
       </TanstackProvider>

@@ -10,6 +10,7 @@ export interface UserData {
   userType: "gamer" | "brand";
   isVerified: boolean;
   companyName?: string;
+  profileComplete?: boolean;
   createdAt: string;
   accessToken: string;
   refreshToken: string;
@@ -25,35 +26,13 @@ export interface GamerProfileData {
   role: "gamer";
   isVerified: boolean;
   leaderboardPosition: number | null;
-  points?: {
-    monthKey: string;
-    puzzlePoints: number;
-    referralPoints: number;
-    totalPoints: number;
-  };
-  analytics: {
-    lifetime: {
-      puzzlesSolved: number;
-      totalPoints: number;
-      totalEarnings: number;
-      totalTime: number;
-      totalMoves: number;
-      attempts: number;
-      successRate: number;
-      leaderboardPosition: number;
-    };
-    weekly: {
-      puzzlesSolved: number;
-      totalPoints: number;
-      totalEarnings: number;
-      totalTime: number;
-      totalMoves: number;
-      attempts: number;
-      successRate: number;
-      leaderboardPosition: number;
-    };
-  };
-  puzzlesSolved: string[];
+  // §2 — optional to browse/watch ads, required to spin (§6)
+  age?: number;
+  sex?: GamerSex;
+  country?: string;
+  state?: string;
+  city?: string;
+  profileComplete?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -72,186 +51,13 @@ export interface BrandProfileData {
     companyName: string;
     verified: boolean;
     totalCampaigns: number;
+    // §2 — required before POST /ad-campaigns will succeed
+    businessCategories?: string[];
+    country?: string;
+    state?: string;
+    city?: string;
+    profileComplete?: boolean;
   };
-}
-
-// Campaign-related types
-export interface CampaignQuestion {
-  question: string;
-  choices: string[];
-  correctIndex: number;
-  _id: string;
-}
-
-export interface CampaignData {
-  _id: string;
-  brandId: string;
-  brandName: string;
-  gameType:
-    | "sliding_puzzle"
-    | "word_hunt"
-    | "card_matching"
-    | "spot_the_difference";
-  title: string;
-  description: string;
-  puzzleImageUrl?: string;
-  originalImageUrl?: string;
-  cardImages?: string[];
-  timeLimit: number; // in hours
-  questions: CampaignQuestion[];
-  passage?: string;
-  words: string[];
-  createdAt: string;
-  endDate: string;
-  brandUrl: string;
-  campaignUrl: string;
-  packageId: string;
-  packageName: string;
-  status: string;
-  budgetRemaining: number;
-  budgetUsed: number;
-  paymentStatus: "paid" | "unpaid";
-}
-
-export interface CampaignsResponse {
-  success: boolean;
-  campaigns: CampaignData[];
-}
-
-export interface CampaignResponse {
-  success: boolean;
-  campaign: CampaignData;
-}
-
-// Leaderboard-related types
-export interface LeaderboardEntries {
-  userId: string;
-  puzzlesSolved: number;
-  points: number;
-  amountEarned: number;
-  avatar: string;
-  fullName: string;
-  username: string;
-  position: number;
-}
-
-export interface LeaderboardData {
-  type: string;
-  weekStart: string;
-  weekEnd: string;
-  totalPlayers: number;
-  entries: LeaderboardEntries[];
-}
-
-export interface LeaderboardResponse {
-  success: true;
-  leaderboard: LeaderboardData;
-}
-
-// Puzzle-related types
-export interface Puzzle {
-  _id: string;
-  campaignId: string;
-  title: string;
-  description: string;
-  type: "trivia" | "word-puzzle" | "image-puzzle" | "memory-game" | "quiz";
-  difficulty: "easy" | "medium" | "hard";
-  rewardAmount: number;
-  maxAttempts: number;
-  timeLimit?: number; // in seconds
-  questions?: PuzzleQuestion[];
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface PuzzleQuestion {
-  _id: string;
-  question: string;
-  type: "multiple-choice" | "true-false" | "text-input";
-  options?: string[];
-  correctAnswer: string | number;
-  points: number;
-}
-
-export interface PuzzlesResponse {
-  success: boolean;
-  puzzles: Puzzle[];
-  pagination: {
-    current: number;
-    total: number;
-    count: number;
-    totalItems: number;
-  };
-}
-
-// User Progress and Earnings
-export interface UserProgress {
-  _id: string;
-  userId: string;
-  puzzleId: string;
-  campaignId: string;
-  status: "in-progress" | "completed" | "failed";
-  score: number;
-  timeSpent: number;
-  attemptsUsed: number;
-  earnedAmount: number;
-  completedAt?: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface UserProgressResponse {
-  success: boolean;
-  progress: UserProgress[];
-  totalEarnings: number;
-  totalPuzzlesCompleted: number;
-}
-
-// Earnings and Payments
-export interface Earning {
-  _id: string;
-  userId: string;
-  campaignId: string;
-  puzzleId: string;
-  amount: number;
-  status: "pending" | "paid" | "cancelled";
-  paymentMethod?: string;
-  paidAt?: string;
-  createdAt: string;
-}
-
-export interface EarningsResponse {
-  success: boolean;
-  earnings: Earning[];
-  totalEarnings: number;
-  pendingEarnings: number;
-  paidEarnings: number;
-}
-
-// Brand Analytics Types
-export interface CampaignAnalytics {
-  campaignId: string;
-  title: string;
-  plays: number;
-  completions: number;
-  avgCompletionTime: number;
-  questionCorrectnessRates: number[];
-}
-
-export interface BrandAnalyticsData {
-  totalCampaigns: number;
-  activeCampaigns: number;
-  totalBudgetUsed: number;
-  totalGamesPlayed: number;
-  uniquePlayers: number;
-  avgPlayTime: number;
-  campaigns: CampaignAnalytics[];
-}
-
-export interface BrandAnalyticsResponse {
-  success: boolean;
-  analytics: BrandAnalyticsData;
 }
 
 // Generic Response Types
@@ -272,81 +78,6 @@ export interface RegisterResponse {
   message: string;
   user: UserData;
 }
-
-// Badge System Types
-export interface Badge {
-  id: string;
-  title: string;
-  description: string;
-  icon: string;
-  category:
-    | "milestone"
-    | "earnings"
-    | "specialist"
-    | "performance"
-    | "competitive"
-    | "special";
-  difficulty: "bronze" | "silver" | "gold" | "platinum";
-  requirement: number | string;
-  unlockedAt?: string;
-  isUnlocked: boolean;
-}
-
-export interface BadgeProgress {
-  badgeId: string;
-  currentProgress: number;
-  targetProgress: number;
-  percentage: number;
-}
-
-export interface UserBadges {
-  badges: Badge[];
-  progress: BadgeProgress[];
-  totalUnlocked: number;
-  totalAvailable: number;
-}
-
-// Package Types
-export interface Package {
-  _id: string;
-  name: string;
-  amount: number;
-  priority: number;
-  description: string;
-}
-
-export interface PackagesResponse {
-  success: boolean;
-  packages: Package[];
-}
-
-// Prize Table Types
-export interface PrizeTableEntry {
-  position: number;
-  percentage: number;
-  amount: number;
-}
-
-export interface PrizeTableData {
-  date: string;
-  activeCampaignsCount: number;
-  totalDailyPool: number;
-  gamerShare: number;
-  platformFee: number;
-  prizeTable: PrizeTableEntry[];
-  campaignBreakdown: any[]; // Can be refined when structure is known
-}
-
-export interface PrizeTableResponse {
-  success: boolean;
-  prizeTable: PrizeTableData;
-}
-
-// Note: the old monthly leaderboard types (LeaderboardEntry,
-// MonthlyLeaderboardResponse, ReferralAnalytics, GamerProfileResponse) were
-// removed here — the backend dropped /leaderboards/monthly entirely and
-// GET /user/gamer/profile's shape changed. See WeeklyLeaderboardEntry /
-// WeeklyLeaderboardResponse / GamerProfileV2Response further below.
 
 export interface ReferralSummaryRow {
   rank: number;
@@ -407,196 +138,6 @@ export interface ReferralMyStatsResponse {
       successfulAt: string;
       pointsAwarded: number;
     }[];
-  };
-}
-
-// Puzzle campaign and submit types for new game behaviour
-export type GameType =
-  | "spot_the_difference"
-  | "card_matching"
-  | "sliding_puzzle"
-  | "word_hunt";
-
-export interface PuzzleCampaign {
-  _id: string;
-  brandId?: string;
-  gameType: GameType;
-  title?: string;
-  description?: string;
-  puzzleImageUrl?: string;
-  originalImageUrl?: string;
-  cardImages?: string[];
-  timeLimit?: number;
-  questions?: { question: string; choices: string[]; correctIndex: number }[];
-}
-
-export interface PuzzleSubmitRequest {
-  timeTaken: number;
-  movesTaken?: number;
-  solved: boolean;
-  answers?: number[];
-  differencesFound?: { x: number; y: number; width: number; height: number }[];
-}
-
-export interface PuzzleSubmitResponse {
-  success: true;
-  attempt: any;
-  gameType: GameType;
-}
-
-// ─────────────────────────────────────────────────────────────────────────
-// Weekly-system migration v2 types (see API_CONTRACT_WEEKLY_MIGRATION.md)
-// Legacy schemaVersion:1 types above (CampaignData, CampaignQuestion, etc.)
-// are untouched — old campaigns keep serving from those shapes.
-// ─────────────────────────────────────────────────────────────────────────
-
-export interface CampaignCompletionResponse {
-  hasCompletedByCurrentUser: boolean;
-}
-
-export type CampaignQuestionInput = Omit<CampaignQuestion, "_id">;
-
-// v2 campaigns span all four game types plus a video + quiz stage.
-export interface CampaignV2Data {
-  _id: string;
-  schemaVersion: 2;
-  brandId: string;
-  brandName: string;
-  gameTypes: GameType[];
-  title: string;
-  description: string;
-  puzzleImageUrl?: string;
-  videoUrl?: string;
-  videoDurationSeconds: number;
-  videoSizeBytes: number;
-  videoMimeType: string;
-  words: string[];
-  questions: CampaignQuestion[]; // exactly 3, brand-authored, no AI generation
-  prizeDescription: string;
-  prizeUnitsAvailable: number;
-  createdAt: string;
-  endDate: string;
-  durationWeeks: number;
-  weeklyPrice: number;
-  brandUrl?: string;
-  campaignUrl?: string;
-  packageId: string;
-  packageName: string;
-  status: "draft" | "active" | "paused" | "completed" | string;
-  paymentStatus: "paid" | "unpaid";
-}
-
-export type AnyCampaign = CampaignData | CampaignV2Data;
-
-export function isV2Campaign(
-  campaign: AnyCampaign
-): campaign is CampaignV2Data {
-  return Array.isArray((campaign as CampaignV2Data).gameTypes);
-}
-
-export interface CampaignV2Response {
-  success: boolean;
-  campaign: CampaignV2Data;
-}
-
-// List endpoints (GET /campaigns, GET /campaigns/my-campaigns, etc.) now
-// return a mix of legacy and v2 campaigns in the same array.
-export interface AnyCampaignsResponse {
-  success: boolean;
-  campaigns: AnyCampaign[];
-}
-
-export interface WeeklyPriceResponse {
-  pricing: {
-    packageType: "basic" | "premium";
-    weeklyPrice: number;
-    durationWeeks: number;
-    totalAmount: number;
-    timeLimitHours: number;
-  };
-}
-
-// Gameplay sessions (v2 campaigns only)
-export interface GameSession {
-  _id: string;
-  campaignId: string;
-  gameTypes: GameType[];
-  status?: string;
-}
-
-export interface SessionStartResponse {
-  success: boolean;
-  session: GameSession;
-}
-
-export interface SessionActionResponse {
-  success: boolean;
-}
-
-export interface SessionQuizAttemptResponse {
-  success: boolean;
-  score: number;
-  allCorrect: boolean;
-  attemptsSoFar: number;
-  firstAttemptScore: number;
-}
-
-export interface SessionCompleteResponse {
-  success: true;
-  isFirstCompletion: boolean;
-  pointsAwarded: number;
-  totalCompletionTimeMs: number;
-  voided: boolean;
-  flagged: boolean;
-}
-
-// Weekly leaderboard (replaces monthly, which the backend removed)
-export interface WeeklyLeaderboardEntry {
-  position: number;
-  userId: string;
-  fullName: string;
-  username?: string;
-  avatar?: string;
-  puzzlesSolved: number;
-  points: number;
-  avgCompletionTimeMs: number;
-  avgCompletionTimeSec: number;
-}
-
-export interface WeeklyLeaderboardResponse {
-  success: true;
-  leaderboard: {
-    type: string;
-    weekKey: string;
-    totalPlayers: number;
-    entries: WeeklyLeaderboardEntry[];
-  };
-}
-
-// GET /user/gamer/profile — response shape changed: points/referral analytics
-// are now weekly-only (monthKey/puzzlePoints/referralPoints fields removed).
-export interface GamerProfileV2Response {
-  success: true;
-  profile: {
-    _id: string;
-    firstName: string;
-    lastName: string;
-    username: string;
-    avatar?: string;
-    points: {
-      weekKey: string;
-      totalPoints: number;
-    };
-    analytics: {
-      referral: {
-        weekKey: string;
-        totalReferrals: number;
-        successfulReferrals: number;
-        pendingReferrals: number;
-        pointsThisWeek: number;
-        referralCountThisWeek: number;
-      };
-    };
   };
 }
 
@@ -664,128 +205,236 @@ export interface CreateWithdrawalRequest {
   idempotencyKey: string;
 }
 
-// Raffles
-export interface RaffleCampaignCurrentResponse {
-  campaignId: string;
-  weekKey: string;
-  ticketCount: number;
-  eligibilityFloor: number;
-  drawStatus: "pending" | "drawn" | string;
-  // Not explicitly documented in the API contract's "current" shape, but a
-  // drawn winner implies a backing draw record — needed to call
-  // GET /raffles/:drawId/verify. Treated as best-effort/optional until
-  // confirmed; UI code must not assume it's always present.
-  drawId?: string;
-  winner?: {
-    userId: string;
-    fullName?: string;
-    username?: string;
-  } | null;
-}
-
-export type RaffleFulfillmentStatus =
-  | "pending"
-  | "shipped"
-  | "delivered"
-  | "failed";
-
-export interface UpdateRaffleFulfillmentRequest {
-  fulfillmentStatus: RaffleFulfillmentStatus;
-  fulfillmentNotes?: string;
-}
-
-export interface RaffleTicket {
-  campaignId: string;
-  campaignTitle?: string;
-  weekKey: string;
-  ticketCount: number;
-}
-
-export interface MyRaffleTicketsResponse {
-  success: boolean;
-  tickets: RaffleTicket[];
-  eligibleThisWeek: boolean;
-}
-
-export interface RaffleVerifyResponse {
-  drawId: string;
-  campaignId: string;
-  weekKey: string;
-  winner: {
-    userId: string;
-    fullName?: string;
-    username?: string;
-  };
-  verification: {
-    valid: boolean;
-    seed?: string;
-  };
-}
-
 // Admin config — the subset the frontend reads rather than hardcoding
-// (see API_CONTRACT_WEEKLY_MIGRATION.md §10). GET /admin/config is
+// (see API_CONTRACT_ADS_REWARD_PLATFORM.md §10). GET /admin/config is
 // admin-only; most of these are read via feature-specific fallbacks
-// (e.g. weekly pricing via the public calculate-weekly-price endpoint)
 // until a public config subset endpoint exists.
 export interface AdminConfigResponse {
   success: boolean;
   config: Record<string, { value: unknown; description?: string }>;
 }
 
-// Forum
-export interface ForumThread {
-  _id: string;
+// ─────────────────────────────────────────────────────────────────────────
+// Ads-watching & reward platform types (API_CONTRACT_ADS_REWARD_PLATFORM.md)
+// ─────────────────────────────────────────────────────────────────────────
+
+// §2 — profile completion additions
+export type GamerSex = "man" | "woman" | "prefer_not_to_say";
+
+export interface GamerProfileCompletionFields {
+  age?: number;
+  sex?: GamerSex;
+  country?: string;
+  state?: string;
+  city?: string;
+}
+
+export interface BrandProfileCompletionFields {
+  businessCategories?: string[];
+  country?: string;
+  state?: string;
+  city?: string;
+}
+
+// §3 — ad-watching flow (optional auth: works for anon + authenticated)
+export interface AdQuestion {
+  question: string;
+  choices: string[];
+}
+
+export interface AdNextItem {
+  campaignId: string;
   title: string;
-  category?: string;
-  authorId?: string;
-  authorName?: string;
-  createdAt: string;
-  postCount?: number;
+  description: string;
+  brandUrl: string;
+  videoUrl: string;
+  videoDurationSeconds: number;
+  questions: AdQuestion[]; // never includes correctIndex
 }
 
-export interface ForumThreadsResponse {
-  success: boolean;
-  threads: ForumThread[];
+export interface AdNextResponse {
+  success: true;
+  adsWatchedSoFar: number;
+  ad: AdNextItem;
 }
 
-export interface ForumPost {
+export interface AdQuizSubmitRequest {
+  answers: number[]; // exactly 3, submitted all at once
+}
+
+export interface AdQuizSubmitResponse {
+  success: true;
+  allCorrect: boolean;
+  attemptsSoFar: number;
+  cycleCompleted: boolean;
+  spinCreditGranted: boolean; // only true for authenticated users
+}
+
+// §4 — ad campaigns (brand-facing)
+export type AdCampaignTier = "basic" | "premium" | "pro";
+export type AdCampaignStatus = "draft" | "active" | "inactive";
+
+export interface AdCampaignQuestionInput {
+  question: string;
+  choices: string[];
+  correctIndex: number;
+}
+
+export interface AdCampaign {
   _id: string;
-  threadId: string;
-  body: string;
-  imageUrls?: string[];
-  authorId?: string;
-  authorName?: string;
-  authorAvatar?: string;
-  likeCount: number;
-  likedByMe?: boolean;
-  moderationStatus?: "visible" | "removed";
+  brandId: string;
+  title: string;
+  description: string;
+  brandUrl?: string;
+  campaignUrl?: string;
+  videoUrl: string;
+  videoDurationSeconds: number;
+  questions: AdCampaignQuestionInput[]; // exactly 3
+  tier: AdCampaignTier;
+  global?: boolean; // pro only
+  status: AdCampaignStatus;
+  tierPriceUSD: number;
+  usdToNgnRateSnapshot: number;
+  activatedAt?: string;
+  expiresAt?: string;
   createdAt: string;
 }
 
-export interface ForumPostsResponse {
+export interface AdCampaignsResponse {
   success: boolean;
-  posts: ForumPost[];
+  campaigns: AdCampaign[];
 }
 
-export type WinnerSubmissionStatus = "submitted" | "verified" | "rejected";
+export interface AdCampaignResponse {
+  success: boolean;
+  campaign: AdCampaign;
+}
 
-export interface WinnerSubmission {
+export interface AdCampaignAnalytics {
+  views: number;
+  completions: number;
+  questionCorrectnessRates: number[]; // first-attempt only, length 3
+  demographics: {
+    country: Record<string, number>;
+    sex: Record<string, number>;
+    ageBuckets: Record<string, number>;
+  };
+}
+
+export interface AdCampaignAnalyticsResponse {
+  success: true;
+  analytics: AdCampaignAnalytics;
+}
+
+// §5 — spin & prize system
+// discount20 only ever comes from the 50-try-again-benchmark special board
+// (POST /spins/try-again/spend) — a normal POST /spins roll never produces
+// it (its win-type distribution only has discount30/discount50 buckets).
+export type SpinOutcomeType =
+  | "cash"
+  | "brand_product"
+  | "discount30"
+  | "discount50"
+  | "discount20"
+  | "try_again";
+
+export type SpinDecision = "pending" | "redeem" | "decline";
+
+export interface SpinResult {
   _id: string;
-  campaignId: string;
-  postUrl: string;
-  claimedLikeCount?: number;
-  status: WinnerSubmissionStatus;
-  adminNotes?: string;
+  outcomeType: SpinOutcomeType;
+  prizePoolItemId?: string;
+  decision: SpinDecision;
+}
+
+export interface TryAgainStatus {
+  tryAgainCount: number;
+  distanceToNextBenchmarks: { "50": number; "100": number };
+}
+
+export interface SpinResponse {
+  success: true;
+  spin: SpinResult;
+  tryAgainStatus: TryAgainStatus;
+}
+
+export interface SpinWinDecisionRequest {
+  decision: "redeem" | "decline";
+}
+
+export type TryAgainBenchmark = 50 | 100;
+
+export interface TryAgainSpendRequest {
+  benchmark: TryAgainBenchmark;
+}
+
+export interface TryAgainStatusResponse {
+  success: true;
+  tryAgainCount: number;
+  distanceToNextBenchmarks: { "50": number; "100": number };
+}
+
+export interface SpinVerifyResponse {
+  success: true;
+  spinResultId: string;
+  outcomeType: SpinOutcomeType;
+  verification: { valid: boolean; seed?: string };
+}
+
+// §7 — marketplace
+export interface MarketplaceProduct {
+  _id: string;
+  brandId: string;
+  name: string;
+  description: string;
+  priceUSD: number;
+  category: string;
+  deliveryAsset?: string;
+  fulfillmentInstructions?: string;
   createdAt: string;
 }
 
-export interface WinnerSubmissionsResponse {
+export interface MarketplaceProductsResponse {
   success: boolean;
-  submissions: WinnerSubmission[];
+  products: MarketplaceProduct[];
 }
 
-export interface CreateWinnerSubmissionRequest {
-  campaignId: string;
-  postUrl: string;
-  claimedLikeCount?: number;
+export interface MarketplaceProductResponse {
+  success: boolean;
+  product: MarketplaceProduct;
+}
+
+export interface MarketplaceCheckoutRequest {
+  productId: string;
+  discountCode?: string;
+  email: string;
+}
+
+export interface MarketplaceCheckoutResponse {
+  success: true;
+  authorizationUrl?: string; // absent when a 100%-off code delivers immediately
+  deliveredImmediately?: boolean;
+  reference: string;
+}
+
+export interface MarketplaceOrder {
+  _id: string;
+  productId: string;
+  productName: string;
+  reference: string;
+  amountPaid: number;
+  discountCode?: string;
+  deliveredAt?: string;
+  deliveryPayload?: { deliveryAsset?: string; fulfillmentInstructions?: string };
+  createdAt: string;
+}
+
+export interface MarketplaceOrdersResponse {
+  success: boolean;
+  orders: MarketplaceOrder[];
+}
+
+export interface MarketplaceOrderVerifyResponse {
+  success: true;
+  order: MarketplaceOrder;
 }

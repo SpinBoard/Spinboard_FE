@@ -1,53 +1,43 @@
-@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * Dark-first, single-mode design system (ads-watching & reward platform).
+ * No light-mode ":root" block is maintained — the app renders dark only,
+ * so ".dark" below IS the default theme, applied via `className="dark"`
+ * on <html> in the root layout.
+ */
 @layer base {
-  :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 270 48% 56%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 222.2 84% 4.9%;
-    --muted: 210 40% 96%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 260 15% 70%;
-    --accent-foreground: 222.2 84% 4.9%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 270 48% 56%;
-    --radius: 0.75rem;
-  }
-
   .dark {
-    --background: 240 29% 14%;
+    --background: 240 29% 14%;      /* Pazzell dark navy */
     --foreground: 248 249 255;
     --card: 210 25% 15%;
     --card-foreground: 248 249 255;
     --popover: 210 25% 15%;
     --popover-foreground: 248 249 255;
-    --primary: 260 56% 66%;
+    --primary: 260 56% 66%;         /* Pazzell Purple #6C5CE7 family */
     --primary-foreground: 248 249 255;
-    --secondary: 186 100% 50%;
+    --secondary: 186 100% 50%;      /* Pazzell Cyan #00D9FF */
     --secondary-foreground: 240 29% 14%;
     --muted: 210 25% 22%;
     --muted-foreground: 0 0% 100% / 0.5;
-    --accent: 339 100% 71%;
+    --accent: 339 100% 71%;         /* Pazzell Pink #FF6B9D */
     --accent-foreground: 0 0% 100%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 248 249 255;
     --border: 210 25% 29%;
     --input: 210 25% 22%;
     --ring: 186 100% 50%;
+    --radius: 0.75rem;
+
+    /* Reserved semantic colors — spin machine + win states ONLY */
+    --spin-inactive: 45 100% 51%;        /* Yellow #FFC300 */
+    --spin-inactive-foreground: 234 47% 7%;
+    --spin-active: 145 100% 39%;         /* Green #00C853 */
+    --spin-active-foreground: 0 0% 100%;
+    --success: 145 100% 39%;
+    --success-foreground: 0 0% 100%;
   }
 }
 
@@ -61,7 +51,11 @@
   }
 
   * {
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: var(--font-inter), sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-sora), sans-serif;
   }
 
   body {
@@ -91,7 +85,12 @@
   }
 }
 
-/* Pazzell Custom Styles */
+/*
+ * Legacy raw-hex palette, retained for pages not yet rewritten in the
+ * ads-platform phases (landing page, old campaign browse). Values match
+ * Pazzell's original palette exactly. Drop this whole block once every
+ * page using it has been rebuilt.
+ */
 :root {
   --pb-primary: #6C5CE7;
   --pb-secondary: #00D9FF;

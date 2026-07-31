@@ -16,8 +16,8 @@ let bankAccounts: { _id: string; accountName: string; bankName: string; accountN
 let withdrawalPostCalls: { body: any }[] = [];
 let failNextWithdrawal = false;
 
-vi.mock("axios", () => ({
-  default: {
+vi.mock("axios", () => {
+  const instance = {
     get: vi.fn((url: string) => {
       if (url.includes("/wallet/balance")) {
         return Promise.resolve({ data: { balance: 1000, currency: "NGN" } });
@@ -55,8 +55,10 @@ vi.mock("axios", () => ({
       return Promise.reject(new Error(`Unhandled POST ${url}`));
     }),
     delete: vi.fn(() => Promise.resolve({ data: { success: true } })),
-  },
-}));
+    interceptors: { request: { use: vi.fn() }, response: { use: vi.fn() } },
+  };
+  return { default: { ...instance, create: () => instance } };
+});
 
 import WalletPage from "./page";
 

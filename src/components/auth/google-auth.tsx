@@ -1,13 +1,13 @@
 "use client";
 
 import { ENDPOINTS } from "@/app/_utils/endpoints";
-import { endpointUrl } from "@/app/_utils/helper";
+import { api } from "@/lib/api";
 import { userAtom } from "@/atom/user";
-import { BrandProfileData, GamerProfileData } from "@/types";
+import { fetchUserDataForSession } from "@/app/_utils/auth-session";
 import { useGoogleLogin } from "@react-oauth/google";
 import { useMutation } from "@tanstack/react-query";
-import axios from "axios";
-import { useAtomValue, useSetAtom } from "jotai";
+import axios, { isAxiosError } from "axios";
+import { useSetAtom } from "jotai";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
@@ -23,89 +23,37 @@ type GoogleLoginPayload = {
   referrerUsername?: string;
 };
 
-const GoogleAuthBtn = ({ referrerUsername }: { referrerUsername?: string }) => {
+const GoogleAuthBtn = ({
+  referrerUsername,
+  returnTo,
+}: {
+  referrerUsername?: string;
+  returnTo?: string;
+}) => {
   const setUser = useSetAtom(userAtom);
   const router = useRouter();
   const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
 
-  const getUserProfile = async (loginData: any) => {
-    if (loginData.user.role === "gamer") {
-      axios
-        .get(endpointUrl(`${ENDPOINTS.GAMER_PROFILE}`), {
-          headers: {
-            Authorization: `Bearer ${loginData.accessToken}`,
-          },
-        })
-        .then((response) => {
-          const gamerData: GamerProfileData = response.data.profile;
-          console.log(gamerData);
-          setUser({
-            id: gamerData._id,
-            firstName: gamerData.firstName,
-            lastName: gamerData.lastName,
-            fullName: `${gamerData.firstName} ${gamerData.lastName}`,
-            avatar: gamerData.avatar,
-            username: gamerData.username,
-            email: gamerData.email,
-            leaderboardPosition: gamerData.leaderboardPosition,
-            userType: gamerData.role,
-            isVerified: gamerData.isVerified,
-            createdAt: gamerData.createdAt,
-            accessToken: loginData.accessToken,
-            refreshToken: loginData.refreshToken,
-          });
-
-          toast.success("Success", {
-            description: "Login successful!",
-          });
-          router.push(routes.USER.DASHBOARD);
-        });
-    } else {
-      axios
-        .get(endpointUrl(`${ENDPOINTS.BRAND_PROFILE}`), {
-          headers: {
-            Authorization: `Bearer ${loginData.accessToken}`,
-          },
-        })
-        .then((response) => {
-          const brandData: BrandProfileData = response.data.profile;
-          setUser({
-            id: brandData._id,
-            fullName: brandData.name,
-            email: brandData.email,
-            userType: brandData.role,
-            isVerified: brandData.isVerified,
-            createdAt: brandData.createdAt,
-            companyName: brandData?.companyName,
-            accessToken: loginData.accessToken,
-            refreshToken: loginData.refreshToken,
-          });
-
-          toast.success("Success", {
-            description: "Login successful!",
-          });
-          router.push(routes.BRAND.DASHBOARD);
-        });
-    }
-  };
-
   const googleAuthMutation = useMutation({
-    mutationFn: (payload: GoogleLoginPayload) => {
-      return axios.post(endpointUrl(`${ENDPOINTS.GOOGLE_AUTH}`), payload);
-    },
-    onError: (error: any) => {
-      const errorMessage =
-        error.response?.data?.message ||
-        error.message ||
-        "Google authentication failed";
-      toast.error("Error", {
-        description: errorMessage,
-      });
-      console.log(error);
+    mutationFn: (payload: GoogleLoginPayload) => api.post(ENDPOINTS.GOOGLE_AUTH, payload),
+    onError: (error) => {
+      const message = isAxiosError(error)
+        ? (error.response?.data as { message?: string } | undefined)?.message
+        : undefined;
+      toast.error("Error", { description: message || "Google authentication failed" });
     },
     onSuccess: async (data) => {
-      const loginData = data.data;
-      await getUserProfile(loginData);
+      const { userData, dashboardRoute } = await fetchUserDataForSession(data.data);
+      setUser(userData);
+      toast.success("Success", { description: "Google sign-in successful!" });
+      router.push(
+        returnTo ||
+          (dashboardRoute === "gamer"
+            ? userData.profileComplete
+              ? routes.USER.DASHBOARD
+              : routes.USER.PROFILE_COMPLETE
+            : routes.BRAND.DASHBOARD)
+      );
     },
   });
   // If no Google client ID is configured, don't attempt to use Google hooks during SSR/prerender
@@ -120,11 +68,7 @@ const GoogleAuthBtn = ({ referrerUsername }: { referrerUsername?: string }) => {
         try {
           const userInfoResponse = await axios.get(
             "https://www.googleapis.com/oauth2/v3/userinfo",
-            {
-              headers: {
-                Authorization: `Bearer ${tokenResponse.access_token}`,
-              },
-            }
+            { headers: { Authorization: `Bearer ${tokenResponse.access_token}` } }
           );
 
           const {
@@ -146,9 +90,8 @@ const GoogleAuthBtn = ({ referrerUsername }: { referrerUsername?: string }) => {
             ...(referrerUsername ? { referrerUsername } : {}),
           });
           toast.info("Please wait, while we log you in.");
-        } catch (error: any) {
+        } catch {
           toast.error("Google login failed. Please try again.");
-          console.error("Google login error:", error);
         }
       },
       onError: () => {
@@ -160,7 +103,7 @@ const GoogleAuthBtn = ({ referrerUsername }: { referrerUsername?: string }) => {
       <button
         onClick={() => handleGoogleAuth()}
         disabled={googleAuthMutation.isPending}
-        className="w-full flex items-center justify-center gap-2 p-3 bg-white/5 border border-white/10 rounded-xl text-white text-sm hover:bg-white/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+        className="w-full flex items-center justify-center gap-2 p-3 bg-white/5 border border-border rounded-xl text-foreground text-sm hover:bg-white/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
         {googleAuthMutation.isPending ? (
           <Loader2 className="w-4 h-4 animate-spin" />
         ) : (

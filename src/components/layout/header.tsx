@@ -4,10 +4,11 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { LogoIcon } from "@/components/ui/logo-icon";
-import { User, Menu, LogOut, X, Trophy, Settings, Wallet, MessageSquare } from "lucide-react";
+import { User, Menu, LogOut, X, Settings, Wallet, ShoppingBag } from "lucide-react";
 import { routes } from "@/app/_utils/routes";
 import { useAtomValue, useSetAtom } from "jotai/react";
 import { userAtom } from "@/atom/user";
+import { TryAgainBadge } from "@/components/spin/try-again-badge";
 import { useRouter, usePathname } from "next/navigation";
 import {
   DropdownMenu,
@@ -54,7 +55,7 @@ export function Header() {
               href={routes.HOME}
               className="flex items-center gap-2 text-2xl font-bold text-white font-fredoka">
               <LogoIcon />
-              Pazzell
+              Spinboard
             </Link>
           </div>
 
@@ -62,19 +63,19 @@ export function Header() {
             {isMounted && userType === "gamer" ? (
               <>
                 <Link
+                  href={routes.WATCH}
+                  className="text-white hover:text-secondary font-medium transition-colors">
+                  Watch &amp; Earn
+                </Link>
+                <Link
                   href={routes.USER.DASHBOARD}
                   className="text-white hover:text-secondary font-medium transition-colors">
                   Dashboard
                 </Link>
                 <Link
-                  href={routes.CAMPAIGNS}
+                  href={routes.MARKETPLACE}
                   className="text-white hover:text-secondary font-medium transition-colors">
-                  Campaigns
-                </Link>
-                <Link
-                  href={routes.LEADERBOARD}
-                  className="text-white hover:text-secondary font-medium transition-colors">
-                  Leaderboard
+                  Marketplace
                 </Link>
                 <Link
                   href={routes.USER.REFERRALS}
@@ -86,37 +87,53 @@ export function Header() {
                   className="text-white hover:text-secondary font-medium transition-colors">
                   Wallet
                 </Link>
+              </>
+            ) : isMounted && userType === "brand" ? (
+              <>
                 <Link
-                  href={routes.USER.FORUM}
+                  href={routes.BRAND.DASHBOARD}
                   className="text-white hover:text-secondary font-medium transition-colors">
-                  Forum
+                  Dashboard
                 </Link>
-                {/* <Link href={routes.USER.BADGES} className="text-white hover:text-secondary font-medium transition-colors">
-                  Badges
-                </Link> */}
+                <Link
+                  href={routes.BRAND.CAMPAIGNS}
+                  className="text-white hover:text-secondary font-medium transition-colors">
+                  Campaigns
+                </Link>
+                <Link
+                  href={routes.BRAND.PRODUCTS}
+                  className="text-white hover:text-secondary font-medium transition-colors">
+                  Products
+                </Link>
+                <Link
+                  href={routes.MARKETPLACE}
+                  className="text-white hover:text-secondary font-medium transition-colors">
+                  Marketplace
+                </Link>
               </>
             ) : (
               <>
+                <Link
+                  href={routes.WATCH}
+                  className="text-white hover:text-secondary font-medium transition-colors">
+                  Watch &amp; Earn
+                </Link>
                 <Link
                   href={routes.HOME}
                   className="text-white hover:text-secondary font-medium transition-colors">
                   Home
                 </Link>
                 <Link
-                  href={routes.CAMPAIGNS}
+                  href={routes.MARKETPLACE}
                   className="text-white hover:text-secondary font-medium transition-colors">
-                  Campaigns
-                </Link>
-                <Link
-                  href={routes.LEADERBOARD}
-                  className="text-white hover:text-secondary font-medium transition-colors">
-                  Leaderboard
+                  Marketplace
                 </Link>
               </>
             )}
           </nav>
 
           <div className="flex items-center space-x-2 sm:space-x-4">
+            {isMounted && userType === "gamer" && <TryAgainBadge />}
             {isMounted && userType ? (
               <div className="flex items-center space-x-1 sm:space-x-2">
                 <DropdownMenu>
@@ -161,6 +178,12 @@ export function Header() {
                           <Link href={routes.USER.WALLET}>
                             <Wallet className="h-4 w-4 mr-2" />
                             Wallet
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <Link href={routes.USER.MARKETPLACE_ORDERS}>
+                            <ShoppingBag className="h-4 w-4 mr-2" />
+                            Orders
                           </Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem asChild>
@@ -226,22 +249,22 @@ export function Header() {
               {isMounted && userType === "gamer" ? (
                 <>
                   <Link
+                    href={routes.WATCH}
+                    className="block text-white hover:text-secondary hover:bg-white/5 py-3 px-2 rounded-md transition-colors"
+                    onClick={closeMobileMenu}>
+                    Watch &amp; Earn
+                  </Link>
+                  <Link
                     href={routes.USER.DASHBOARD}
                     className="block text-white hover:text-secondary hover:bg-white/5 py-3 px-2 rounded-md transition-colors"
                     onClick={closeMobileMenu}>
                     Dashboard
                   </Link>
                   <Link
-                    href={routes.CAMPAIGNS}
+                    href={routes.MARKETPLACE}
                     className="block text-white hover:text-secondary hover:bg-white/5 py-3 px-2 rounded-md transition-colors"
                     onClick={closeMobileMenu}>
-                    Campaigns
-                  </Link>
-                  <Link
-                    href={routes.LEADERBOARD}
-                    className="block text-white hover:text-secondary hover:bg-white/5 py-3 px-2 rounded-md transition-colors"
-                    onClick={closeMobileMenu}>
-                    Leaderboard
+                    Marketplace
                   </Link>
                   <Link
                     href={routes.USER.REFERRALS}
@@ -254,12 +277,6 @@ export function Header() {
                     className="block text-white hover:text-secondary hover:bg-white/5 py-3 px-2 rounded-md transition-colors"
                     onClick={closeMobileMenu}>
                     Wallet
-                  </Link>
-                  <Link
-                    href={routes.USER.FORUM}
-                    className="block text-white hover:text-secondary hover:bg-white/5 py-3 px-2 rounded-md transition-colors"
-                    onClick={closeMobileMenu}>
-                    Forum
                   </Link>
                   {/* <Link
                     href={routes.USER.BADGES}
@@ -306,10 +323,16 @@ export function Header() {
                     Campaigns
                   </Link>
                   <Link
-                    href={routes.BRAND.ANALYTICS}
+                    href={routes.BRAND.PRODUCTS}
                     className="block text-white hover:text-secondary hover:bg-white/5 py-3 px-2 rounded-md transition-colors"
                     onClick={closeMobileMenu}>
-                    Analytics
+                    Products
+                  </Link>
+                  <Link
+                    href={routes.MARKETPLACE}
+                    className="block text-white hover:text-secondary hover:bg-white/5 py-3 px-2 rounded-md transition-colors"
+                    onClick={closeMobileMenu}>
+                    Marketplace
                   </Link>
                   {userType && (
                     <div className="border-t border-white/10 pt-4 space-y-2">
@@ -324,6 +347,12 @@ export function Header() {
                 </>
               ) : (
                 <>
+                  <Link
+                    href={routes.WATCH}
+                    className="block py-3 px-2 rounded-md transition-colors text-white hover:text-secondary hover:bg-white/5"
+                    onClick={closeMobileMenu}>
+                    Watch &amp; Earn
+                  </Link>
                   <a
                     href="#for-brands"
                     className="block py-3 px-2 rounded-md transition-colors text-white hover:text-secondary hover:bg-white/5"
@@ -337,16 +366,10 @@ export function Header() {
                     For Players
                   </a>
                   <Link
-                    href={routes.CAMPAIGNS}
+                    href={routes.MARKETPLACE}
                     className="block py-3 px-2 rounded-md transition-colors text-white hover:text-secondary hover:bg-white/5"
                     onClick={closeMobileMenu}>
-                    Campaigns
-                  </Link>
-                  <Link
-                    href={routes.LEADERBOARD}
-                    className="block py-3 px-2 rounded-md transition-colors text-white hover:text-secondary hover:bg-white/5"
-                    onClick={closeMobileMenu}>
-                    Leaderboard
+                    Marketplace
                   </Link>
                   <div className="border-t border-white/10 pt-4 flex flex-col space-y-2">
                     <Link href={routes.LOGIN} onClick={closeMobileMenu}>

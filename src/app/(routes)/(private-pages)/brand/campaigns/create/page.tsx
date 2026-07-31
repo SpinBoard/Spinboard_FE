@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
+import { isAxiosError } from "axios";
 import { useAtomValue } from "jotai";
-import axios from "axios";
 import Link from "next/link";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -25,7 +26,6 @@ import {
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -44,32 +44,28 @@ import {
   Upload,
   CheckCircle,
   AlertCircle,
-  DollarSign,
-  Image as ImageIcon,
   Video as VideoIcon,
   FileText,
-  Target,
+  HelpCircle,
   Loader2,
   CreditCard,
   Save,
-  Gift,
-  HelpCircle,
   X,
+  Globe,
+  BarChart3,
 } from "lucide-react";
 import { routes } from "@/app/_utils/routes";
-import { userAtom } from "@/atom/user";
 import { ENDPOINTS } from "@/app/_utils/endpoints";
-import { endpointUrl } from "@/app/_utils/helper";
+import { api } from "@/lib/api";
 import { useAdminConfig } from "@/hooks/use-admin-config";
-import { Package, PackagesResponse, WeeklyPriceResponse } from "@/types";
+import { userAtom } from "@/atom/user";
+import { AdCampaignResponse } from "@/types";
 import {
   QUIZ_QUESTION_COUNT,
-  WORD_HUNT_MIN_WORDS,
-  WORD_HUNT_MIN_WORD_LENGTH,
+  TIER_META,
   getVideoDuration,
   validateVideoFile,
-  validateWords,
-  buildCampaignFormData,
+  buildAdCampaignFormData,
 } from "./wizard-utils";
 
 const questionSchema = z.object({
@@ -89,64 +85,30 @@ const wizardSchema = z.object({
     .url("Please enter a valid URL")
     .optional()
     .or(z.literal("")),
-  image: z
-    .any()
-    .refine(
-      (f) => f instanceof File && f.size > 0,
-      "Please upload a campaign image"
-    ),
   video: z
     .any()
-    .refine(
-      (f) => f instanceof File && f.size > 0,
-      "Please upload a campaign video"
-    ),
-  words: z.array(z.string()).refine((w) => validateWords(w).valid, {
-    message: `Word hunt requires at least ${WORD_HUNT_MIN_WORDS} valid words (minimum ${WORD_HUNT_MIN_WORD_LENGTH} characters each)`,
-  }),
-  prizeDescription: z
-    .string()
-    .min(5, "Describe what players stand to win"),
-  prizeUnitsAvailable: z.number().int().min(1),
+    .refine((f) => f instanceof File && f.size > 0, "Please upload a campaign video"),
   questions: z
     .array(questionSchema)
     .length(
       QUIZ_QUESTION_COUNT,
       `Exactly ${QUIZ_QUESTION_COUNT} quiz questions are required`
     ),
-  packageId: z.string().min(1, "Please select a package"),
-  durationWeeks: z
-    .number()
-    .int()
-    .min(1, "Select at least 1 week")
-    .max(12, "Maximum 12 weeks"),
+  tier: z.enum(["basic", "premium", "pro"]),
+  global: z.boolean(),
 });
 
 type WizardFormData = z.infer<typeof wizardSchema>;
 
-const STEPS = [
-  "Details",
-  "Image",
-  "Video",
-  "Word Hunt",
-  "Prize",
-  "Quiz",
-  "Package",
-  "Review",
-] as const;
+const STEPS = ["Details", "Video", "Quiz", "Tier", "Review"] as const;
 
 const STEP_FIELDS: (keyof WizardFormData)[][] = [
   ["title", "description", "brandUrl", "campaignUrl"],
-  ["image"],
   ["video"],
-  ["words"],
-  ["prizeDescription", "prizeUnitsAvailable"],
   ["questions"],
-  ["packageId", "durationWeeks"],
+  ["tier"],
   [],
 ];
-
-const WEEK_OPTIONS = Array.from({ length: 12 }, (_, i) => i + 1);
 
 const emptyQuestion = () => ({
   question: "",
@@ -158,17 +120,18 @@ export default function CreateCampaignWizardPage() {
   const router = useRouter();
   const user = useAtomValue(userAtom);
   const { get: getConfig } = useAdminConfig();
+  const tierPrices = getConfig("campaign.tierPrices");
 
   const [step, setStep] = useState(0);
-  const [imagePreview, setImagePreview] = useState<string>("");
   const [videoPreviewUrl, setVideoPreviewUrl] = useState<string>("");
   const [videoDurationSeconds, setVideoDurationSeconds] = useState<number | null>(null);
   const [videoError, setVideoError] = useState<string>("");
   const [videoChecking, setVideoChecking] = useState(false);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
-  const [currentActionType, setCurrentActionType] = useState<"draft" | "payment">("draft");
+  const [createdCampaignId, setCreatedCampaignId] = useState<string | null>(null);
   const [apiError, setApiError] = useState<string>("");
   const [uploadProgress, setUploadProgress] = useState<number>(0);
+  const [payAction, setPayAction] = useState<"idle" | "paying">("idle");
 
   const form = useForm<WizardFormData>({
     resolver: zodResolver(wizardSchema),
@@ -177,14 +140,10 @@ export default function CreateCampaignWizardPage() {
       description: "",
       brandUrl: "",
       campaignUrl: "",
-      image: undefined as any,
-      video: undefined as any,
-      words: Array(WORD_HUNT_MIN_WORDS).fill(""),
-      prizeDescription: "",
-      prizeUnitsAvailable: 1,
+      video: undefined,
       questions: Array(QUIZ_QUESTION_COUNT).fill(null).map(emptyQuestion),
-      packageId: "",
-      durationWeeks: 1,
+      tier: "basic",
+      global: false,
     },
   });
 
@@ -193,99 +152,57 @@ export default function CreateCampaignWizardPage() {
     name: "questions",
   });
 
-  const packageId = form.watch("packageId");
-  const durationWeeks = form.watch("durationWeeks");
-
-  const { data: packagesData, isLoading: packagesLoading } = useQuery<Package[]>({
-    queryKey: ["packages"],
-    queryFn: () =>
-      axios
-        .get<PackagesResponse>(endpointUrl(ENDPOINTS.PACKAGES), {
-          headers: { Authorization: `Bearer ${user?.accessToken}` },
-        })
-        .then((res) => res.data.packages),
-    enabled: !!user?.accessToken,
-  });
-
-  const selectedPackage = packagesData?.find((p) => p._id === packageId) ?? null;
-  const packageType = selectedPackage?.name?.toLowerCase();
-
-  const { data: priceData, isFetching: priceLoading } = useQuery({
-    queryKey: ["weekly-price", packageType, durationWeeks],
-    queryFn: () =>
-      axios
-        .get<WeeklyPriceResponse>(
-          endpointUrl(ENDPOINTS.CALCULATE_WEEKLY_PRICE(packageType!, durationWeeks)),
-          { headers: { Authorization: `Bearer ${user?.accessToken}` } }
-        )
-        .then((res) => res.data.pricing),
-    enabled: !!packageType && !!durationWeeks && durationWeeks > 0,
-  });
-
-  const initializePayment = useMutation({
-    mutationFn: async (payload: { campaignId: string; packageType: string; email: string }) =>
-      axios.post(endpointUrl(ENDPOINTS.INITIALIZE_PAYMENT), payload, {
-        headers: { Authorization: `Bearer ${user?.accessToken}` },
-      }),
-    onSuccess: (response) => {
-      setShowSubmitModal(false);
-      const paymentResponse = response.data.data;
-      window.open(paymentResponse.authorization_url, "_blank");
-      router.push(routes.BRAND.CAMPAIGNS);
-    },
-    onError: () => {
-      setShowSubmitModal(false);
-      setApiError("Failed to initialize payment. Your campaign was saved as a draft — you can pay from the campaigns list.");
-    },
-  });
+  const tier = form.watch("tier");
+  const global = form.watch("global");
+  const selectedTierMeta = TIER_META.find((t) => t.id === tier)!;
+  const priceUSD = tierPrices?.[tier] ?? selectedTierMeta.priceUSD;
 
   const createCampaignMutation = useMutation({
     mutationFn: async (formData: FormData) =>
-      axios.post(endpointUrl(ENDPOINTS.CREATE_CAMPAIGN), formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-          Authorization: `Bearer ${user?.accessToken}`,
-        },
+      api.post<AdCampaignResponse>(ENDPOINTS.AD_CAMPAIGNS, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
         onUploadProgress: (evt) => {
           if (evt.total) setUploadProgress(Math.round((evt.loaded / evt.total) * 100));
         },
       }),
     onSuccess: (response) => {
       if (!response.data.success) return;
-      if (currentActionType === "draft") {
-        setShowSubmitModal(false);
-        router.push(routes.BRAND.CAMPAIGNS);
-        return;
-      }
-      initializePayment.mutate({
-        campaignId: response.data.campaign._id,
-        packageType: response.data.campaign.packageName ?? packageType!,
-        email: user?.email as string,
-      });
+      setCreatedCampaignId(response.data.campaign._id);
     },
-    onError: (error: any) => {
-      const message =
-        error?.response?.data?.message ||
-        "Failed to create campaign. Please try again.";
-      setApiError(message);
+    onError: (error) => {
+      const message = isAxiosError(error)
+        ? (error.response?.data as { message?: string } | undefined)?.message
+        : undefined;
+      setApiError(message || "Failed to create campaign. Please try again.");
       setShowSubmitModal(false);
       setUploadProgress(0);
     },
   });
 
-  const isSubmitting = createCampaignMutation.isPending || initializePayment.isPending;
+  const initializePayment = useMutation({
+    mutationFn: async (payload: { campaignId: string; email: string }) =>
+      api.post(ENDPOINTS.AD_PAYMENTS_INITIALIZE, payload),
+    onSuccess: (response) => {
+      const authorizationUrl = (response.data as { data?: { authorization_url?: string } })
+        ?.data?.authorization_url;
+      if (authorizationUrl) window.open(authorizationUrl, "_blank");
+      setShowSubmitModal(false);
+      router.push(routes.BRAND.CAMPAIGNS);
+    },
+    onError: () => {
+      setPayAction("idle");
+      setApiError(
+        "Failed to start payment. Your campaign was saved as a draft — you can pay from the campaigns list."
+      );
+    },
+  });
 
-  const handleImageChange = (file: File) => {
-    form.setValue("image", file, { shouldValidate: true });
-    const reader = new FileReader();
-    reader.onloadend = () => setImagePreview(reader.result as string);
-    reader.readAsDataURL(file);
-  };
+  const isSubmitting = createCampaignMutation.isPending;
 
   const handleVideoChange = async (file: File) => {
     setVideoError("");
     setVideoChecking(true);
-    form.setValue("video", undefined as any, { shouldValidate: false });
+    form.setValue("video", undefined, { shouldValidate: false });
     setVideoDurationSeconds(null);
     try {
       const duration = await getVideoDuration(file);
@@ -301,8 +218,8 @@ export default function CreateCampaignWizardPage() {
       }
       form.setValue("video", file, { shouldValidate: true });
       setVideoPreviewUrl(URL.createObjectURL(file));
-    } catch (err: any) {
-      setVideoError(err?.message ?? "Could not read video file.");
+    } catch (err) {
+      setVideoError(err instanceof Error ? err.message : "Could not read video file.");
     } finally {
       setVideoChecking(false);
     }
@@ -316,59 +233,54 @@ export default function CreateCampaignWizardPage() {
 
   const goNext = async () => {
     const fields = STEP_FIELDS[step];
-    const valid = fields.length === 0 ? true : await form.trigger(fields as any);
-    if (step === 2 && (!!videoError || videoChecking || !form.getValues("video"))) return;
+    const valid =
+      fields.length === 0 ? true : await form.trigger(fields as (keyof WizardFormData)[]);
+    if (step === 1 && (!!videoError || videoChecking || !form.getValues("video"))) return;
     if (!valid) return;
     setStep((s) => Math.min(s + 1, STEPS.length - 1));
   };
 
   const goBack = () => setStep((s) => Math.max(s - 1, 0));
 
-  const handleFinalSubmit = (actionType: "draft" | "payment") => {
+  const handleCreate = () => {
     const data = form.getValues();
     setApiError("");
     setUploadProgress(0);
-    setCurrentActionType(actionType);
-    const formData = buildCampaignFormData({
+    const formData = buildAdCampaignFormData({
       title: data.title,
       description: data.description,
       brandUrl: data.brandUrl,
       campaignUrl: data.campaignUrl,
-      image: data.image,
       video: data.video,
-      words: data.words,
       questions: data.questions,
-      prizeDescription: data.prizeDescription,
-      prizeUnitsAvailable: data.prizeUnitsAvailable,
-      packageId: data.packageId,
-      durationWeeks: data.durationWeeks,
+      tier: data.tier,
+      global: data.tier === "pro" ? data.global : false,
     });
     createCampaignMutation.mutate(formData);
   };
 
-  const wordsValue = form.watch("words");
-  const wordsCheck = useMemo(() => validateWords(wordsValue || []), [wordsValue]);
+  const handlePayNow = () => {
+    if (!createdCampaignId || !user?.email) return;
+    setPayAction("paying");
+    initializePayment.mutate({ campaignId: createdCampaignId, email: user.email });
+  };
 
   return (
     <div className="space-y-8">
       <div className="flex items-center gap-4">
         <Link href={routes.BRAND.CAMPAIGNS}>
-          <Button
-            variant="outline"
-            size="icon"
-            className="border-white/20 text-white hover:bg-white/10">
+          <Button variant="outline" size="icon" className="border-border text-foreground hover:bg-white/10">
             <ArrowLeft className="h-4 w-4" />
           </Button>
         </Link>
         <div>
-          <h1 className="text-3xl font-bold text-white font-fredoka">Create Campaign</h1>
-          <p className="text-white/70">
-            One campaign spans all four games, plus a brand video and quiz.
+          <h1 className="text-3xl font-bold text-foreground font-sora">Create Ad Campaign</h1>
+          <p className="text-muted-foreground">
+            Upload your video ad, add a 3-question quiz, and pick a tier.
           </p>
         </div>
       </div>
 
-      {/* Stepper */}
       <div className="max-w-4xl mx-auto">
         <div className="flex items-center gap-1 overflow-x-auto pb-2">
           {STEPS.map((label, i) => (
@@ -377,15 +289,15 @@ export default function CreateCampaignWizardPage() {
                 data-testid={`wizard-step-${i}`}
                 className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap ${
                   i === step
-                    ? "bg-secondary text-secondary-foreground"
+                    ? "bg-primary text-primary-foreground"
                     : i < step
-                    ? "bg-secondary/20 text-secondary"
-                    : "bg-white/5 text-white/40"
+                      ? "bg-primary/20 text-primary"
+                      : "bg-white/5 text-muted-foreground"
                 }`}>
                 {i < step ? <CheckCircle className="h-3 w-3" /> : <span>{i + 1}</span>}
                 {label}
               </div>
-              {i < STEPS.length - 1 && <div className="w-4 h-px bg-white/10" />}
+              {i < STEPS.length - 1 && <div className="w-4 h-px bg-border" />}
             </div>
           ))}
         </div>
@@ -398,11 +310,10 @@ export default function CreateCampaignWizardPage() {
             setShowSubmitModal(true);
           }}
           className="max-w-4xl mx-auto space-y-6">
-          {/* Step 0: Details */}
           {step === 0 && (
-            <Card className="bg-card/50 backdrop-blur-sm border-white/10">
+            <Card className="bg-card/50 backdrop-blur-sm border-border">
               <CardHeader>
-                <CardTitle className="text-white font-fredoka flex items-center gap-2">
+                <CardTitle className="text-foreground font-sora flex items-center gap-2">
                   <FileText className="h-5 w-5 text-secondary" />
                   Campaign Details
                 </CardTitle>
@@ -413,15 +324,11 @@ export default function CreateCampaignWizardPage() {
                   name="title"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-white">Campaign Title</FormLabel>
+                      <FormLabel>Campaign Title</FormLabel>
                       <FormControl>
-                        <Input
-                          placeholder="Enter campaign title..."
-                          className="bg-white/5 border-white/10 text-white placeholder:text-white/40 h-12"
-                          {...field}
-                        />
+                        <Input placeholder="Enter campaign title..." {...field} />
                       </FormControl>
-                      <FormMessage className="text-red-400" />
+                      <FormMessage className="text-destructive" />
                     </FormItem>
                   )}
                 />
@@ -430,15 +337,11 @@ export default function CreateCampaignWizardPage() {
                   name="description"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-white">Description</FormLabel>
+                      <FormLabel>Description</FormLabel>
                       <FormControl>
-                        <Textarea
-                          placeholder="Describe your campaign..."
-                          className="bg-white/5 border-white/10 text-white placeholder:text-white/40 min-h-[100px]"
-                          {...field}
-                        />
+                        <Textarea placeholder="Describe your campaign..." className="min-h-[100px]" {...field} />
                       </FormControl>
-                      <FormMessage className="text-red-400" />
+                      <FormMessage className="text-destructive" />
                     </FormItem>
                   )}
                 />
@@ -447,19 +350,13 @@ export default function CreateCampaignWizardPage() {
                   name="brandUrl"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-white">
-                        Brand URL{" "}
-                        <span className="text-white/60 text-xs font-normal">(Optional)</span>
+                      <FormLabel>
+                        Brand URL <span className="text-muted-foreground text-xs font-normal">(Optional)</span>
                       </FormLabel>
                       <FormControl>
-                        <Input
-                          type="url"
-                          placeholder="https://your-brand.com"
-                          className="bg-white/5 border-white/10 text-white placeholder:text-white/40 h-12"
-                          {...field}
-                        />
+                        <Input type="url" placeholder="https://your-brand.com" {...field} />
                       </FormControl>
-                      <FormMessage className="text-red-400" />
+                      <FormMessage className="text-destructive" />
                     </FormItem>
                   )}
                 />
@@ -468,19 +365,13 @@ export default function CreateCampaignWizardPage() {
                   name="campaignUrl"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-white">
-                        Campaign URL{" "}
-                        <span className="text-white/60 text-xs font-normal">(Optional)</span>
+                      <FormLabel>
+                        Campaign URL <span className="text-muted-foreground text-xs font-normal">(Optional)</span>
                       </FormLabel>
                       <FormControl>
-                        <Input
-                          type="url"
-                          placeholder="https://your-brand.com/campaign"
-                          className="bg-white/5 border-white/10 text-white placeholder:text-white/40 h-12"
-                          {...field}
-                        />
+                        <Input type="url" placeholder="https://your-brand.com/campaign" {...field} />
                       </FormControl>
-                      <FormMessage className="text-red-400" />
+                      <FormMessage className="text-destructive" />
                     </FormItem>
                   )}
                 />
@@ -488,89 +379,21 @@ export default function CreateCampaignWizardPage() {
             </Card>
           )}
 
-          {/* Step 1: Image */}
           {step === 1 && (
-            <Card className="bg-card/50 backdrop-blur-sm border-white/10">
+            <Card className="bg-card/50 backdrop-blur-sm border-border">
               <CardHeader>
-                <CardTitle className="text-white font-fredoka flex items-center gap-2">
-                  <ImageIcon className="h-5 w-5 text-secondary" />
-                  Campaign Image
-                </CardTitle>
-                <p className="text-white/60 text-sm">
-                  Feeds the sliding-puzzle and spot-the-difference games.
-                </p>
-              </CardHeader>
-              <CardContent>
-                <FormField
-                  control={form.control}
-                  name="image"
-                  render={() => (
-                    <FormItem>
-                      <FormControl>
-                        <div className="border-2 border-dashed border-white/20 rounded-lg p-8 relative">
-                          {imagePreview ? (
-                            <div className="relative">
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img
-                                src={imagePreview}
-                                alt="Preview"
-                                className="w-full max-h-64 object-contain rounded-lg"
-                              />
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                className="absolute top-2 right-2 bg-black/50 border-white/20"
-                                onClick={() => {
-                                  setImagePreview("");
-                                  form.setValue("image", undefined as any, { shouldValidate: true });
-                                }}>
-                                Remove
-                              </Button>
-                            </div>
-                          ) : (
-                            <div className="text-center">
-                              <Upload className="mx-auto h-12 w-12 text-white/40" />
-                              <p className="mt-2 text-white/70">Click to upload campaign image</p>
-                              <p className="text-xs text-white/40 mt-1">PNG, JPG up to 10MB</p>
-                            </div>
-                          )}
-                          <Input
-                            type="file"
-                            accept="image/*"
-                            data-testid="image-input"
-                            className="absolute inset-0 opacity-0 cursor-pointer"
-                            onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              if (file) handleImageChange(file);
-                            }}
-                          />
-                        </div>
-                      </FormControl>
-                      <FormMessage className="text-red-400" />
-                    </FormItem>
-                  )}
-                />
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Step 2: Video */}
-          {step === 2 && (
-            <Card className="bg-card/50 backdrop-blur-sm border-white/10">
-              <CardHeader>
-                <CardTitle className="text-white font-fredoka flex items-center gap-2">
+                <CardTitle className="text-foreground font-sora flex items-center gap-2">
                   <VideoIcon className="h-5 w-5 text-secondary" />
-                  Brand Video
+                  Ad Video
                 </CardTitle>
-                <p className="text-white/60 text-sm">
-                  ~2 minutes. Players watch this before the quiz. Max{" "}
+                <p className="text-muted-foreground text-sm">
+                  ~90 seconds. Viewers watch this before the quiz. Max{" "}
                   {Math.round(getConfig("video.maxDurationSeconds"))}s,{" "}
                   {Math.round(getConfig("video.maxSizeBytes") / (1024 * 1024))}MB.
                 </p>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="border-2 border-dashed border-white/20 rounded-lg p-8 relative">
+                <div className="border-2 border-dashed border-border rounded-lg p-8 relative">
                   {videoPreviewUrl ? (
                     <div className="relative">
                       <video src={videoPreviewUrl} controls className="w-full max-h-64 rounded-lg" />
@@ -578,11 +401,11 @@ export default function CreateCampaignWizardPage() {
                         type="button"
                         variant="outline"
                         size="sm"
-                        className="absolute top-2 right-2 bg-black/50 border-white/20"
+                        className="absolute top-2 right-2 bg-black/50 border-border"
                         onClick={() => {
                           setVideoPreviewUrl("");
                           setVideoDurationSeconds(null);
-                          form.setValue("video", undefined as any, { shouldValidate: true });
+                          form.setValue("video", undefined, { shouldValidate: true });
                         }}>
                         <X className="h-4 w-4" />
                       </Button>
@@ -592,10 +415,10 @@ export default function CreateCampaignWizardPage() {
                       {videoChecking ? (
                         <Loader2 className="mx-auto h-10 w-10 text-secondary animate-spin" />
                       ) : (
-                        <Upload className="mx-auto h-12 w-12 text-white/40" />
+                        <Upload className="mx-auto h-12 w-12 text-muted-foreground" />
                       )}
-                      <p className="mt-2 text-white/70">
-                        {videoChecking ? "Checking video..." : "Click to upload campaign video"}
+                      <p className="mt-2 text-muted-foreground">
+                        {videoChecking ? "Checking video..." : "Click to upload your ad video"}
                       </p>
                     </div>
                   )}
@@ -611,13 +434,13 @@ export default function CreateCampaignWizardPage() {
                   />
                 </div>
                 {videoDurationSeconds !== null && !videoError && (
-                  <p className="text-green-400 text-sm flex items-center gap-2">
+                  <p className="text-success text-sm flex items-center gap-2">
                     <CheckCircle className="h-4 w-4" />
                     {Math.round(videoDurationSeconds)}s, looks good.
                   </p>
                 )}
                 {videoError && (
-                  <p className="text-red-400 text-sm flex items-center gap-2">
+                  <p className="text-destructive text-sm flex items-center gap-2">
                     <AlertCircle className="h-4 w-4" />
                     {videoError}
                   </p>
@@ -626,139 +449,34 @@ export default function CreateCampaignWizardPage() {
             </Card>
           )}
 
-          {/* Step 3: Word Hunt */}
-          {step === 3 && (
-            <Card className="bg-card/50 backdrop-blur-sm border-white/10">
+          {step === 2 && (
+            <Card className="bg-card/50 backdrop-blur-sm border-border">
               <CardHeader>
-                <CardTitle className="text-white font-fredoka flex items-center gap-2">
-                  <Target className="h-5 w-5 text-secondary" />
-                  Word Hunt Words
-                </CardTitle>
-                <p className="text-white/60 text-sm">
-                  At least {WORD_HUNT_MIN_WORDS} words, {WORD_HUNT_MIN_WORD_LENGTH}+ characters each.
-                </p>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {Array.from({ length: WORD_HUNT_MIN_WORDS }).map((_, index) => (
-                    <FormField
-                      key={index}
-                      control={form.control}
-                      name={`words.${index}`}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-white">Word {index + 1}</FormLabel>
-                          <FormControl>
-                            <Input
-                              placeholder={`Enter word ${index + 1}...`}
-                              className="bg-white/5 border-white/10 text-white placeholder:text-white/40"
-                              {...field}
-                            />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                  ))}
-                </div>
-                {!wordsCheck.valid && (
-                  <p className="text-red-400 text-sm mt-3">{wordsCheck.message}</p>
-                )}
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Step 4: Prize */}
-          {step === 4 && (
-            <Card className="bg-card/50 backdrop-blur-sm border-white/10">
-              <CardHeader>
-                <CardTitle className="text-white font-fredoka flex items-center gap-2">
-                  <Gift className="h-5 w-5 text-secondary" />
-                  Prize
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="prizeDescription"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-white">What players stand to win</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          placeholder="e.g. A brand-new pair of wireless headphones"
-                          className="bg-white/5 border-white/10 text-white placeholder:text-white/40 min-h-[100px]"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage className="text-red-400" />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="prizeUnitsAvailable"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-white">Units Available</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          min={1}
-                          className="bg-white/5 border-white/10 text-white h-12 w-32"
-                          value={field.value}
-                          onChange={(e) =>
-                            field.onChange(
-                              e.target.value === "" ? 1 : Number(e.target.value)
-                            )
-                          }
-                        />
-                      </FormControl>
-                      <FormDescription className="text-white/50 text-xs">
-                        One winner is drawn per campaign per week regardless of units.
-                      </FormDescription>
-                      <FormMessage className="text-red-400" />
-                    </FormItem>
-                  )}
-                />
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Step 5: Quiz */}
-          {step === 5 && (
-            <Card className="bg-card/50 backdrop-blur-sm border-white/10">
-              <CardHeader>
-                <CardTitle className="text-white font-fredoka flex items-center gap-2">
+                <CardTitle className="text-foreground font-sora flex items-center gap-2">
                   <HelpCircle className="h-5 w-5 text-secondary" />
                   Quiz Questions
-                  <span className="text-white/40 text-xs font-normal ml-1">
+                  <span className="text-muted-foreground text-xs font-normal ml-1">
                     (exactly {QUIZ_QUESTION_COUNT})
                   </span>
                 </CardTitle>
-                <p className="text-white/60 text-sm">
-                  Players answer these after watching the video, with unlimited retries.
+                <p className="text-muted-foreground text-sm">
+                  Viewers answer these after watching the video, with unlimited retries.
                 </p>
               </CardHeader>
               <CardContent className="space-y-6">
                 {questionFields.map((question, questionIndex) => (
-                  <div
-                    key={question.id}
-                    className="space-y-4 p-4 bg-white/5 rounded-lg border border-white/10">
-                    <h4 className="text-white font-medium">Question {questionIndex + 1}</h4>
+                  <div key={question.id} className="space-y-4 p-4 bg-white/5 rounded-lg border border-border">
+                    <h4 className="text-foreground font-medium">Question {questionIndex + 1}</h4>
                     <FormField
                       control={form.control}
                       name={`questions.${questionIndex}.question`}
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-white">Question</FormLabel>
+                          <FormLabel>Question</FormLabel>
                           <FormControl>
-                            <Input
-                              placeholder="Enter your question..."
-                              className="bg-white/5 border-white/10 text-white placeholder:text-white/40 h-12"
-                              {...field}
-                            />
+                            <Input placeholder="Enter your question..." {...field} />
                           </FormControl>
-                          <FormMessage className="text-red-400" />
+                          <FormMessage className="text-destructive" />
                         </FormItem>
                       )}
                     />
@@ -770,17 +488,13 @@ export default function CreateCampaignWizardPage() {
                           name={`questions.${questionIndex}.choices.${choiceIndex}`}
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-white text-sm">
+                              <FormLabel className="text-sm">
                                 Choice {String.fromCharCode(65 + choiceIndex)}
                               </FormLabel>
                               <FormControl>
-                                <Input
-                                  placeholder={`Option ${String.fromCharCode(65 + choiceIndex)}`}
-                                  className="bg-white/5 border-white/10 text-white placeholder:text-white/40 h-12"
-                                  {...field}
-                                />
+                                <Input placeholder={`Option ${String.fromCharCode(65 + choiceIndex)}`} {...field} />
                               </FormControl>
-                              <FormMessage className="text-red-400" />
+                              <FormMessage className="text-destructive" />
                             </FormItem>
                           )}
                         />
@@ -791,27 +505,24 @@ export default function CreateCampaignWizardPage() {
                       name={`questions.${questionIndex}.correctIndex`}
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-white">Correct Answer</FormLabel>
+                          <FormLabel>Correct Answer</FormLabel>
                           <Select
                             onValueChange={(value) => field.onChange(parseInt(value))}
                             value={field.value.toString()}>
                             <FormControl>
-                              <SelectTrigger className="bg-white/5 border-white/10 text-white h-12">
+                              <SelectTrigger>
                                 <SelectValue placeholder="Select correct answer" />
                               </SelectTrigger>
                             </FormControl>
-                            <SelectContent className="bg-card border-white/10">
+                            <SelectContent>
                               {["A", "B", "C", "D"].map((letter, index) => (
-                                <SelectItem
-                                  key={index}
-                                  value={index.toString()}
-                                  className="text-white hover:bg-white/10">
+                                <SelectItem key={index} value={index.toString()}>
                                   Option {letter}
                                 </SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
-                          <FormMessage className="text-red-400" />
+                          <FormMessage className="text-destructive" />
                         </FormItem>
                       )}
                     />
@@ -821,152 +532,108 @@ export default function CreateCampaignWizardPage() {
             </Card>
           )}
 
-          {/* Step 6: Package + Duration */}
-          {step === 6 && (
-            <Card className="bg-card/50 backdrop-blur-sm border-white/10">
+          {step === 3 && (
+            <Card className="bg-card/50 backdrop-blur-sm border-border">
               <CardHeader>
-                <CardTitle className="text-white font-fredoka flex items-center gap-2">
-                  <DollarSign className="h-5 w-5 text-secondary" />
-                  Package & Duration
-                </CardTitle>
+                <CardTitle className="text-foreground font-sora">Choose your tier</CardTitle>
+                <p className="text-muted-foreground text-sm">
+                  Higher tiers get shown more often and unlock analytics.
+                </p>
               </CardHeader>
               <CardContent className="space-y-6">
-                <FormField
-                  control={form.control}
-                  name="packageId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-white">Package</FormLabel>
-                      <FormControl>
-                        <div className="space-y-3">
-                          {packagesLoading ? (
-                            <div className="text-center py-4">
-                              <Loader2 className="h-6 w-6 animate-spin text-secondary mx-auto" />
-                            </div>
-                          ) : (
-                            (packagesData || []).map((pkg) => (
-                              <div
-                                key={pkg._id}
-                                className={`p-3 rounded-lg border cursor-pointer transition-all ${
-                                  field.value === pkg._id
-                                    ? "border-secondary bg-secondary/10"
-                                    : "border-white/20 hover:border-white/40"
-                                }`}
-                                onClick={() => field.onChange(pkg._id)}>
-                                <h4 className="text-white font-medium capitalize">{pkg.name}</h4>
-                              </div>
-                            ))
-                          )}
-                        </div>
-                      </FormControl>
-                      <FormMessage className="text-red-400" />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="durationWeeks"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-white">Duration (weeks)</FormLabel>
-                      <Select
-                        onValueChange={(v) => field.onChange(parseInt(v))}
-                        value={field.value?.toString()}>
-                        <FormControl>
-                          <SelectTrigger className="bg-white/5 border-white/10 text-white h-12">
-                            <SelectValue placeholder="Select weeks" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent className="bg-card border-white/10">
-                          {WEEK_OPTIONS.map((w) => (
-                            <SelectItem
-                              key={w}
-                              value={w.toString()}
-                              className="text-white hover:bg-white/10">
-                              {w} week{w !== 1 ? "s" : ""}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage className="text-red-400" />
-                    </FormItem>
-                  )}
-                />
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {TIER_META.map((t) => (
+                    <button
+                      type="button"
+                      key={t.id}
+                      data-testid={`tier-card-${t.id}`}
+                      onClick={() => form.setValue("tier", t.id, { shouldValidate: true })}
+                      className={`text-left p-4 rounded-xl border-2 transition-all ${
+                        tier === t.id ? "border-primary bg-primary/10" : "border-border hover:border-white/30"
+                      }`}>
+                      <h4 className="font-sora font-bold text-lg text-foreground">{t.name}</h4>
+                      <p className="text-2xl font-bold text-primary my-1">
+                        ${tierPrices?.[t.id] ?? t.priceUSD}
+                      </p>
+                      <p className="text-xs text-muted-foreground mb-3">{t.blurb}</p>
+                      <ul className="space-y-1 text-xs text-muted-foreground">
+                        <li className="flex items-center gap-1.5">
+                          <BarChart3 className="h-3 w-3" /> {t.displayWeight} display weight
+                        </li>
+                        <li className="flex items-center gap-1.5">
+                          <CheckCircle className={`h-3 w-3 ${t.analytics ? "text-success" : "opacity-30"}`} />
+                          Analytics dashboard
+                        </li>
+                        <li className="flex items-center gap-1.5">
+                          <Globe className={`h-3 w-3 ${t.globalToggle ? "text-success" : "opacity-30"}`} />
+                          Global visibility toggle
+                        </li>
+                      </ul>
+                    </button>
+                  ))}
+                </div>
 
-                {selectedPackage && durationWeeks > 0 && (
-                  <div className="p-4 bg-secondary/10 border border-secondary/20 rounded-lg" data-testid="price-summary">
-                    {priceLoading ? (
-                      <div className="flex items-center gap-2 text-white/70 text-sm">
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Calculating price...
-                      </div>
-                    ) : priceData ? (
-                      <div className="flex justify-between items-center">
-                        <span className="text-white/70">
-                          {priceData.durationWeeks} week{priceData.durationWeeks !== 1 ? "s" : ""} &times; ₦
-                          {priceData.weeklyPrice.toLocaleString()}/week
-                        </span>
-                        <span className="text-secondary font-bold text-2xl font-fredoka">
-                          ₦{priceData.totalAmount.toLocaleString()}
-                        </span>
-                      </div>
-                    ) : (
-                      <p className="text-white/60 text-sm">Select a package and duration to see the price.</p>
+                {selectedTierMeta.globalToggle && (
+                  <FormField
+                    control={form.control}
+                    name="global"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center justify-between rounded-lg border border-border p-4">
+                        <div>
+                          <FormLabel>Show globally</FormLabel>
+                          <p className="text-xs text-muted-foreground">
+                            Off shows only in your brand&apos;s country; on shows worldwide.
+                          </p>
+                        </div>
+                        <FormControl>
+                          <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                        </FormControl>
+                      </FormItem>
                     )}
-                  </div>
+                  />
                 )}
               </CardContent>
             </Card>
           )}
 
-          {/* Step 7: Review */}
-          {step === 7 && (
-            <Card className="bg-card/50 backdrop-blur-sm border-white/10">
+          {step === 4 && (
+            <Card className="bg-card/50 backdrop-blur-sm border-border">
               <CardHeader>
-                <CardTitle className="text-white font-fredoka flex items-center gap-2">
+                <CardTitle className="text-foreground font-sora flex items-center gap-2">
                   <CheckCircle className="h-5 w-5 text-secondary" />
                   Review
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3 text-sm">
-                <div className="flex justify-between text-white/70">
+                <div className="flex justify-between text-muted-foreground">
                   <span>Title</span>
-                  <span className="text-white">{form.getValues("title")}</span>
+                  <span className="text-foreground">{form.getValues("title")}</span>
                 </div>
-                <div className="flex justify-between text-white/70">
-                  <span>Prize</span>
-                  <span className="text-white text-right max-w-xs">
-                    {form.getValues("prizeDescription")}
-                  </span>
+                <div className="flex justify-between text-muted-foreground">
+                  <span>Tier</span>
+                  <span className="text-foreground capitalize">{tier}</span>
                 </div>
-                <div className="flex justify-between text-white/70">
-                  <span>Package</span>
-                  <span className="text-white capitalize">{selectedPackage?.name}</span>
-                </div>
-                <div className="flex justify-between text-white/70">
-                  <span>Duration</span>
-                  <span className="text-white">{durationWeeks} week(s)</span>
-                </div>
-                {priceData && (
-                  <div className="flex justify-between border-t border-white/10 pt-3">
-                    <span className="text-white font-semibold">Total to Pay</span>
-                    <span className="text-secondary font-bold text-xl font-fredoka">
-                      ₦{priceData.totalAmount.toLocaleString()}
-                    </span>
+                {selectedTierMeta.globalToggle && (
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Visibility</span>
+                    <span className="text-foreground">{global ? "Global" : "Home country only"}</span>
                   </div>
                 )}
+                <div className="flex justify-between border-t border-border pt-3">
+                  <span className="text-foreground font-semibold">Total to Pay</span>
+                  <span className="text-primary font-bold text-xl font-sora">${priceUSD}</span>
+                </div>
               </CardContent>
             </Card>
           )}
 
-          {/* Navigation */}
           <div className="flex items-center justify-between pt-4">
             <Button
               type="button"
               variant="outline"
               onClick={goBack}
               disabled={step === 0 || isSubmitting}
-              className="border-white/20 text-white hover:bg-white/10">
+              className="border-border text-foreground hover:bg-white/10">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back
             </Button>
@@ -975,8 +642,8 @@ export default function CreateCampaignWizardPage() {
               <Button
                 type="button"
                 onClick={goNext}
-                disabled={step === 2 && (videoChecking || !!videoError)}
-                className="bg-secondary hover:bg-secondary/80 text-secondary-foreground">
+                disabled={step === 1 && (videoChecking || !!videoError)}
+                className="bg-primary hover:bg-primary/90 text-primary-foreground">
                 Next
                 <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
@@ -984,16 +651,16 @@ export default function CreateCampaignWizardPage() {
               <Button
                 type="submit"
                 disabled={isSubmitting}
-                className="bg-secondary hover:bg-secondary/80 text-secondary-foreground">
+                className="bg-primary hover:bg-primary/90 text-primary-foreground">
                 <CheckCircle className="h-4 w-4 mr-2" />
-                Submit Campaign
+                Create Campaign
               </Button>
             )}
           </div>
 
           {apiError && (
-            <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
-              <div className="flex items-center gap-2 text-red-400">
+            <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-lg">
+              <div className="flex items-center gap-2 text-destructive">
                 <AlertCircle className="h-4 w-4" />
                 <span className="text-sm">{apiError}</span>
               </div>
@@ -1002,13 +669,18 @@ export default function CreateCampaignWizardPage() {
         </form>
       </Form>
 
-      {/* Submit modal */}
-      <Dialog open={showSubmitModal} onOpenChange={(open) => !isSubmitting && setShowSubmitModal(open)}>
-        <DialogContent className="bg-card border-white/20 max-w-md">
+      <Dialog
+        open={showSubmitModal}
+        onOpenChange={(open) => !isSubmitting && !initializePayment.isPending && setShowSubmitModal(open)}>
+        <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-white font-fredoka text-xl">Create Campaign</DialogTitle>
-            <DialogDescription className="text-white/70">
-              How would you like to proceed?
+            <DialogTitle className="font-sora text-xl">
+              {createdCampaignId ? "Pay to activate" : "Create Ad Campaign"}
+            </DialogTitle>
+            <DialogDescription>
+              {createdCampaignId
+                ? `Your campaign is saved as a draft. Pay $${priceUSD} to activate it for 30 days.`
+                : "This creates your campaign as a draft."}
             </DialogDescription>
           </DialogHeader>
 
@@ -1016,41 +688,49 @@ export default function CreateCampaignWizardPage() {
             {isSubmitting && uploadProgress > 0 && uploadProgress < 100 && (
               <div className="space-y-2">
                 <Progress value={uploadProgress} />
-                <p className="text-white/60 text-xs text-center">
-                  Uploading... {uploadProgress}%
-                </p>
+                <p className="text-muted-foreground text-xs text-center">Uploading... {uploadProgress}%</p>
               </div>
             )}
-            <Button
-              onClick={() => handleFinalSubmit("draft")}
-              disabled={isSubmitting}
-              variant="outline"
-              className="w-full border-white/20 text-white hover:bg-white/90 h-12 flex items-center justify-center gap-3">
-              {createCampaignMutation.isPending && currentActionType === "draft" ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Save className="h-4 w-4" />
-              )}
-              Save as Draft
-            </Button>
-            <Button
-              onClick={() => handleFinalSubmit("payment")}
-              disabled={isSubmitting}
-              className="w-full bg-secondary hover:bg-secondary/80 text-secondary-foreground h-12 flex items-center justify-center gap-3">
-              {isSubmitting && currentActionType === "payment" ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <CreditCard className="h-4 w-4" />
-              )}
-              Proceed to Payment
-            </Button>
-            <Button
-              onClick={() => setShowSubmitModal(false)}
-              disabled={isSubmitting}
-              variant="ghost"
-              className="w-full text-white/60 hover:text-white hover:bg-white/5">
-              Cancel
-            </Button>
+
+            {!createdCampaignId ? (
+              <>
+                <Button
+                  onClick={handleCreate}
+                  disabled={isSubmitting}
+                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground h-12 flex items-center justify-center gap-3">
+                  {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                  Create Draft
+                </Button>
+                <Button
+                  onClick={() => setShowSubmitModal(false)}
+                  disabled={isSubmitting}
+                  variant="ghost"
+                  className="w-full text-muted-foreground hover:text-foreground hover:bg-white/5">
+                  Cancel
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button
+                  onClick={handlePayNow}
+                  disabled={payAction === "paying"}
+                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground h-12 flex items-center justify-center gap-3">
+                  {payAction === "paying" ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <CreditCard className="h-4 w-4" />
+                  )}
+                  Pay Now
+                </Button>
+                <Button
+                  onClick={() => router.push(routes.BRAND.CAMPAIGNS)}
+                  disabled={payAction === "paying"}
+                  variant="outline"
+                  className="w-full border-border text-foreground hover:bg-white/10">
+                  I&apos;ll pay later
+                </Button>
+              </>
+            )}
           </div>
         </DialogContent>
       </Dialog>

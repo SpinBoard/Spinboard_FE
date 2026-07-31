@@ -1,6 +1,29 @@
 import type { NextConfig } from "next";
 
+// Local-dev-only API proxy. Makes every /api/v1/* request same-origin from
+// the browser's point of view, which sidesteps two local-dev-only problems
+// at once: CORS (no cross-origin request = nothing to configure) and the
+// anon_session_id cookie the backend sets for logged-out ad-watch tracking
+// (it's SameSite=None, which browsers require to be paired with Secure —
+// and Secure cookies don't get sent over plain http://, so cross-port
+// localhost cookies can silently fail to stick without this proxy).
+//
+// Gated on NODE_ENV === "development" so it's a no-op for `next build`
+// (Vercel, the Docker image, and the AWS EC2 deployment all build with
+// NODE_ENV=production) — those keep talking directly to whatever
+// NEXT_PUBLIC_API_URL is set to in their own environment, untouched.
+const DEV_BACKEND_URL = process.env.DEV_BACKEND_URL || "http://localhost:4000";
+
 const nextConfig: NextConfig = {
+  async rewrites() {
+    if (process.env.NODE_ENV !== "development") return [];
+    return [
+      {
+        source: "/api/v1/:path*",
+        destination: `${DEV_BACKEND_URL}/api/v1/:path*`,
+      },
+    ];
+  },
   images: {
     remotePatterns: [
       {

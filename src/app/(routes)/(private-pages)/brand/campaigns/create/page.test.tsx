@@ -24,32 +24,11 @@ vi.mock("@/atom/user", () => ({
 
 const hoisted = vi.hoisted(() => ({
   capturedFormData: null as FormData | null,
+  paymentInitCalls: [] as unknown[],
 }));
 
 vi.mock("axios", () => {
   const get = vi.fn((url: string) => {
-    if (url.includes("/packages")) {
-      return Promise.resolve({
-        data: {
-          packages: [
-            { _id: "pkg_basic", name: "basic", amount: 7000, priority: 1, description: "" },
-          ],
-        },
-      });
-    }
-    if (url.includes("/payments/calculate-weekly-price")) {
-      return Promise.resolve({
-        data: {
-          pricing: {
-            packageType: "basic",
-            weeklyPrice: 7000,
-            durationWeeks: 1,
-            totalAmount: 7000,
-            timeLimitHours: 168,
-          },
-        },
-      });
-    }
     if (url.includes("/admin/config")) {
       return Promise.reject({ response: { status: 403 } });
     }
@@ -57,16 +36,24 @@ vi.mock("axios", () => {
   });
 
   const post = vi.fn((url: string, body: unknown) => {
-    if (url.includes("/brands/campaigns")) {
+    if (url.includes("/ad-campaigns")) {
       hoisted.capturedFormData = body as FormData;
       return Promise.resolve({
-        data: { success: true, campaign: { _id: "camp1", packageName: "basic" } },
+        data: { success: true, campaign: { _id: "camp1", tier: "basic" } },
+      });
+    }
+    if (url.includes("/ad-payments/initialize")) {
+      hoisted.paymentInitCalls.push(body);
+      return Promise.resolve({
+        data: { data: { authorization_url: "https://paystack.example/pay" } },
       });
     }
     return Promise.reject(new Error(`Unhandled POST ${url}`));
   });
 
-  return { default: { get, post } };
+  const interceptors = { request: { use: vi.fn() }, response: { use: vi.fn() } };
+  const instance = { get, post, interceptors };
+  return { default: { ...instance, create: () => instance } };
 });
 
 vi.mock("./wizard-utils", async (importOriginal) => {
@@ -76,6 +63,8 @@ vi.mock("./wizard-utils", async (importOriginal) => {
     getVideoDuration: vi.fn().mockResolvedValue(90),
   };
 });
+
+vi.stubGlobal("open", vi.fn());
 
 import CreateCampaignWizardPage from "./page";
 
@@ -92,17 +81,6 @@ function renderWizard() {
 
 const makeFile = (name: string, type: string) => new File(["x".repeat(20)], name, { type });
 
-async function fillWordHuntStep(user: ReturnType<typeof userEvent.setup>) {
-  const words = ["apple", "banana", "cherry", "date", "eagle", "flute", "grape"];
-  for (let i = 0; i < words.length; i++) {
-    const input = screen.getByLabelText(`Word ${i + 1}`);
-    await user.clear(input);
-    await user.type(input, words[i]);
-  }
-}
-
-// correctIndex defaults to 0 ("Option A") for every question, which is
-// already a valid selection, so this only needs to fill text fields.
 async function fillQuizStep(user: ReturnType<typeof userEvent.setup>) {
   const questionInputs = screen.getAllByLabelText("Question");
   const choiceLabels = ["Choice A", "Choice B", "Choice C", "Choice D"];
@@ -116,10 +94,32 @@ async function fillQuizStep(user: ReturnType<typeof userEvent.setup>) {
   }
 }
 
+async function advanceThroughDetailsVideoQuiz(user: ReturnType<typeof userEvent.setup>) {
+  await user.type(screen.getByLabelText("Campaign Title"), "Summer Splash");
+  await user.type(
+    screen.getByLabelText("Description"),
+    "A fun summer campaign for our brand fans"
+  );
+  await user.click(screen.getByRole("button", { name: /next/i }));
+
+  await screen.findByRole("heading", { name: /ad video/i });
+  const videoInput = screen.getByTestId("video-input");
+  await user.upload(videoInput, makeFile("video.mp4", "video/mp4"));
+  await screen.findByText(/looks good/i);
+  await user.click(screen.getByRole("button", { name: /next/i }));
+
+  await screen.findByRole("heading", { name: /quiz questions/i });
+  await fillQuizStep(user);
+  await user.click(screen.getByRole("button", { name: /next/i }));
+
+  await screen.findByRole("heading", { name: /choose your tier/i });
+}
+
 describe("CreateCampaignWizardPage", () => {
   beforeEach(() => {
     pushMock.mockClear();
     hoisted.capturedFormData = null;
+    hoisted.paymentInitCalls = [];
   });
 
   it("blocks advancing past step 0 until required fields are valid", async () => {
@@ -128,76 +128,68 @@ describe("CreateCampaignWizardPage", () => {
 
     await user.click(screen.getByRole("button", { name: /next/i }));
 
-    // Still on step 0 — the Image step's heading should not be present.
-    expect(screen.queryByRole("heading", { name: /campaign image/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: /ad video/i })).not.toBeInTheDocument();
     expect(await screen.findAllByText(/at least 3 characters|at least 10 characters/i)).not.toHaveLength(0);
   });
 
-  it("advances through the wizard and submits a draft with the expected FormData shape", async () => {
+  it("shows the tier comparison with prices and benefit checkmarks", async () => {
     const user = userEvent.setup();
     renderWizard();
+    await advanceThroughDetailsVideoQuiz(user);
 
-    // Step 0: Details
-    await user.type(screen.getByLabelText("Campaign Title"), "Summer Splash");
-    await user.type(
-      screen.getByLabelText("Description"),
-      "A fun summer campaign for our brand fans"
-    );
+    const basicCard = screen.getByTestId("tier-card-basic");
+    const premiumCard = screen.getByTestId("tier-card-premium");
+    const proCard = screen.getByTestId("tier-card-pro");
+
+    expect(basicCard).toHaveTextContent("$20");
+    expect(premiumCard).toHaveTextContent("$30");
+    expect(proCard).toHaveTextContent("$50");
+    expect(premiumCard).toHaveTextContent("2x display weight");
+    expect(proCard).toHaveTextContent("3x display weight");
+  }, 20000);
+
+  it("only shows the global-visibility toggle for the Pro tier", async () => {
+    const user = userEvent.setup();
+    renderWizard();
+    await advanceThroughDetailsVideoQuiz(user);
+
+    expect(screen.queryByLabelText(/show globally/i)).not.toBeInTheDocument();
+
+    await user.click(screen.getByTestId("tier-card-premium"));
+    expect(screen.queryByLabelText(/show globally/i)).not.toBeInTheDocument();
+
+    await user.click(screen.getByTestId("tier-card-pro"));
+    expect(screen.getByLabelText(/show globally/i)).toBeInTheDocument();
+  }, 20000);
+
+  it("creates the campaign as a draft, then offers to pay now with the tier price", async () => {
+    const user = userEvent.setup();
+    renderWizard();
+    await advanceThroughDetailsVideoQuiz(user);
+
+    await user.click(screen.getByTestId("tier-card-premium"));
     await user.click(screen.getByRole("button", { name: /next/i }));
 
-    // Step 1: Image
-    await screen.findByRole("heading", { name: /campaign image/i });
-    const imageInput = screen.getByTestId("image-input");
-    await user.upload(imageInput, makeFile("image.png", "image/png"));
-    await user.click(screen.getByRole("button", { name: /next/i }));
-
-    // Step 2: Video (getVideoDuration mocked to resolve 90s, under the 130s default limit)
-    await screen.findByRole("heading", { name: /brand video/i });
-    const videoInput = screen.getByTestId("video-input");
-    await user.upload(videoInput, makeFile("video.mp4", "video/mp4"));
-    await screen.findByText(/looks good/i);
-    await user.click(screen.getByRole("button", { name: /next/i }));
-
-    // Step 3: Word Hunt
-    await screen.findByRole("heading", { name: /word hunt words/i });
-    await fillWordHuntStep(user);
-    await user.click(screen.getByRole("button", { name: /next/i }));
-
-    // Step 4: Prize
-    await screen.findByRole("heading", { name: /^prize$/i });
-    await user.type(
-      screen.getByLabelText(/what players stand to win/i),
-      "A brand-new pair of headphones"
-    );
-    await user.click(screen.getByRole("button", { name: /next/i }));
-
-    // Step 5: Quiz
-    await screen.findByRole("heading", { name: /quiz questions/i });
-    await fillQuizStep(user);
-    await user.click(screen.getByRole("button", { name: /next/i }));
-
-    // Step 6: Package & Duration
-    await screen.findByRole("heading", { name: /package & duration/i });
-    await user.click(await screen.findByText("basic"));
-    const priceSummary = await screen.findByTestId("price-summary");
-    await waitFor(() => expect(within(priceSummary).getAllByText(/₦7,000/).length).toBeGreaterThan(0));
-    await user.click(screen.getByRole("button", { name: /next/i }));
-
-    // Step 7: Review + submit
     await screen.findByRole("heading", { name: /^review$/i });
-    await user.click(screen.getByRole("button", { name: /submit campaign/i }));
+    expect(screen.getByText("$30")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /create campaign/i }));
 
-    await user.click(await screen.findByRole("button", { name: /save as draft/i }));
+    await user.click(await screen.findByRole("button", { name: /create draft/i }));
 
+    const fd = await waitFor(() => {
+      expect(hoisted.capturedFormData).not.toBeNull();
+      return hoisted.capturedFormData!;
+    });
+    expect(fd.get("title")).toBe("Summer Splash");
+    expect(fd.get("tier")).toBe("premium");
+    expect(fd.has("global")).toBe(false);
+    expect(JSON.parse(fd.get("questions") as string)).toHaveLength(3);
+
+    await user.click(await screen.findByRole("button", { name: /pay now/i }));
+
+    await waitFor(() =>
+      expect(hoisted.paymentInitCalls).toEqual([{ campaignId: "camp1", email: "brand@test.com" }])
+    );
     await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/brand/campaigns"));
-
-    const fd = hoisted.capturedFormData;
-    expect(fd).not.toBeNull();
-    expect(fd!.get("title")).toBe("Summer Splash");
-    expect(fd!.get("prizeDescription")).toBe("A brand-new pair of headphones");
-    expect(fd!.get("packageId")).toBe("pkg_basic");
-    expect(fd!.get("durationWeeks")).toBe("1");
-    expect(JSON.parse(fd!.get("questions") as string)).toHaveLength(3);
-    expect(JSON.parse(fd!.get("words") as string).length).toBeGreaterThanOrEqual(7);
   }, 30000);
 });

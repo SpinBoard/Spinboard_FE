@@ -76,10 +76,16 @@ export default function ReferralsPage() {
   });
 
   const stats = myStatsData?.stats;
-  const creditedCount = stats?.successfulReferralsThisMonth ?? 0;
-  const creditedPoints = stats?.referralPointsThisMonth ?? 0;
+  // §6: qualification is now anti-fraud gated (verified email + complete
+  // profile + one full 5-ad cycle), and rewards are discount codes at 20/40
+  // qualified referrals, not points — the underlying GET /referrals/my-stats
+  // route is unchanged, so its "successful"/"pending" counts are reused here
+  // as qualified/pending against the new 20 & 40 thresholds.
+  const qualifiedCount = stats?.successfulReferralsThisMonth ?? 0;
   const pendingCount = stats?.pendingReferrals ?? 0;
   const referredUsers = stats?.referredUsersThisMonth ?? [];
+  const distanceTo20 = Math.max(0, 20 - qualifiedCount);
+  const distanceTo40 = Math.max(0, 40 - qualifiedCount);
 
   const events = eventsData?.events || [];
 
@@ -95,8 +101,8 @@ export default function ReferralsPage() {
     if (navigator.share) {
       try {
         await navigator.share({
-          title: "Join me on Pazzell",
-          text: "Play puzzles from top brands and earn real rewards. Sign up with my link!",
+          title: "Join Spinboard",
+          text: "Watch ads, answer quizzes, and spin to win real rewards. Sign up with my link!",
           url: referralLink,
         });
       } catch {
@@ -116,13 +122,12 @@ export default function ReferralsPage() {
       <div className="max-w-5xl mx-auto space-y-6">
         {/* Header */}
         <div>
-          <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2 font-fredoka flex items-center gap-3">
+          <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2 font-sora flex items-center gap-3">
             <Gift className="h-8 w-8 text-secondary" />
             Refer &amp; Earn
           </h1>
           <p className="text-white/70">
-            Invite friends to Pazzell and earn bonus points once they&apos;re active
-            players.
+            Invite friends — 20 qualified referrals earns a 20% off code, 40 earns 50% off.
           </p>
         </div>
 
@@ -131,15 +136,16 @@ export default function ReferralsPage() {
           <Info className="h-5 w-5 text-secondary mt-0.5 flex-shrink-0" />
           <div className="text-sm text-white/80 space-y-1">
             <p>
-              <span className="text-secondary font-semibold">You earn +5 bonus points</span>{" "}
-              once your referred friend reaches 21 lifetime points — about 3 campaigns
-              completed.
+              A referral becomes <span className="text-secondary font-semibold">qualified</span>{" "}
+              once your friend verifies their email, completes their profile, and
+              finishes one full 5-ad watch cycle.
             </p>
             <p className="text-white/50 text-xs">
-              Referral bonus points are added to your weekly leaderboard total. A
-              referral shows as <span className="text-white/70">pending</span> until
-              your friend hits that threshold, then flips to{" "}
-              <span className="text-green-400">credited</span>.
+              {distanceTo20 > 0
+                ? `${distanceTo20} more qualified referral${distanceTo20 !== 1 ? "s" : ""} unlocks a 20% off code.`
+                : distanceTo40 > 0
+                  ? `20% off unlocked! ${distanceTo40} more unlocks a 50% off code.`
+                  : "Both the 20% and 50% off codes are unlocked!"}
             </p>
           </div>
         </div>
@@ -147,13 +153,12 @@ export default function ReferralsPage() {
         {/* Referral Link Card */}
         <Card className="bg-card/50 backdrop-blur-sm border-white/10">
           <CardHeader>
-            <CardTitle className="text-white font-fredoka text-xl flex items-center gap-2">
+            <CardTitle className="text-white font-sora text-xl flex items-center gap-2">
               <Share2 className="h-5 w-5 text-secondary" />
               Your Referral Link
             </CardTitle>
             <CardDescription className="text-white/70">
-              Share this link. You&apos;ll earn 5 bonus points once they reach 21
-              lifetime points (about 3 campaigns completed).
+              Share this link — qualified referrals count toward your 20%/50% off codes.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -182,7 +187,7 @@ export default function ReferralsPage() {
                   </Button>
                   <Button
                     onClick={shareReferralLink}
-                    className="bg-gradient-to-r from-secondary to-[#FF6B9D] text-white font-fredoka">
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground font-sora">
                     <Share2 className="h-4 w-4 mr-2" />
                     Share
                   </Button>
@@ -201,11 +206,11 @@ export default function ReferralsPage() {
                   <UserPlus className="h-5 w-5 text-secondary" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-white font-fredoka">
-                    {creditedCount}
+                  <p className="text-2xl font-bold text-white font-sora">
+                    {qualifiedCount}
                   </p>
                   <p className="text-xs text-white/60 uppercase tracking-wider">
-                    Credited Referrals
+                    Qualified Referrals
                   </p>
                 </div>
               </div>
@@ -219,11 +224,11 @@ export default function ReferralsPage() {
                   <Zap className="h-5 w-5 text-green-400" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-white font-fredoka">
-                    +{creditedPoints}
+                  <p className="text-2xl font-bold text-white font-sora">
+                    {distanceTo20 > 0 ? distanceTo20 : distanceTo40}
                   </p>
                   <p className="text-xs text-white/60 uppercase tracking-wider">
-                    Referral Points Earned
+                    To next {distanceTo20 > 0 ? "20% off" : "50% off"}
                   </p>
                 </div>
               </div>
@@ -237,11 +242,11 @@ export default function ReferralsPage() {
                   <Clock className="h-5 w-5 text-yellow-400" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-white font-fredoka">
+                  <p className="text-2xl font-bold text-white font-sora">
                     {pendingCount}
                   </p>
                   <p className="text-xs text-white/60 uppercase tracking-wider">
-                    Pending (not yet at 21 pts)
+                    Pending
                   </p>
                 </div>
               </div>
@@ -253,9 +258,9 @@ export default function ReferralsPage() {
         {referredUsers.length > 0 && (
           <Card className="bg-card/50 backdrop-blur-sm border-white/10">
             <CardHeader>
-              <CardTitle className="text-white font-fredoka flex items-center gap-2">
+              <CardTitle className="text-white font-sora flex items-center gap-2">
                 <UserPlus className="h-5 w-5 text-secondary" />
-                Credited Referrals
+                Qualified Referrals
               </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
@@ -289,7 +294,7 @@ export default function ReferralsPage() {
                       </div>
                     </div>
                     <Badge className="bg-green-500/20 text-green-400 border-green-500/30 border">
-                      +{ru.pointsAwarded} pts
+                      Qualified
                     </Badge>
                   </div>
                 ))}
@@ -302,7 +307,7 @@ export default function ReferralsPage() {
         {events.length > 0 && (
           <Card className="bg-card/50 backdrop-blur-sm border-white/10">
             <CardHeader>
-              <CardTitle className="text-white font-fredoka flex items-center gap-2">
+              <CardTitle className="text-white font-sora flex items-center gap-2">
                 <UserPlus className="h-5 w-5 text-secondary" />
                 Recent Activity
               </CardTitle>
@@ -319,8 +324,8 @@ export default function ReferralsPage() {
                       : "A friend");
                   const label =
                     event.type === "signup"
-                      ? `${name} signed up using your link — pending until they reach 21 points`
-                      : `${name} reached 21 points — you earned +5 pts`;
+                      ? `${name} signed up using your link — pending until they qualify`
+                      : `${name} qualified — one step closer to your next discount code`;
 
                   return (
                     <div
