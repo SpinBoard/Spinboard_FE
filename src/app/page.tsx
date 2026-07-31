@@ -137,7 +137,9 @@ export default function Home() {
                   { icon: "flash-flat-icon.png", title: "Try-Again Boards", desc: "Bank enough try-agains and spend them on a guaranteed-win board." },
                   { icon: "money-flat-icon.png", title: "Referral Program", desc: "20 qualified referrals earns 20% off, 40 earns 50% off." },
                 ].map((earning, index) => (
-                  <div key={index} className="bg-white/5 rounded-2xl p-6 text-center">
+                  <div
+                    key={index}
+                    className="bg-white/5 border border-white/10 rounded-2xl p-6 text-center transition-all duration-300 hover:-translate-y-3 hover:border-secondary hover:shadow-lg hover:shadow-secondary/20">
                     <div className="mb-4 flex justify-center">
                       <Image src={`/icons/${earning.icon}`} alt="" width={48} height={48} />
                     </div>
