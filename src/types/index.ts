@@ -43,6 +43,7 @@ export interface BrandProfileData {
   email: string;
   role: "brand";
   companyName: string;
+  avatar?: string;
   isVerified: boolean;
   createdAt: string;
   updatedAt: string;
@@ -271,7 +272,8 @@ export interface AdQuizSubmitResponse {
 }
 
 // §4 — ad campaigns (brand-facing)
-export type AdCampaignTier = "basic" | "premium" | "pro";
+// Per AD_CAMPAIGN_PRICING_AND_GOLIVE_UPDATE.md §1 — `pro` tier removed entirely.
+export type AdCampaignTier = "basic" | "premium";
 export type AdCampaignStatus = "draft" | "active" | "inactive";
 
 export interface AdCampaignQuestionInput {
@@ -291,10 +293,13 @@ export interface AdCampaign {
   videoDurationSeconds: number;
   questions: AdCampaignQuestionInput[]; // exactly 3
   tier: AdCampaignTier;
-  global?: boolean; // pro only
+  global?: boolean; // premium only (was pro only, pre-migration)
   status: AdCampaignStatus;
-  tierPriceUSD: number;
-  usdToNgnRateSnapshot: number;
+  // Unset on a fresh draft — only snapshotted once go-live payment succeeds
+  // (AD_CAMPAIGN_PRICING_AND_GOLIVE_UPDATE.md §2-3).
+  tierPriceUSD?: number;
+  usdToNgnRateSnapshot?: number;
+  numberOfWeeks?: number;
   activatedAt?: string;
   expiresAt?: string;
   createdAt: string;
@@ -324,6 +329,33 @@ export interface AdCampaignAnalytics {
 export interface AdCampaignAnalyticsResponse {
   success: true;
   analytics: AdCampaignAnalytics;
+}
+
+// Go-live payment — AD_CAMPAIGN_PRICING_AND_GOLIVE_UPDATE.md §3. Tier is fixed
+// at creation time; only the number of weeks (and resulting cost) is chosen here.
+export interface AdPaymentInitializeRequest {
+  campaignId: string;
+  email: string;
+  numberOfWeeks: number;
+}
+
+export interface AdPaymentInitializeResponse {
+  success: true;
+  data: {
+    authorization_url: string;
+    access_code: string;
+    reference: string;
+    numberOfWeeks: number;
+    amount: number;
+    currency: string;
+  };
+}
+
+// Error shape when go-live is blocked by an incomplete brand profile (§3, §6).
+export interface ProfileIncompleteError {
+  success: false;
+  message: string;
+  code: "PROFILE_INCOMPLETE";
 }
 
 // §5 — spin & prize system
@@ -437,4 +469,44 @@ export interface MarketplaceOrdersResponse {
 export interface MarketplaceOrderVerifyResponse {
   success: true;
   order: MarketplaceOrder;
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Settings — AD_CAMPAIGN_PRICING_AND_GOLIVE_UPDATE.md §5 (GET /settings)
+// ─────────────────────────────────────────────────────────────────────────
+
+export interface SettingsNotificationPrefs {
+  emailNotifications: boolean;
+  referralBonusAlerts: boolean;
+  leaderboardUpdates: boolean;
+  newCampaignAlerts: boolean;
+  weeklyDigest: boolean;
+}
+
+export interface BrandSettings {
+  role: "brand";
+  email: string;
+  hasPassword: boolean;
+  isVerified: boolean;
+  notifications: SettingsNotificationPrefs;
+  account: { companyName?: string; avatar?: string };
+  profileComplete: boolean;
+}
+
+export interface GamerSettings {
+  role: "gamer";
+  email: string;
+  hasPassword: boolean;
+  isVerified: boolean;
+  notifications: SettingsNotificationPrefs;
+  account: { firstName?: string; lastName?: string; username?: string; avatar?: string };
+  privacy: { showOnLeaderboard: boolean };
+  profileComplete: boolean;
+}
+
+export type Settings = BrandSettings | GamerSettings;
+
+export interface SettingsResponse {
+  success: true;
+  settings: Settings;
 }

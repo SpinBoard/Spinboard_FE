@@ -38,7 +38,7 @@ export default function CampaignAnalyticsPage() {
       <MainLayout maxWidth="2xl">
         <div className="text-center py-16 space-y-4">
           <Lock className="h-10 w-10 text-muted-foreground mx-auto" />
-          <h1 className="font-sora text-2xl font-bold text-foreground">Analytics is a Premium/Pro feature</h1>
+          <h1 className="font-sora text-2xl font-bold text-foreground">Analytics is a Premium feature</h1>
           <p className="text-muted-foreground">Upgrade this campaign&apos;s tier to unlock views, completions, and demographics.</p>
           <Link href={routes.BRAND.CAMPAIGNS}>
             <Button variant="outline" className="border-border text-foreground hover:bg-white/10">

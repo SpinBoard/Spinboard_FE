@@ -10,7 +10,8 @@ import {
   Loader2, 
   CreditCard,
   ArrowLeft,
-  ExternalLink
+  ExternalLink,
+  LogIn
 } from 'lucide-react'
 import Link from 'next/link'
 import { routes } from '@/app/_utils/routes'
@@ -35,7 +36,9 @@ function PaymentVerify() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const user = useAtomValue(userAtom)
-  const [verificationStatus, setVerificationStatus] = useState<'loading' | 'success' | 'failed'>('loading')
+  const [verificationStatus, setVerificationStatus] = useState<
+    'loading' | 'success' | 'failed' | 'unauthenticated'
+  >('loading')
   const [paymentData, setPaymentData] = useState<PaymentVerificationResponse | null>(null)
 
   const reference = searchParams.get('reference')
@@ -64,13 +67,26 @@ function PaymentVerify() {
     },
   })
 
+  // Bug fix: previously, when `reference`/`trxref` were present but
+  // `user?.accessToken` wasn't (e.g. this tab has no session at all — most
+  // commonly because Paystack's callback_url points at a different origin
+  // than the one the brand was actually logged into, so localStorage here
+  // is empty), neither branch below fired and the page stayed stuck on
+  // "Verifying Payment..." forever with no error and no network call ever
+  // made. Now every code path resolves to a terminal status.
   useEffect(() => {
-    if (reference && trxref && user?.accessToken) {
-      verifyPaymentMutation.mutate()
-    } else if (!reference || !trxref) {
+    if (!reference || !trxref) {
       setVerificationStatus('failed')
+      return
     }
+    if (!user?.accessToken) {
+      setVerificationStatus('unauthenticated')
+      return
+    }
+    verifyPaymentMutation.mutate()
   }, [reference, trxref, user?.accessToken])
+
+  const loginReturnTo = `${routes.PAYMENT_VERIFY}?${searchParams.toString()}`
 
   const handleReturnToCampaigns = () => {
     router.push(user?.userType === 'brand' ? routes.BRAND.CAMPAIGNS : routes.WATCH)
@@ -99,18 +115,26 @@ function PaymentVerify() {
                   <AlertCircle className="w-8 h-8 text-red-400" />
                 </div>
               )}
+              {verificationStatus === 'unauthenticated' && (
+                <div className="w-16 h-16 bg-yellow-500/20 rounded-full flex items-center justify-center">
+                  <LogIn className="w-8 h-8 text-yellow-400" />
+                </div>
+              )}
             </div>
-            
+
             <CardTitle className="text-white font-fredoka text-2xl mb-2">
               {verificationStatus === 'loading' && 'Verifying Payment...'}
               {verificationStatus === 'success' && 'Payment Successful!'}
               {verificationStatus === 'failed' && 'Payment Verification Failed'}
+              {verificationStatus === 'unauthenticated' && 'Log In to Verify Your Payment'}
             </CardTitle>
-            
+
             <p className="text-white/70">
               {verificationStatus === 'loading' && 'Please wait while we confirm your payment'}
               {verificationStatus === 'success' && 'Your payment has been processed successfully'}
               {verificationStatus === 'failed' && 'There was an issue verifying your payment'}
+              {verificationStatus === 'unauthenticated' &&
+                "We couldn't find your session in this browser tab"}
             </p>
           </CardHeader>
 
@@ -189,6 +213,20 @@ function PaymentVerify() {
               </div>
             )}
 
+            {/* Unauthenticated State */}
+            {verificationStatus === 'unauthenticated' && (
+              <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4">
+                <div className="flex items-center gap-2 text-yellow-400 mb-2">
+                  <LogIn className="w-4 h-4" />
+                  <span className="font-semibold">Not logged in here</span>
+                </div>
+                <p className="text-yellow-100/80 text-sm">
+                  Your payment reference is saved below — log in and we&apos;ll verify it right
+                  away. Nothing was charged twice; this is just a browser session issue.
+                </p>
+              </div>
+            )}
+
             {/* Loading State */}
             {verificationStatus === 'loading' && (
               <div className="text-center py-8">
@@ -202,15 +240,24 @@ function PaymentVerify() {
 
             {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row gap-3 pt-4">
-              <Button 
-                onClick={handleReturnToCampaigns}
-                className="flex-1 bg-secondary hover:bg-secondary/80 text-secondary-foreground font-fredoka"
-              >
-                {verificationStatus === 'success' ? 'View Campaigns' : 'Return to Campaigns'}
-              </Button>
-              
+              {verificationStatus === 'unauthenticated' ? (
+                <Link href={`${routes.LOGIN}?returnTo=${encodeURIComponent(loginReturnTo)}`} className="flex-1">
+                  <Button className="w-full bg-secondary hover:bg-secondary/80 text-secondary-foreground font-fredoka">
+                    <LogIn className="w-4 h-4 mr-2" />
+                    Log In to Verify
+                  </Button>
+                </Link>
+              ) : (
+                <Button
+                  onClick={handleReturnToCampaigns}
+                  className="flex-1 bg-secondary hover:bg-secondary/80 text-secondary-foreground font-fredoka"
+                >
+                  {verificationStatus === 'success' ? 'View Campaigns' : 'Return to Campaigns'}
+                </Button>
+              )}
+
               {verificationStatus === 'failed' && (
-                <Button 
+                <Button
                   onClick={() => window.location.reload()}
                   variant="outline"
                   className="flex-1 border-white/20 text-white hover:bg-white/10"

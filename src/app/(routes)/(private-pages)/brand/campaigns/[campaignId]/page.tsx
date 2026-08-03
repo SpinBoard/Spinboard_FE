@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
@@ -10,10 +11,11 @@ import { PageError } from "@/components/ui/page-error";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, BarChart3, Clock, Globe2, HelpCircle } from "lucide-react";
+import { ArrowLeft, BarChart3, Clock, Globe2, HelpCircle, Rocket } from "lucide-react";
 import Link from "next/link";
 import { routes } from "@/app/_utils/routes";
 import { AdCampaign, AdCampaignResponse } from "@/types";
+import { GoLiveDialog } from "@/components/brand/go-live-dialog";
 
 function daysLeft(expiresAt?: string): number | null {
   if (!expiresAt) return null;
@@ -24,6 +26,7 @@ function daysLeft(expiresAt?: string): number | null {
 export default function ViewCampaignPage() {
   const params = useParams();
   const campaignId = params.campaignId as string;
+  const [showGoLive, setShowGoLive] = useState(false);
 
   const {
     data: campaign,
@@ -69,13 +72,21 @@ export default function ViewCampaignPage() {
             <h1 className="text-2xl font-bold text-foreground font-sora">{campaign.title}</h1>
             <p className="text-muted-foreground">{campaign.description}</p>
           </div>
-          {(campaign.tier === "premium" || campaign.tier === "pro") && (
+          {campaign.tier === "premium" && (
             <Link href={routes.BRAND.CAMPAIGN_ANALYTICS(campaignId)}>
               <Button variant="outline" className="border-border text-foreground hover:bg-white/10">
                 <BarChart3 className="h-4 w-4 mr-2" />
                 Analytics
               </Button>
             </Link>
+          )}
+          {campaign.status === "draft" && (
+            <Button
+              className="bg-primary hover:bg-primary/90 text-primary-foreground"
+              onClick={() => setShowGoLive(true)}>
+              <Rocket className="h-4 w-4 mr-2" />
+              Go Live
+            </Button>
           )}
         </div>
 
@@ -133,6 +144,8 @@ export default function ViewCampaignPage() {
           </div>
         </CardContent>
       </Card>
+
+      <GoLiveDialog campaign={campaign} open={showGoLive} onOpenChange={setShowGoLive} />
     </MainLayout>
   );
 }

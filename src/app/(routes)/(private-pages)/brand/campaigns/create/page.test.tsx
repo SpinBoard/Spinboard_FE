@@ -38,8 +38,16 @@ vi.mock("axios", () => {
   const post = vi.fn((url: string, body: unknown) => {
     if (url.includes("/ad-campaigns")) {
       hoisted.capturedFormData = body as FormData;
+      const formData = body as FormData;
       return Promise.resolve({
-        data: { success: true, campaign: { _id: "camp1", tier: "basic" } },
+        data: {
+          success: true,
+          campaign: {
+            _id: "camp1",
+            title: formData.get("title"),
+            tier: formData.get("tier"),
+          },
+        },
       });
     }
     if (url.includes("/ad-payments/initialize")) {
@@ -132,23 +140,20 @@ describe("CreateCampaignWizardPage", () => {
     expect(await screen.findAllByText(/at least 3 characters|at least 10 characters/i)).not.toHaveLength(0);
   });
 
-  it("shows the tier comparison with prices and benefit checkmarks", async () => {
+  it("shows the tier comparison with weekly prices and benefit checkmarks", async () => {
     const user = userEvent.setup();
     renderWizard();
     await advanceThroughDetailsVideoQuiz(user);
 
     const basicCard = screen.getByTestId("tier-card-basic");
     const premiumCard = screen.getByTestId("tier-card-premium");
-    const proCard = screen.getByTestId("tier-card-pro");
 
-    expect(basicCard).toHaveTextContent("$20");
-    expect(premiumCard).toHaveTextContent("$30");
-    expect(proCard).toHaveTextContent("$50");
-    expect(premiumCard).toHaveTextContent("2x display weight");
-    expect(proCard).toHaveTextContent("3x display weight");
+    expect(basicCard).toHaveTextContent("$10");
+    expect(premiumCard).toHaveTextContent("$15");
+    expect(screen.queryByTestId("tier-card-pro")).not.toBeInTheDocument();
   }, 20000);
 
-  it("only shows the global-visibility toggle for the Pro tier", async () => {
+  it("only shows the global-visibility toggle for the Premium tier", async () => {
     const user = userEvent.setup();
     renderWizard();
     await advanceThroughDetailsVideoQuiz(user);
@@ -156,13 +161,10 @@ describe("CreateCampaignWizardPage", () => {
     expect(screen.queryByLabelText(/show globally/i)).not.toBeInTheDocument();
 
     await user.click(screen.getByTestId("tier-card-premium"));
-    expect(screen.queryByLabelText(/show globally/i)).not.toBeInTheDocument();
-
-    await user.click(screen.getByTestId("tier-card-pro"));
     expect(screen.getByLabelText(/show globally/i)).toBeInTheDocument();
   }, 20000);
 
-  it("creates the campaign as a draft, then offers to pay now with the tier price", async () => {
+  it("creates the campaign as a draft with no price shown, then offers to go live", async () => {
     const user = userEvent.setup();
     renderWizard();
     await advanceThroughDetailsVideoQuiz(user);
@@ -171,7 +173,7 @@ describe("CreateCampaignWizardPage", () => {
     await user.click(screen.getByRole("button", { name: /next/i }));
 
     await screen.findByRole("heading", { name: /^review$/i });
-    expect(screen.getByText("$30")).toBeInTheDocument();
+    expect(screen.queryByText(/total to pay/i)).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: /create campaign/i }));
 
     await user.click(await screen.findByRole("button", { name: /create draft/i }));
@@ -185,11 +187,15 @@ describe("CreateCampaignWizardPage", () => {
     expect(fd.has("global")).toBe(false);
     expect(JSON.parse(fd.get("questions") as string)).toHaveLength(3);
 
-    await user.click(await screen.findByRole("button", { name: /pay now/i }));
+    await user.click(await screen.findByRole("button", { name: /go live now/i }));
+
+    // Go-live dialog opens with a weeks picker; proceeding sends numberOfWeeks.
+    await user.click(await screen.findByRole("button", { name: /proceed to payment/i }));
 
     await waitFor(() =>
-      expect(hoisted.paymentInitCalls).toEqual([{ campaignId: "camp1", email: "brand@test.com" }])
+      expect(hoisted.paymentInitCalls).toEqual([
+        { campaignId: "camp1", email: "brand@test.com", numberOfWeeks: 1 },
+      ])
     );
-    await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/brand/campaigns"));
   }, 30000);
 });

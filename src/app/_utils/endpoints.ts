@@ -22,6 +22,7 @@ export const ENDPOINTS = {
   USER_ME: "/user/me",
 
   // User settings
+  SETTINGS: "/settings",
   CHANGE_PASSWORD: "/profile/change-password",
   UPDATE_NOTIFICATIONS: "/profile/notifications",
   UPDATE_PRIVACY: "/profile/privacy",

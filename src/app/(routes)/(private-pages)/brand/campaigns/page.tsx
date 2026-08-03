@@ -16,15 +16,13 @@ import {
   Eye,
   Target,
   Clock,
-  CreditCard,
-  Loader2,
+  Rocket,
   BarChart3,
   Globe2,
 } from "lucide-react";
 import Link from "next/link";
 import { routes } from "@/app/_utils/routes";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { isAxiosError } from "axios";
+import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { ENDPOINTS } from "@/app/_utils/endpoints";
 import { AdCampaign, AdCampaignsResponse } from "@/types";
@@ -32,7 +30,7 @@ import { useAtomValue } from "jotai";
 import { userAtom } from "@/atom/user";
 import { PageLoader } from "@/components/ui/page-loader";
 import { PageError } from "@/components/ui/page-error";
-import { toast } from "sonner";
+import { GoLiveDialog } from "@/components/brand/go-live-dialog";
 
 const STATUS_STYLES: Record<AdCampaign["status"], string> = {
   draft: "bg-white/10 text-muted-foreground border-white/20",
@@ -50,7 +48,7 @@ export default function BrandCampaignsPage() {
   const user = useAtomValue(userAtom);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | AdCampaign["status"]>("all");
-  const [payingId, setPayingId] = useState<string | null>(null);
+  const [goLiveCampaign, setGoLiveCampaign] = useState<AdCampaign | null>(null);
 
   const {
     data: campaigns,
@@ -62,29 +60,6 @@ export default function BrandCampaignsPage() {
       api.get<AdCampaignsResponse>(ENDPOINTS.AD_CAMPAIGNS_MINE).then((res) => res.data.campaigns),
     enabled: !!user?.accessToken,
   });
-
-  const initializePayment = useMutation({
-    mutationFn: (payload: { campaignId: string; email: string }) =>
-      api.post(ENDPOINTS.AD_PAYMENTS_INITIALIZE, payload),
-    onSuccess: (response) => {
-      const authorizationUrl = (response.data as { data?: { authorization_url?: string } })
-        ?.data?.authorization_url;
-      if (authorizationUrl) window.open(authorizationUrl, "_blank");
-    },
-    onError: (error) => {
-      const message = isAxiosError(error)
-        ? (error.response?.data as { message?: string } | undefined)?.message
-        : undefined;
-      toast.error(message || "Failed to start payment");
-    },
-    onSettled: () => setPayingId(null),
-  });
-
-  const handlePayNow = (campaign: AdCampaign) => {
-    if (!user?.email) return;
-    setPayingId(campaign._id);
-    initializePayment.mutate({ campaignId: campaign._id, email: user.email });
-  };
 
   const filteredCampaigns = useMemo(() => {
     if (!campaigns) return [];
@@ -176,7 +151,7 @@ export default function BrandCampaignsPage() {
                   {campaign.status === "active" && remaining !== null && (
                     <div className="flex items-center gap-1.5">
                       <Clock className="h-3.5 w-3.5 text-secondary" />
-                      {remaining} day{remaining !== 1 ? "s" : ""} left of 30
+                      {remaining} day{remaining !== 1 ? "s" : ""} left
                     </div>
                   )}
                   {campaign.global && (
@@ -194,7 +169,7 @@ export default function BrandCampaignsPage() {
                       View
                     </Button>
                   </Link>
-                  {(campaign.tier === "premium" || campaign.tier === "pro") && (
+                  {campaign.tier === "premium" && (
                     <Link href={routes.BRAND.CAMPAIGN_ANALYTICS(campaign._id)} className="flex-1">
                       <Button variant="outline" size="sm" className="w-full border-border text-foreground hover:bg-white/10">
                         <BarChart3 className="h-3.5 w-3.5 mr-1.5" />
@@ -206,16 +181,9 @@ export default function BrandCampaignsPage() {
                     <Button
                       size="sm"
                       className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground"
-                      disabled={initializePayment.isPending && payingId === campaign._id}
-                      onClick={() => handlePayNow(campaign)}>
-                      {initializePayment.isPending && payingId === campaign._id ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      ) : (
-                        <>
-                          <CreditCard className="h-3.5 w-3.5 mr-1.5" />
-                          Pay Now
-                        </>
-                      )}
+                      onClick={() => setGoLiveCampaign(campaign)}>
+                      <Rocket className="h-3.5 w-3.5 mr-1.5" />
+                      Go Live
                     </Button>
                   )}
                 </div>
@@ -244,6 +212,12 @@ export default function BrandCampaignsPage() {
           </Link>
         </div>
       )}
+
+      <GoLiveDialog
+        campaign={goLiveCampaign}
+        open={!!goLiveCampaign}
+        onOpenChange={(open) => !open && setGoLiveCampaign(null)}
+      />
     </div>
   );
 }

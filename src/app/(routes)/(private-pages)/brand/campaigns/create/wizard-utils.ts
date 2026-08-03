@@ -100,28 +100,27 @@ export function validateQuizQuestions(
   return { valid: true };
 }
 
-export type AdCampaignTierId = "basic" | "premium" | "pro";
+// `pro` tier removed entirely (AD_CAMPAIGN_PRICING_AND_GOLIVE_UPDATE.md §1).
+export type AdCampaignTierId = "basic" | "premium";
 
 export interface TierMeta {
   id: AdCampaignTierId;
   name: string;
-  priceUSD: number;
-  displayWeight: string;
+  priceUSD: number; // USD per week
   analytics: boolean;
   globalToggle: boolean;
   blurb: string;
 }
 
-// Prices/weights here are display fallbacks — the wizard prefers live
-// values from GET /admin/config (campaign.tierPrices / campaign.tierWeights)
-// via useAdminConfig, never hardcoding what the contract calls out as
-// admin-adjustable (§10).
+// Prices here are display fallbacks — the wizard prefers live values from
+// GET /admin/config (campaign.tierPrices) via useAdminConfig, never
+// hardcoding what the contract calls out as admin-adjustable (§10). Total
+// cost = priceUSD × numberOfWeeks, chosen later at go-live time, not here.
 export const TIER_META: TierMeta[] = [
   {
     id: "basic",
     name: "Basic",
-    priceUSD: 20,
-    displayWeight: "1x",
+    priceUSD: 10,
     analytics: false,
     globalToggle: false,
     blurb: "Standard rotation in your home country.",
@@ -129,20 +128,10 @@ export const TIER_META: TierMeta[] = [
   {
     id: "premium",
     name: "Premium",
-    priceUSD: 30,
-    displayWeight: "2x",
-    analytics: true,
-    globalToggle: false,
-    blurb: "2x display weight + full analytics.",
-  },
-  {
-    id: "pro",
-    name: "Pro",
-    priceUSD: 50,
-    displayWeight: "3x",
+    priceUSD: 15,
     analytics: true,
     globalToggle: true,
-    blurb: "3x display weight, analytics, and optional global visibility.",
+    blurb: "Full analytics, plus the option to go global.",
   },
 ];
 
@@ -157,8 +146,9 @@ export interface AdCampaignWizardData {
   global?: boolean;
 }
 
-// Builds the multipart body matching API_CONTRACT_ADS_REWARD_PLATFORM.md §4
-// (POST /ad-campaigns). `global` is only meaningful (and only sent) for Pro.
+// Builds the multipart body matching AD_CAMPAIGN_PRICING_AND_GOLIVE_UPDATE.md
+// §3 (POST /ad-campaigns). `global` is only meaningful (and only sent) for
+// Premium — pricing/weeks are chosen later, at go-live, not here.
 export function buildAdCampaignFormData(data: AdCampaignWizardData): FormData {
   const formData = new FormData();
   formData.append("title", data.title);
@@ -169,7 +159,7 @@ export function buildAdCampaignFormData(data: AdCampaignWizardData): FormData {
   formData.append("video", data.video);
   formData.append("questions", JSON.stringify(data.questions));
   formData.append("tier", data.tier);
-  if (data.tier === "pro" && data.global) {
+  if (data.tier === "premium" && data.global) {
     formData.append("global", String(data.global));
   }
   return formData;

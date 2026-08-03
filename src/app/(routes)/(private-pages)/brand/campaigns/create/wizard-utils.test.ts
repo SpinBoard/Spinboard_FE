@@ -84,20 +84,23 @@ describe("validateQuizQuestions", () => {
 });
 
 describe("TIER_META", () => {
-  it("prices tiers at $20 / $30 / $50", () => {
-    expect(TIER_META.map((t) => t.priceUSD)).toEqual([20, 30, 50]);
+  it("prices tiers at $10 / $15 per week", () => {
+    expect(TIER_META.map((t) => t.priceUSD)).toEqual([10, 15]);
   });
 
-  it("only grants analytics to premium and pro", () => {
+  it("only grants analytics to premium", () => {
     expect(TIER_META.find((t) => t.id === "basic")?.analytics).toBe(false);
     expect(TIER_META.find((t) => t.id === "premium")?.analytics).toBe(true);
-    expect(TIER_META.find((t) => t.id === "pro")?.analytics).toBe(true);
   });
 
-  it("only grants the global-visibility toggle to pro", () => {
+  it("only grants the global-visibility toggle to premium", () => {
     expect(TIER_META.find((t) => t.id === "basic")?.globalToggle).toBe(false);
-    expect(TIER_META.find((t) => t.id === "premium")?.globalToggle).toBe(false);
-    expect(TIER_META.find((t) => t.id === "pro")?.globalToggle).toBe(true);
+    expect(TIER_META.find((t) => t.id === "premium")?.globalToggle).toBe(true);
+  });
+
+  it("has no pro tier", () => {
+    expect(TIER_META).toHaveLength(2);
+    expect(TIER_META.map((t) => t.id)).toEqual(["basic", "premium"]);
   });
 });
 
@@ -133,13 +136,13 @@ describe("buildAdCampaignFormData", () => {
     expect(questions[0]).toEqual(baseData.questions[0]);
   });
 
-  it("omits `global` for non-pro tiers even if the flag is set", () => {
-    const fd = buildAdCampaignFormData({ ...baseData, tier: "premium", global: true });
+  it("omits `global` for basic even if the flag is set", () => {
+    const fd = buildAdCampaignFormData({ ...baseData, tier: "basic", global: true });
     expect(fd.has("global")).toBe(false);
   });
 
-  it("includes `global` only for pro when set", () => {
-    const fd = buildAdCampaignFormData({ ...baseData, tier: "pro", global: true });
+  it("includes `global` only for premium when set", () => {
+    const fd = buildAdCampaignFormData({ ...baseData, tier: "premium", global: true });
     expect(fd.get("global")).toBe("true");
   });
 

@@ -37,6 +37,7 @@ export const routes = {
   // Brand Routes
   BRAND: {
     DASHBOARD: "/brand/dashboard",
+    PROFILE: "/brand/profile",
     PROFILE_COMPLETE: "/brand/profile/complete",
     CAMPAIGNS: "/brand/campaigns",
     CAMPAIGNS_CREATE: "/brand/campaigns/create",

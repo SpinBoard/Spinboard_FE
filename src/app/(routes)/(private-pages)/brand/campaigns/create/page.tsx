@@ -5,9 +5,8 @@ import { useRouter } from "next/navigation";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
-import { useAtomValue } from "jotai";
 import Link from "next/link";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -48,18 +47,17 @@ import {
   FileText,
   HelpCircle,
   Loader2,
-  CreditCard,
   Save,
   X,
   Globe,
-  BarChart3,
+  Rocket,
 } from "lucide-react";
 import { routes } from "@/app/_utils/routes";
 import { ENDPOINTS } from "@/app/_utils/endpoints";
 import { api } from "@/lib/api";
 import { useAdminConfig } from "@/hooks/use-admin-config";
-import { userAtom } from "@/atom/user";
-import { AdCampaignResponse } from "@/types";
+import { AdCampaign, AdCampaignResponse } from "@/types";
+import { GoLiveDialog } from "@/components/brand/go-live-dialog";
 import {
   QUIZ_QUESTION_COUNT,
   TIER_META,
@@ -94,7 +92,7 @@ const wizardSchema = z.object({
       QUIZ_QUESTION_COUNT,
       `Exactly ${QUIZ_QUESTION_COUNT} quiz questions are required`
     ),
-  tier: z.enum(["basic", "premium", "pro"]),
+  tier: z.enum(["basic", "premium"]),
   global: z.boolean(),
 });
 
@@ -118,7 +116,7 @@ const emptyQuestion = () => ({
 
 export default function CreateCampaignWizardPage() {
   const router = useRouter();
-  const user = useAtomValue(userAtom);
+  const queryClient = useQueryClient();
   const { get: getConfig } = useAdminConfig();
   const tierPrices = getConfig("campaign.tierPrices");
 
@@ -128,10 +126,10 @@ export default function CreateCampaignWizardPage() {
   const [videoError, setVideoError] = useState<string>("");
   const [videoChecking, setVideoChecking] = useState(false);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
-  const [createdCampaignId, setCreatedCampaignId] = useState<string | null>(null);
+  const [createdCampaign, setCreatedCampaign] = useState<AdCampaign | null>(null);
   const [apiError, setApiError] = useState<string>("");
   const [uploadProgress, setUploadProgress] = useState<number>(0);
-  const [payAction, setPayAction] = useState<"idle" | "paying">("idle");
+  const [showGoLive, setShowGoLive] = useState(false);
 
   const form = useForm<WizardFormData>({
     resolver: zodResolver(wizardSchema),
@@ -167,7 +165,12 @@ export default function CreateCampaignWizardPage() {
       }),
     onSuccess: (response) => {
       if (!response.data.success) return;
-      setCreatedCampaignId(response.data.campaign._id);
+      setCreatedCampaign(response.data.campaign);
+      // Without this, the campaigns list keeps serving its cached result
+      // (staleTime is 5 minutes globally, see src/lib/query-client.ts) and
+      // a brand landing back on /brand/campaigns right after creating a
+      // draft won't see it until the cache naturally expires.
+      queryClient.invalidateQueries({ queryKey: ["ad-campaigns-mine"] });
     },
     onError: (error) => {
       const message = isAxiosError(error)
@@ -176,24 +179,6 @@ export default function CreateCampaignWizardPage() {
       setApiError(message || "Failed to create campaign. Please try again.");
       setShowSubmitModal(false);
       setUploadProgress(0);
-    },
-  });
-
-  const initializePayment = useMutation({
-    mutationFn: async (payload: { campaignId: string; email: string }) =>
-      api.post(ENDPOINTS.AD_PAYMENTS_INITIALIZE, payload),
-    onSuccess: (response) => {
-      const authorizationUrl = (response.data as { data?: { authorization_url?: string } })
-        ?.data?.authorization_url;
-      if (authorizationUrl) window.open(authorizationUrl, "_blank");
-      setShowSubmitModal(false);
-      router.push(routes.BRAND.CAMPAIGNS);
-    },
-    onError: () => {
-      setPayAction("idle");
-      setApiError(
-        "Failed to start payment. Your campaign was saved as a draft — you can pay from the campaigns list."
-      );
     },
   });
 
@@ -254,15 +239,9 @@ export default function CreateCampaignWizardPage() {
       video: data.video,
       questions: data.questions,
       tier: data.tier,
-      global: data.tier === "pro" ? data.global : false,
+      global: data.tier === "premium" ? data.global : false,
     });
     createCampaignMutation.mutate(formData);
-  };
-
-  const handlePayNow = () => {
-    if (!createdCampaignId || !user?.email) return;
-    setPayAction("paying");
-    initializePayment.mutate({ campaignId: createdCampaignId, email: user.email });
   };
 
   return (
@@ -537,11 +516,12 @@ export default function CreateCampaignWizardPage() {
               <CardHeader>
                 <CardTitle className="text-foreground font-sora">Choose your tier</CardTitle>
                 <p className="text-muted-foreground text-sm">
-                  Higher tiers get shown more often and unlock analytics.
+                  Premium unlocks analytics and global visibility. You&apos;ll pick how many
+                  weeks to run this campaign — and pay — when you go live.
                 </p>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {TIER_META.map((t) => (
                     <button
                       type="button"
@@ -554,12 +534,10 @@ export default function CreateCampaignWizardPage() {
                       <h4 className="font-sora font-bold text-lg text-foreground">{t.name}</h4>
                       <p className="text-2xl font-bold text-primary my-1">
                         ${tierPrices?.[t.id] ?? t.priceUSD}
+                        <span className="text-sm font-normal text-muted-foreground">/week</span>
                       </p>
                       <p className="text-xs text-muted-foreground mb-3">{t.blurb}</p>
                       <ul className="space-y-1 text-xs text-muted-foreground">
-                        <li className="flex items-center gap-1.5">
-                          <BarChart3 className="h-3 w-3" /> {t.displayWeight} display weight
-                        </li>
                         <li className="flex items-center gap-1.5">
                           <CheckCircle className={`h-3 w-3 ${t.analytics ? "text-success" : "opacity-30"}`} />
                           Analytics dashboard
@@ -619,9 +597,9 @@ export default function CreateCampaignWizardPage() {
                     <span className="text-foreground">{global ? "Global" : "Home country only"}</span>
                   </div>
                 )}
-                <div className="flex justify-between border-t border-border pt-3">
-                  <span className="text-foreground font-semibold">Total to Pay</span>
-                  <span className="text-primary font-bold text-xl font-sora">${priceUSD}</span>
+                <div className="border-t border-border pt-3 text-xs text-muted-foreground">
+                  This creates your campaign as a draft at ${priceUSD}/week. You&apos;ll choose
+                  how many weeks to run it — and pay — when you go live.
                 </div>
               </CardContent>
             </Card>
@@ -669,17 +647,15 @@ export default function CreateCampaignWizardPage() {
         </form>
       </Form>
 
-      <Dialog
-        open={showSubmitModal}
-        onOpenChange={(open) => !isSubmitting && !initializePayment.isPending && setShowSubmitModal(open)}>
+      <Dialog open={showSubmitModal} onOpenChange={(open) => !isSubmitting && setShowSubmitModal(open)}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="font-sora text-xl">
-              {createdCampaignId ? "Pay to activate" : "Create Ad Campaign"}
+              {createdCampaign ? "Campaign created" : "Create Ad Campaign"}
             </DialogTitle>
             <DialogDescription>
-              {createdCampaignId
-                ? `Your campaign is saved as a draft. Pay $${priceUSD} to activate it for 30 days.`
+              {createdCampaign
+                ? "Your campaign is saved as a draft. Go live anytime to choose how many weeks to run it and pay."
                 : "This creates your campaign as a draft."}
             </DialogDescription>
           </DialogHeader>
@@ -692,7 +668,7 @@ export default function CreateCampaignWizardPage() {
               </div>
             )}
 
-            {!createdCampaignId ? (
+            {!createdCampaign ? (
               <>
                 <Button
                   onClick={handleCreate}
@@ -712,28 +688,34 @@ export default function CreateCampaignWizardPage() {
             ) : (
               <>
                 <Button
-                  onClick={handlePayNow}
-                  disabled={payAction === "paying"}
+                  onClick={() => {
+                    setShowSubmitModal(false);
+                    setShowGoLive(true);
+                  }}
                   className="w-full bg-primary hover:bg-primary/90 text-primary-foreground h-12 flex items-center justify-center gap-3">
-                  {payAction === "paying" ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <CreditCard className="h-4 w-4" />
-                  )}
-                  Pay Now
+                  <Rocket className="h-4 w-4" />
+                  Go Live Now
                 </Button>
                 <Button
                   onClick={() => router.push(routes.BRAND.CAMPAIGNS)}
-                  disabled={payAction === "paying"}
                   variant="outline"
                   className="w-full border-border text-foreground hover:bg-white/10">
-                  I&apos;ll pay later
+                  I&apos;ll do this later
                 </Button>
               </>
             )}
           </div>
         </DialogContent>
       </Dialog>
+
+      <GoLiveDialog
+        campaign={createdCampaign}
+        open={showGoLive}
+        onOpenChange={(open) => {
+          setShowGoLive(open);
+          if (!open) router.push(routes.BRAND.CAMPAIGNS);
+        }}
+      />
     </div>
   );
 }

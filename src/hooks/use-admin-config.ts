@@ -12,14 +12,16 @@ import { AdminConfigResponse } from "@/types";
 export const ADMIN_CONFIG_DEFAULTS = {
   "video.maxDurationSeconds": 95,
   "video.maxSizeBytes": 100 * 1024 * 1024,
-  "campaign.tierPrices": { basic: 20, premium: 30, pro: 50 } as Record<
-    "basic" | "premium" | "pro",
+  // USD per week now (AD_CAMPAIGN_PRICING_AND_GOLIVE_UPDATE.md §1) — `pro`
+  // tier removed. Total cost = rate × numberOfWeeks, chosen at go-live time.
+  "campaign.tierPrices": { basic: 10, premium: 15 } as Record<
+    "basic" | "premium",
     number
   >,
   "payment.usdToNgnRate": 1600,
   "campaign.activeDays": 30,
-  "campaign.tierWeights": { basic: 1, premium: 2, pro: 3 } as Record<
-    "basic" | "premium" | "pro",
+  "campaign.tierWeights": { basic: 1, premium: 2 } as Record<
+    "basic" | "premium",
     number
   >,
   "spin.adsPerCycle": 5,

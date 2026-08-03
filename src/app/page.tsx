@@ -162,7 +162,7 @@ export default function Home() {
             <div className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
               {[
                 { num: "1", title: "Upload Your Ad", desc: "A ~90-second video plus a 3-question quiz — that's the whole campaign." },
-                { num: "2", title: "Pick a Tier", desc: "Basic, Premium, or Pro — higher tiers get shown more and unlock analytics." },
+                { num: "2", title: "Pick a Tier", desc: "Basic or Premium — Premium gets more visibility and unlocks analytics." },
                 { num: "3", title: "Track Performance", desc: "Views, completions, per-question correctness, and viewer demographics." },
               ].map((step, index) => (
                 <div
@@ -188,7 +188,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-[5%] grid md:grid-cols-2 gap-8">
           {[
             { icon: "money-flat-icon.png", title: "Real Rewards, Fast Payouts", desc: "Cash wins land straight in your wallet — withdraw whenever you like." },
-            { icon: "chart-flat-icon.png", title: "Real Tier Analytics", desc: "Premium and Pro brands see views, completions, and demographics live." },
+            { icon: "chart-flat-icon.png", title: "Real Tier Analytics", desc: "Premium brands see views, completions, and demographics live." },
             { icon: "target-flat-icon.png", title: "Genuine Engagement", desc: "Every quiz answer is a real interaction, not a passive skip-through." },
             { icon: "mobile-flat-icon.png", title: "Mobile-First", desc: "Video, quiz, and spin machine all built to feel great on any screen." },
           ].map((feature, index) => (

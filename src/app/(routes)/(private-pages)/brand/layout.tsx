@@ -16,6 +16,7 @@ import {
   X,
   LogOut,
   Building2,
+  User,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { routes } from '@/app/_utils/routes'
@@ -236,6 +237,12 @@ export default function BrandLayout({
                       </div>
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link href={routes.BRAND.PROFILE}>
+                        <User className="h-4 w-4 mr-2" />
+                        Profile
+                      </Link>
+                    </DropdownMenuItem>
                     <DropdownMenuItem asChild>
                       <Link href={routes.BRAND.SETTINGS}>
                         <Settings className="h-4 w-4 mr-2" />
