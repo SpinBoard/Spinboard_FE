@@ -6,7 +6,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
   User,
   Camera,
   Save,
@@ -19,7 +26,7 @@ import {
 import Link from 'next/link'
 import { routes } from '@/app/_utils/routes'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { GamerProfileData } from '@/types'
+import { GamerProfileData, GamerSex } from '@/types'
 import axios from 'axios'
 import { endpointUrl } from '@/app/_utils/helper'
 import { ENDPOINTS } from '@/app/_utils/endpoints'
@@ -40,6 +47,11 @@ export default function ProfilePage() {
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [username, setUsername] = useState('')
+  const [age, setAge] = useState('')
+  const [sex, setSex] = useState<GamerSex | ''>('')
+  const [country, setCountry] = useState('')
+  const [state, setState] = useState('')
+  const [city, setCity] = useState('')
   const [avatarPreview, setAvatarPreview] = useState<string>('')
   const [isSaving, setIsSaving] = useState(false)
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false)
@@ -57,6 +69,11 @@ export default function ProfilePage() {
       setFirstName(profile.firstName || '')
       setLastName(profile.lastName || '')
       setUsername(profile.username || '')
+      setAge(profile.age ? String(profile.age) : '')
+      setSex(profile.sex || '')
+      setCountry(profile.country || '')
+      setState(profile.state || '')
+      setCity(profile.city || '')
       setAvatarPreview(profile.avatar || '')
       return profile
     }),
@@ -69,6 +86,11 @@ export default function ProfilePage() {
       firstName: string;
       lastName: string;
       username: string;
+      age?: number;
+      sex?: GamerSex;
+      country?: string;
+      state?: string;
+      city?: string;
       avatar?: string;
     }) => {
       return axios.put(endpointUrl(ENDPOINTS.UPDATE_PROFILE), profileData, {
@@ -79,11 +101,10 @@ export default function ProfilePage() {
     },
     onSuccess: (response: any) => {
       const profileData: GamerProfileData = response.data.profile
-      console.log(profileData)
       queryClient.invalidateQueries({ queryKey: ["profile"] });
       setIsEditing(false);
       toast.success("Profile updated successfully!");
-      
+
       // Update user atom with new profile data
       if (user) {
         setUser({
@@ -92,7 +113,8 @@ export default function ProfilePage() {
           lastName: profileData.lastName,
           fullName: `${profileData.firstName} ${profileData.lastName}`,
           username: profileData.username,
-          avatar: profileData.avatar
+          avatar: profileData.avatar,
+          profileComplete: profileData.profileComplete,
         });
       }
     },
@@ -172,7 +194,16 @@ export default function ProfilePage() {
     
     try {
       // Prepare profile data for submission (excluding avatar)
-      const profileUpdateData = {
+      const profileUpdateData: {
+        firstName: string;
+        lastName: string;
+        username: string;
+        age?: number;
+        sex?: GamerSex;
+        country?: string;
+        state?: string;
+        city?: string;
+      } = {
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         username: username.trim(),
@@ -184,6 +215,12 @@ export default function ProfilePage() {
         setIsSaving(false);
         return;
       }
+
+      if (age) profileUpdateData.age = Number(age);
+      if (sex) profileUpdateData.sex = sex;
+      if (country.trim()) profileUpdateData.country = country.trim();
+      if (state.trim()) profileUpdateData.state = state.trim();
+      if (city.trim()) profileUpdateData.city = city.trim();
 
       await updateProfileMutation.mutateAsync(profileUpdateData);
     } catch (error) {
@@ -199,6 +236,11 @@ export default function ProfilePage() {
       setFirstName(profileData.firstName || '')
       setLastName(profileData.lastName || '')
       setUsername(profileData.username || '')
+      setAge(profileData.age ? String(profileData.age) : '')
+      setSex(profileData.sex || '')
+      setCountry(profileData.country || '')
+      setState(profileData.state || '')
+      setCity(profileData.city || '')
     }
     setIsEditing(false)
   }
@@ -386,6 +428,92 @@ export default function ProfilePage() {
                   />
                 </div>
 
+                {/* Age & Sex */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="age" className="text-white font-medium">
+                      Age
+                    </Label>
+                    <Input
+                      id="age"
+                      type="number"
+                      value={age}
+                      onChange={(e) => setAge(e.target.value)}
+                      disabled={!isEditing}
+                      className="bg-white/5 border-white/20 text-white focus:ring-secondary focus:border-secondary placeholder:text-white/40 disabled:opacity-50"
+                      placeholder="Your age"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="sex" className="text-white font-medium">
+                      Sex
+                    </Label>
+                    <Select
+                      value={sex}
+                      onValueChange={(value) => setSex(value as GamerSex)}
+                      disabled={!isEditing}
+                    >
+                      <SelectTrigger
+                        id="sex"
+                        className="bg-white/5 border-white/20 text-white disabled:opacity-50"
+                      >
+                        <SelectValue placeholder="Select" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="man">Man</SelectItem>
+                        <SelectItem value="woman">Woman</SelectItem>
+                        <SelectItem value="prefer_not_to_say">Prefer not to say</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Location */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="country" className="text-white font-medium">
+                      Country
+                    </Label>
+                    <Input
+                      id="country"
+                      type="text"
+                      value={country}
+                      onChange={(e) => setCountry(e.target.value)}
+                      disabled={!isEditing}
+                      className="bg-white/5 border-white/20 text-white focus:ring-secondary focus:border-secondary placeholder:text-white/40 disabled:opacity-50"
+                      placeholder="Country"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="state" className="text-white font-medium">
+                      State
+                    </Label>
+                    <Input
+                      id="state"
+                      type="text"
+                      value={state}
+                      onChange={(e) => setState(e.target.value)}
+                      disabled={!isEditing}
+                      className="bg-white/5 border-white/20 text-white focus:ring-secondary focus:border-secondary placeholder:text-white/40 disabled:opacity-50"
+                      placeholder="State"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="city" className="text-white font-medium">
+                      City
+                    </Label>
+                    <Input
+                      id="city"
+                      type="text"
+                      value={city}
+                      onChange={(e) => setCity(e.target.value)}
+                      disabled={!isEditing}
+                      className="bg-white/5 border-white/20 text-white focus:ring-secondary focus:border-secondary placeholder:text-white/40 disabled:opacity-50"
+                      placeholder="City"
+                    />
+                  </div>
+                </div>
+
                 {/* Email (Read-only) */}
                 <div className="space-y-2">
                   <Label htmlFor="email" className="text-white font-medium">
@@ -449,10 +577,10 @@ export default function ProfilePage() {
               Your account statistics and status
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
             <div className={`p-4 rounded-lg border ${
-              profileData?.isVerified 
-                ? 'bg-green-500/10 border-green-500/20' 
+              profileData?.isVerified
+                ? 'bg-green-500/10 border-green-500/20'
                 : 'bg-yellow-500/10 border-yellow-500/20'
             }`}>
               <div className={`flex items-center gap-2 ${
@@ -464,9 +592,30 @@ export default function ProfilePage() {
                 </span>
               </div>
               <p className="text-white/70 text-sm mt-1">
-                {profileData?.isVerified 
+                {profileData?.isVerified
                   ? 'Your account is verified and you can participate in all campaigns.'
                   : 'Your account is not yet verified. Some features may be limited.'
+                }
+              </p>
+            </div>
+
+            <div className={`p-4 rounded-lg border ${
+              profileData?.profileComplete
+                ? 'bg-green-500/10 border-green-500/20'
+                : 'bg-yellow-500/10 border-yellow-500/20'
+            }`}>
+              <div className={`flex items-center gap-2 ${
+                profileData?.profileComplete ? 'text-green-400' : 'text-yellow-400'
+              }`}>
+                <CheckCircle className="h-5 w-5" />
+                <span className="font-semibold">
+                  Profile {profileData?.profileComplete ? 'Complete' : 'Incomplete'}
+                </span>
+              </div>
+              <p className="text-white/70 text-sm mt-1">
+                {profileData?.profileComplete
+                  ? 'Your profile is complete — you can watch ads and spin.'
+                  : 'Add your age, sex, country, state and city above to unlock ads and spin.'
                 }
               </p>
             </div>
