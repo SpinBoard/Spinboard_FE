@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { AlertCircle, ArrowRight, Loader2 } from "lucide-react";
+import { isAxiosError } from "axios";
+import { toast } from "sonner";
 import { MainLayout } from "@/components/layout/main-layout";
 import { Button } from "@/components/ui/button";
 import { VideoPlayer } from "@/components/watch/video-player";
@@ -10,6 +12,13 @@ import { SpinMachine } from "@/components/spin/spin-machine";
 import { useAdNext, useAdQuizSubmit, useAdVideoComplete, useAdVideoStart } from "@/hooks/use-ads";
 import { useSpinCredit } from "@/hooks/use-spin";
 import { useAdminConfig } from "@/hooks/use-admin-config";
+
+function apiErrorMessage(error: unknown, fallback: string) {
+  const message = isAxiosError(error)
+    ? (error.response?.data as { message?: string } | undefined)?.message
+    : undefined;
+  return message || fallback;
+}
 
 export default function WatchPage() {
   const { data, isLoading, isError, refetch, isFetching } = useAdNext();
@@ -34,7 +43,17 @@ export default function WatchPage() {
   useEffect(() => {
     if (ad?.campaignId && startedForCampaignId.current !== ad.campaignId) {
       startedForCampaignId.current = ad.campaignId;
-      videoStartMutation.mutate(ad.campaignId);
+      videoStartMutation.mutate(ad.campaignId, {
+        onError: (error) => {
+          // Not just cosmetic: if the backend requires a successful
+          // video/start before it'll accept a quiz submission, a silent
+          // failure here surfaces later as a misleading "wrong answer" on
+          // quiz submit. Surface it here so the real cause is visible.
+          toast.error("Couldn't start tracking this ad", {
+            description: apiErrorMessage(error, "Please refresh and try again."),
+          });
+        },
+      });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ad?.campaignId]);
@@ -56,7 +75,11 @@ export default function WatchPage() {
         if (result.cycleCompleted) setHasCredit(true);
       }
     } catch {
-      setQuizResult({ allCorrect: false });
+      // Confirmed with backend: quiz/submit 400s when the video hasn't been
+      // played successfully first (video/start + video/complete must have
+      // registered). That's not a graded "wrong answer" — don't relabel it
+      // as one.
+      toast.error("Watch the video first to be able to submit the correct answer");
     }
   };
 

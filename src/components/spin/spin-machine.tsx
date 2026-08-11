@@ -18,6 +18,23 @@ import { useSpin, useSpinCredit, useSpinWinDecision } from "@/hooks/use-spin";
 import { SpinOutcomeType, SpinResponse } from "@/types";
 import { toast } from "sonner";
 import { isAxiosError } from "axios";
+import { SpinWheel, WHEEL_SEGMENTS } from "./spin-wheel";
+
+// Rotates `current` forward to a new angle that lands the given outcome's
+// segment under the pointer (fixed at the top), always spinning forward
+// by a few extra full turns for a satisfying reveal — never backward, and
+// never landing short of a full turn from wherever the wheel already is.
+function landingRotation(current: number, outcomeType: SpinOutcomeType) {
+  const index = WHEEL_SEGMENTS.findIndex((segment) => segment.type === outcomeType);
+  const segmentAngle = 360 / WHEEL_SEGMENTS.length;
+  const segmentMid = (index < 0 ? 0 : index) * segmentAngle + segmentAngle / 2;
+  const targetMod = (360 - segmentMid) % 360;
+  const extraSpins = 4;
+  const base = current - (current % 360);
+  let target = base + extraSpins * 360 + targetMod;
+  if (target <= current) target += 360;
+  return target;
+}
 
 export const OUTCOME_COPY: Record<SpinOutcomeType, { title: string; description: string }> = {
   cash: { title: "You won cash!", description: "Credited straight to your wallet." },
@@ -59,6 +76,7 @@ export function SpinMachine() {
   const [phase, setPhase] = useState<"idle" | "spinning">("idle");
   const [result, setResult] = useState<SpinResponse | null>(null);
   const [justActivated, setJustActivated] = useState(false);
+  const [rotation, setRotation] = useState(0);
   const prevActive = useRef(hasCredit);
 
   useEffect(() => {
@@ -84,6 +102,7 @@ export function SpinMachine() {
     setPhase("spinning");
     try {
       const data = await spinMutation.mutateAsync();
+      setRotation((current) => landingRotation(current, data.spin.outcomeType));
       setResult(data);
     } catch (error) {
       const status = isAxiosError(error) ? error.response?.status : undefined;
@@ -137,18 +156,20 @@ export function SpinMachine() {
             ? "border-spin-active bg-spin-active/10"
             : "border-spin-inactive bg-spin-inactive/10"
         } ${justActivated ? "animate-pulse-glow" : ""}`}>
-        <div
-          className={`mx-auto flex h-20 w-20 items-center justify-center rounded-full transition-colors duration-500 ${
-            active ? "bg-spin-active text-spin-active-foreground" : "bg-spin-inactive text-spin-inactive-foreground"
-          }`}>
-          {phase === "spinning" ? (
-            <Loader2 className="h-9 w-9 animate-spin" />
-          ) : active ? (
-            <PartyPopper className="h-9 w-9" />
-          ) : (
-            <RotateCw className="h-9 w-9" />
-          )}
-        </div>
+        <SpinWheel rotation={rotation}>
+          <div
+            className={`flex h-16 w-16 items-center justify-center rounded-full border-4 border-background transition-colors duration-500 ${
+              active ? "bg-spin-active text-spin-active-foreground" : "bg-spin-inactive text-spin-inactive-foreground"
+            }`}>
+            {phase === "spinning" ? (
+              <Loader2 className="h-7 w-7 animate-spin" />
+            ) : active ? (
+              <PartyPopper className="h-7 w-7" />
+            ) : (
+              <RotateCw className="h-7 w-7" />
+            )}
+          </div>
+        </SpinWheel>
 
         <div>
           <h3 className="font-sora text-lg font-bold text-foreground">
