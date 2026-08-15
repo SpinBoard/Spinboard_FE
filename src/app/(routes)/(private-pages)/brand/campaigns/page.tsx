@@ -18,7 +18,6 @@ import {
   Clock,
   Rocket,
   BarChart3,
-  Globe2,
 } from "lucide-react";
 import Link from "next/link";
 import { routes } from "@/app/_utils/routes";
@@ -31,18 +30,7 @@ import { userAtom } from "@/atom/user";
 import { PageLoader } from "@/components/ui/page-loader";
 import { PageError } from "@/components/ui/page-error";
 import { GoLiveDialog } from "@/components/brand/go-live-dialog";
-
-const STATUS_STYLES: Record<AdCampaign["status"], string> = {
-  draft: "bg-white/10 text-muted-foreground border-white/20",
-  active: "bg-success/20 text-success border-success/30",
-  inactive: "bg-white/10 text-muted-foreground border-white/20",
-};
-
-function daysLeft(expiresAt?: string): number | null {
-  if (!expiresAt) return null;
-  const diff = new Date(expiresAt).getTime() - Date.now();
-  return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
-}
+import { STATUS_STYLES, MODERATION_STYLES, daysLeft, formatStatusLabel } from "./campaign-status";
 
 export default function BrandCampaignsPage() {
   const user = useAtomValue(userAtom);
@@ -112,19 +100,19 @@ export default function BrandCampaignsPage() {
         </div>
 
         <div className="flex items-center gap-2 overflow-x-auto pb-2">
-          {(["all", "draft", "active", "inactive"] as const).map((key) => {
+          {(["all", "DRAFT", "PENDING_PAYMENT", "ACTIVE", "PAUSED", "EXPIRED", "REJECTED"] as const).map((key) => {
             const count =
               key === "all" ? campaigns?.length ?? 0 : campaigns?.filter((c) => c.status === key).length ?? 0;
             return (
               <button
                 key={key}
                 onClick={() => setStatusFilter(key)}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-all capitalize ${
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-all ${
                   statusFilter === key
                     ? "bg-primary text-primary-foreground"
                     : "bg-white/5 text-muted-foreground hover:bg-white/10 border border-border"
                 }`}>
-                {key}
+                {key === "all" ? "All" : formatStatusLabel(key)}
                 <span className="text-xs px-2 py-0.5 rounded-full bg-white/10">{count}</span>
               </button>
             );
@@ -138,8 +126,11 @@ export default function BrandCampaignsPage() {
           return (
             <Card key={campaign._id} className="bg-card/50 backdrop-blur-sm border-border flex flex-col">
               <CardHeader>
-                <div className="flex items-center justify-between">
-                  <Badge className={`${STATUS_STYLES[campaign.status]} capitalize`}>{campaign.status}</Badge>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge className={STATUS_STYLES[campaign.status]}>{formatStatusLabel(campaign.status)}</Badge>
+                  <Badge className={MODERATION_STYLES[campaign.moderationStatus]}>
+                    {formatStatusLabel(campaign.moderationStatus)}
+                  </Badge>
                   <Badge variant="secondary" className="capitalize">{campaign.tier}</Badge>
                 </div>
                 <CardTitle className="text-foreground font-sora text-lg mt-2">{campaign.title}</CardTitle>
@@ -148,17 +139,14 @@ export default function BrandCampaignsPage() {
                 <p className="text-sm text-muted-foreground line-clamp-2">{campaign.description}</p>
 
                 <div className="space-y-2 text-xs text-muted-foreground">
-                  {campaign.status === "active" && remaining !== null && (
+                  {campaign.status === "ACTIVE" && remaining !== null && (
                     <div className="flex items-center gap-1.5">
                       <Clock className="h-3.5 w-3.5 text-secondary" />
                       {remaining} day{remaining !== 1 ? "s" : ""} left
                     </div>
                   )}
-                  {campaign.global && (
-                    <div className="flex items-center gap-1.5">
-                      <Globe2 className="h-3.5 w-3.5 text-secondary" />
-                      Global visibility
-                    </div>
+                  {campaign.moderationStatus === "REJECTED" && campaign.moderationReason && (
+                    <p className="text-destructive">{campaign.moderationReason}</p>
                   )}
                 </div>
 
@@ -177,7 +165,7 @@ export default function BrandCampaignsPage() {
                       </Button>
                     </Link>
                   )}
-                  {campaign.status === "draft" && (
+                  {campaign.status === "DRAFT" && (
                     <Button
                       size="sm"
                       className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground"

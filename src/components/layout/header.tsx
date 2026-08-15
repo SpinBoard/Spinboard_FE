@@ -4,11 +4,10 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { LogoIcon } from "@/components/ui/logo-icon";
-import { User, Menu, LogOut, X, Settings, Wallet, ShoppingBag } from "lucide-react";
+import { User, Menu, LogOut, X, Settings, Wallet, Gift } from "lucide-react";
 import { routes } from "@/app/_utils/routes";
 import { useAtomValue, useSetAtom } from "jotai/react";
 import { userAtom } from "@/atom/user";
-import { TryAgainBadge } from "@/components/spin/try-again-badge";
 import { useRouter, usePathname } from "next/navigation";
 import {
   DropdownMenu,
@@ -55,7 +54,7 @@ export function Header() {
               href={routes.HOME}
               className="flex items-center gap-2 text-2xl font-bold text-white font-fredoka">
               <LogoIcon />
-              Spinboard
+              Pazzell
             </Link>
           </div>
 
@@ -86,6 +85,11 @@ export function Header() {
                   href={routes.USER.WALLET}
                   className="text-white hover:text-secondary font-medium transition-colors">
                   Wallet
+                </Link>
+                <Link
+                  href={routes.USER.CLAIMS}
+                  className="text-white hover:text-secondary font-medium transition-colors">
+                  Claims
                 </Link>
               </>
             ) : isMounted && userType === "brand" ? (
@@ -133,7 +137,6 @@ export function Header() {
           </nav>
 
           <div className="flex items-center space-x-2 sm:space-x-4">
-            {isMounted && userType === "gamer" && <TryAgainBadge />}
             {isMounted && userType ? (
               <div className="flex items-center space-x-1 sm:space-x-2">
                 <DropdownMenu>
@@ -181,9 +184,9 @@ export function Header() {
                           </Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem asChild>
-                          <Link href={routes.USER.MARKETPLACE_ORDERS}>
-                            <ShoppingBag className="h-4 w-4 mr-2" />
-                            Orders
+                          <Link href={routes.USER.CLAIMS}>
+                            <Gift className="h-4 w-4 mr-2" />
+                            Claims
                           </Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem asChild>
@@ -277,6 +280,12 @@ export function Header() {
                     className="block text-white hover:text-secondary hover:bg-white/5 py-3 px-2 rounded-md transition-colors"
                     onClick={closeMobileMenu}>
                     Wallet
+                  </Link>
+                  <Link
+                    href={routes.USER.CLAIMS}
+                    className="block text-white hover:text-secondary hover:bg-white/5 py-3 px-2 rounded-md transition-colors"
+                    onClick={closeMobileMenu}>
+                    Claims
                   </Link>
                   {/* <Link
                     href={routes.USER.BADGES}

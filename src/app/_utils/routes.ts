@@ -14,11 +14,13 @@ export const routes = {
   HOW_IT_WORKS: "/how-it-works",
   PAYMENT_VERIFY: "/payment/verify",
 
-  // Ads-watching flow — works logged-out (§3), the new core loop
+  // The billboard — continuous ad playback + freebie-code strip, no gate.
+  // Works logged-out.
   WATCH: "/watch",
 
-  // Marketplace (public browse/detail, checkout requires email at minimum)
+  // Marketplace — business directory, not a store
   MARKETPLACE: "/marketplace",
+  MARKETPLACE_BUSINESS: (brandId: string) => `/marketplace/business/${brandId}`,
   MARKETPLACE_PRODUCT: (id: string) => `/marketplace/${id}`,
 
   // User Routes
@@ -29,9 +31,8 @@ export const routes = {
     SETTINGS: "/user/settings",
     REFERRALS: "/user/referrals",
     WALLET: "/user/wallet",
-    // Try-again counter, decision history, and the 50/100 special boards
-    TRY_AGAIN: "/user/try-again",
-    MARKETPLACE_ORDERS: "/user/orders",
+    // Freebie-code claim history + secret-code redemption
+    CLAIMS: "/user/claims",
   },
 
   // Brand Routes
@@ -44,6 +45,8 @@ export const routes = {
     CAMPAIGN_DETAILS: (id: string) => `/brand/campaigns/${id}`,
     CAMPAIGN_ANALYTICS: (id: string) => `/brand/campaigns/${id}/analytics`,
     SETTINGS: "/brand/settings",
+    // Business directory listing management (profile + showcase products)
+    MARKETPLACE_PROFILE: "/brand/marketplace/profile",
     PRODUCTS: "/brand/products",
     PRODUCTS_NEW: "/brand/products/new",
     PRODUCT_EDIT: (id: string) => `/brand/products/${id}/edit`,

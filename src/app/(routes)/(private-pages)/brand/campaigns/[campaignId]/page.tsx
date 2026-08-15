@@ -11,17 +11,12 @@ import { PageError } from "@/components/ui/page-error";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, BarChart3, Clock, Globe2, HelpCircle, Rocket } from "lucide-react";
+import { ArrowLeft, AlertTriangle, BarChart3, Clock, Rocket, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { routes } from "@/app/_utils/routes";
 import { AdCampaign, AdCampaignResponse } from "@/types";
 import { GoLiveDialog } from "@/components/brand/go-live-dialog";
-
-function daysLeft(expiresAt?: string): number | null {
-  if (!expiresAt) return null;
-  const diff = new Date(expiresAt).getTime() - Date.now();
-  return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
-}
+import { STATUS_STYLES, MODERATION_STYLES, daysLeft, formatStatusLabel } from "../campaign-status";
 
 export default function ViewCampaignPage() {
   const params = useParams();
@@ -80,7 +75,7 @@ export default function ViewCampaignPage() {
               </Button>
             </Link>
           )}
-          {campaign.status === "draft" && (
+          {campaign.status === "DRAFT" && (
             <Button
               className="bg-primary hover:bg-primary/90 text-primary-foreground"
               onClick={() => setShowGoLive(true)}>
@@ -91,21 +86,26 @@ export default function ViewCampaignPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-4 bg-card/50 backdrop-blur-sm border border-border rounded-lg p-4">
-          <Badge className="capitalize">{campaign.status}</Badge>
+          <Badge className={STATUS_STYLES[campaign.status]}>{formatStatusLabel(campaign.status)}</Badge>
+          <Badge className={MODERATION_STYLES[campaign.moderationStatus]}>
+            <ShieldCheck className="h-3 w-3 mr-1" />
+            {formatStatusLabel(campaign.moderationStatus)}
+          </Badge>
           <Badge variant="secondary" className="capitalize">{campaign.tier}</Badge>
-          {campaign.status === "active" && remaining !== null && (
+          {campaign.status === "ACTIVE" && remaining !== null && (
             <div className="flex items-center gap-2 text-sm text-foreground">
               <Clock className="h-4 w-4 text-secondary" />
               {remaining} day{remaining !== 1 ? "s" : ""} left
             </div>
           )}
-          {campaign.global && (
-            <div className="flex items-center gap-2 text-sm text-foreground">
-              <Globe2 className="h-4 w-4 text-secondary" />
-              Global visibility
-            </div>
-          )}
         </div>
+
+        {campaign.moderationStatus === "REJECTED" && campaign.moderationReason && (
+          <div className="mt-4 p-3 bg-destructive/10 border border-destructive/30 rounded-lg flex items-start gap-2">
+            <AlertTriangle className="h-4 w-4 text-destructive mt-0.5 flex-shrink-0" />
+            <p className="text-sm text-destructive">{campaign.moderationReason}</p>
+          </div>
+        )}
       </div>
 
       {campaign.videoUrl && (
@@ -114,34 +114,37 @@ export default function ViewCampaignPage() {
 
       <Card className="bg-card/50 backdrop-blur-sm border-border">
         <CardHeader>
-          <CardTitle className="text-foreground font-sora flex items-center gap-2 text-lg">
-            <HelpCircle className="h-5 w-5 text-secondary" />
-            Quiz Questions
-          </CardTitle>
+          <CardTitle className="text-foreground font-sora text-lg">Campaign details</CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {campaign.questions.map((question, index) => (
-              <div key={index} className="border border-border rounded p-3">
-                <h4 className="text-foreground font-semibold text-sm mb-2">Question {index + 1}</h4>
-                <p className="text-muted-foreground text-sm mb-2">{question.question}</p>
-                <div className="space-y-1">
-                  {question.choices.map((choice, choiceIndex) => (
-                    <div
-                      key={choiceIndex}
-                      className={`text-xs p-2 rounded ${
-                        choiceIndex === question.correctIndex
-                          ? "bg-success/20 text-success border border-success/30"
-                          : "bg-white/5 text-muted-foreground border border-border"
-                      }`}>
-                      {String.fromCharCode(65 + choiceIndex)}. {choice}
-                      {choiceIndex === question.correctIndex && " ✓"}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
+        <CardContent className="space-y-2 text-sm">
+          {campaign.brandUrl && (
+            <div className="flex justify-between text-muted-foreground">
+              <span>Brand URL</span>
+              <a href={campaign.brandUrl} target="_blank" rel="noreferrer" className="text-secondary hover:underline truncate max-w-xs">
+                {campaign.brandUrl}
+              </a>
+            </div>
+          )}
+          {campaign.campaignUrl && (
+            <div className="flex justify-between text-muted-foreground">
+              <span>Campaign URL</span>
+              <a href={campaign.campaignUrl} target="_blank" rel="noreferrer" className="text-secondary hover:underline truncate max-w-xs">
+                {campaign.campaignUrl}
+              </a>
+            </div>
+          )}
+          {campaign.activatedAt && (
+            <div className="flex justify-between text-muted-foreground">
+              <span>Activated</span>
+              <span className="text-foreground">{new Date(campaign.activatedAt).toLocaleDateString()}</span>
+            </div>
+          )}
+          {campaign.expiresAt && (
+            <div className="flex justify-between text-muted-foreground">
+              <span>Expires</span>
+              <span className="text-foreground">{new Date(campaign.expiresAt).toLocaleDateString()}</span>
+            </div>
+          )}
         </CardContent>
       </Card>
 

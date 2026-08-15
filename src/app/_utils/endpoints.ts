@@ -32,56 +32,56 @@ export const ENDPOINTS = {
   INITIALIZE_PAYMENT: "/payments/initialize",
   VERIFY_PAYMENT: "/payments/verify",
 
-  // Wallet & withdrawals
+  // Wallet
   WALLET_BALANCE: "/wallet/balance",
   WALLET_TRANSACTIONS: (limit: number = 50) =>
     `/wallet/transactions?limit=${limit}`,
   WALLET_BANK_ACCOUNTS: "/wallet/bank-accounts",
   WALLET_BANK_ACCOUNT_DELETE: (id: string) => `/wallet/bank-accounts/${id}`,
-  WALLET_WITHDRAWALS: "/wallet/withdrawals",
-  WALLET_WITHDRAWAL_DETAILS: (id: string) => `/wallet/withdrawals/${id}`,
+  // No withdrawal endpoint exists — cash only leaves via the manual weekly
+  // payout run. Don't add a WALLET_WITHDRAWALS constant back.
 
   // Admin config
   ADMIN_CONFIG: "/admin/config",
   ADMIN_CONFIG_KEY: (key: string) => `/admin/config/${key}`,
 
-  // ── Ads-watching & reward platform (API_CONTRACT_ADS_REWARD_PLATFORM.md) ──
+  // ── Billboard (continuous ad playback, no gate) ──
+  BILLBOARD_SESSION: "/billboard/session",
+  BILLBOARD_QUEUE: (sessionId: string, size: number = 5) =>
+    `/billboard/queue?sessionId=${encodeURIComponent(sessionId)}&size=${size}`,
+  BILLBOARD_HEARTBEAT: "/billboard/impressions/heartbeat",
+  BILLBOARD_COMPLETE: "/billboard/impressions/complete",
 
-  // Ad-watching flow (§3) — optional auth, work for anon + authenticated
-  ADS_NEXT: (country?: string) =>
-    country ? `/ads/next?country=${encodeURIComponent(country)}` : `/ads/next`,
-  AD_VIDEO_START: (campaignId: string) => `/ads/${campaignId}/video/start`,
-  AD_VIDEO_COMPLETE: (campaignId: string) =>
-    `/ads/${campaignId}/video/complete`,
-  AD_QUIZ_SUBMIT: (campaignId: string) => `/ads/${campaignId}/quiz/submit`,
+  // ── Freebie codes (win + redeem) ──
+  FREEBIES_STRIP: "/freebies/strip",
+  FREEBIES_STRIP_EVENTS: "/freebies/strip/events",
+  FREEBIES_PHRASES: "/freebies/phrases",
+  FREEBIES_APPLY: "/freebies/apply",
+  ME_CLAIMS: "/me/claims",
+  ME_CLAIMS_REDEEM: (claimId: string) => `/me/claims/${claimId}/redeem`,
 
-  // Ad campaigns (brand-facing, §4)
+  // Ad campaigns (brand-facing)
   AD_CAMPAIGNS: "/ad-campaigns",
   AD_CAMPAIGNS_MINE: "/ad-campaigns/mine",
   AD_CAMPAIGN_DETAILS: (campaignId: string) => `/ad-campaigns/${campaignId}`,
   AD_CAMPAIGN_ANALYTICS: (campaignId: string) =>
     `/ad-campaigns/${campaignId}/analytics`,
+  AD_CAMPAIGN_ANALYTICS_BREAKDOWN: (campaignId: string) =>
+    `/ad-campaigns/${campaignId}/analytics/breakdown`,
+  AD_CAMPAIGN_ANALYTICS_EXPORT: (campaignId: string) =>
+    `/ad-campaigns/${campaignId}/analytics/export.csv`,
   AD_PAYMENTS_INITIALIZE: "/ad-payments/initialize",
   AD_PAYMENTS_VERIFY: (reference: string) =>
     `/ad-payments/verify/${reference}`,
 
-  // Spin & prize system (§5)
-  SPINS: "/spins",
-  SPIN_WIN_DECISION: (spinResultId: string) =>
-    `/spins/wins/${spinResultId}/decision`,
-  SPIN_VERIFY: (spinResultId: string) => `/spins/${spinResultId}/verify`,
-  TRY_AGAIN_STATUS: "/spins/try-again/status",
-  TRY_AGAIN_SPEND: "/spins/try-again/spend",
-
-  // Marketplace (§7)
+  // Marketplace — business directory (no checkout)
+  MARKETPLACE_BUSINESSES: "/marketplace/businesses",
+  MARKETPLACE_BUSINESS_DETAILS: (brandId: string) =>
+    `/marketplace/businesses/${brandId}`,
+  MARKETPLACE_BUSINESS_PROFILE_MINE: "/marketplace/business/profile/mine",
+  MARKETPLACE_BUSINESS_PROFILE: "/marketplace/business/profile",
   MARKETPLACE_PRODUCTS: "/marketplace/products",
+  MARKETPLACE_PRODUCTS_MINE: "/marketplace/products/mine",
   MARKETPLACE_PRODUCT_DETAILS: (productId: string) =>
     `/marketplace/products/${productId}`,
-  MARKETPLACE_CHECKOUT: "/marketplace/checkout",
-  MARKETPLACE_ORDER_VERIFY: (reference: string) =>
-    `/marketplace/orders/${reference}/verify`,
-  MARKETPLACE_ORDERS_MINE: "/marketplace/orders/mine",
-
-  // Admin — prize pool (§8)
-  ADMIN_PRIZE_POOL: (date: string) => `/admin/prize-pool/${date}`,
 };

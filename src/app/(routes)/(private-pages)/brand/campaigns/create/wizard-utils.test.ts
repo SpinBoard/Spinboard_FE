@@ -1,14 +1,8 @@
 import { describe, it, expect } from "vitest";
-import {
-  validateVideoFile,
-  validateQuizQuestions,
-  buildAdCampaignFormData,
-  QUIZ_QUESTION_COUNT,
-  TIER_META,
-} from "./wizard-utils";
+import { validateVideoFile, buildAdCampaignFormData, TIER_META } from "./wizard-utils";
 
 describe("validateVideoFile", () => {
-  const config = { maxDurationSeconds: 95, maxSizeBytes: 100 * 1024 * 1024 };
+  const config = { maxDurationSeconds: 60, maxSizeBytes: 25 * 1024 * 1024 };
 
   it("rejects non-video files", () => {
     const file = new File(["x"], "clip.jpg", { type: "image/jpeg" });
@@ -27,65 +21,21 @@ describe("validateVideoFile", () => {
 
   it("rejects videos longer than the max duration", () => {
     const file = new File([new Uint8Array(10)], "clip.mp4", { type: "video/mp4" });
-    const result = validateVideoFile(file, 200, config);
+    const result = validateVideoFile(file, 90, config);
     expect(result.valid).toBe(false);
     expect(result.message).toMatch(/seconds/);
   });
 
-  it("accepts a valid ~90s video within limits", () => {
+  it("accepts a valid video within limits", () => {
     const file = new File([new Uint8Array(10)], "clip.mp4", { type: "video/mp4" });
-    const result = validateVideoFile(file, 90, config);
+    const result = validateVideoFile(file, 30, config);
     expect(result.valid).toBe(true);
   });
 });
 
-describe("validateQuizQuestions", () => {
-  const validQuestion = () => ({
-    question: "What color is the sky?",
-    choices: ["Red", "Blue", "Green", "Yellow"],
-    correctIndex: 1,
-  });
-
-  it("requires exactly QUIZ_QUESTION_COUNT questions", () => {
-    const result = validateQuizQuestions([validQuestion(), validQuestion()]);
-    expect(result.valid).toBe(false);
-    expect(result.message).toContain(String(QUIZ_QUESTION_COUNT));
-  });
-
-  it("rejects a question that is too short", () => {
-    const questions = [validQuestion(), validQuestion(), { ...validQuestion(), question: "Hi" }];
-    const result = validateQuizQuestions(questions);
-    expect(result.valid).toBe(false);
-    expect(result.message).toMatch(/5 characters/);
-  });
-
-  it("rejects a question missing a choice", () => {
-    const questions = [
-      validQuestion(),
-      validQuestion(),
-      { ...validQuestion(), choices: ["Red", "Blue", "", "Yellow"] },
-    ];
-    const result = validateQuizQuestions(questions);
-    expect(result.valid).toBe(false);
-    expect(result.message).toMatch(/4 non-empty choices/);
-  });
-
-  it("rejects an out-of-range correctIndex", () => {
-    const questions = [validQuestion(), validQuestion(), { ...validQuestion(), correctIndex: 9 }];
-    const result = validateQuizQuestions(questions);
-    expect(result.valid).toBe(false);
-    expect(result.message).toMatch(/correct answer/);
-  });
-
-  it("accepts exactly 3 well-formed questions", () => {
-    const questions = [validQuestion(), validQuestion(), validQuestion()];
-    expect(validateQuizQuestions(questions).valid).toBe(true);
-  });
-});
-
 describe("TIER_META", () => {
-  it("prices tiers at $10 / $15 per week", () => {
-    expect(TIER_META.map((t) => t.priceUSD)).toEqual([10, 15]);
+  it("prices tiers flat at $20 / $30, no per-week rate", () => {
+    expect(TIER_META.map((t) => t.priceUSD)).toEqual([20, 30]);
   });
 
   it("only grants analytics to premium", () => {
@@ -93,14 +43,10 @@ describe("TIER_META", () => {
     expect(TIER_META.find((t) => t.id === "premium")?.analytics).toBe(true);
   });
 
-  it("only grants the global-visibility toggle to premium", () => {
-    expect(TIER_META.find((t) => t.id === "basic")?.globalToggle).toBe(false);
-    expect(TIER_META.find((t) => t.id === "premium")?.globalToggle).toBe(true);
-  });
-
-  it("has no pro tier", () => {
+  it("has no pro tier and no global-visibility toggle field", () => {
     expect(TIER_META).toHaveLength(2);
     expect(TIER_META.map((t) => t.id)).toEqual(["basic", "premium"]);
+    expect(TIER_META.every((t) => !("globalToggle" in t))).toBe(true);
   });
 });
 
@@ -111,15 +57,10 @@ describe("buildAdCampaignFormData", () => {
     brandUrl: "https://brand.example.com",
     campaignUrl: "",
     video: new File(["vid"], "video.mp4", { type: "video/mp4" }),
-    questions: [
-      { question: "Q1 goes here", choices: ["A", "B", "C", "D"], correctIndex: 0 },
-      { question: "Q2 goes here", choices: ["A", "B", "C", "D"], correctIndex: 1 },
-      { question: "Q3 goes here", choices: ["A", "B", "C", "D"], correctIndex: 2 },
-    ],
     tier: "basic" as const,
   };
 
-  it("includes every contract-required field", () => {
+  it("includes every contract-required field, nothing else", () => {
     const fd = buildAdCampaignFormData(baseData);
     expect(fd.get("title")).toBe("Summer Splash");
     expect(fd.get("description")).toBe("A fun summer campaign");
@@ -129,26 +70,9 @@ describe("buildAdCampaignFormData", () => {
     expect(fd.get("tier")).toBe("basic");
   });
 
-  it("serializes exactly 3 questions as JSON", () => {
+  it("omits removed fields (questions, global, geoTarget, numberOfWeeks)", () => {
     const fd = buildAdCampaignFormData(baseData);
-    const questions = JSON.parse(fd.get("questions") as string);
-    expect(questions).toHaveLength(3);
-    expect(questions[0]).toEqual(baseData.questions[0]);
-  });
-
-  it("omits `global` for basic even if the flag is set", () => {
-    const fd = buildAdCampaignFormData({ ...baseData, tier: "basic", global: true });
-    expect(fd.has("global")).toBe(false);
-  });
-
-  it("includes `global` only for premium when set", () => {
-    const fd = buildAdCampaignFormData({ ...baseData, tier: "premium", global: true });
-    expect(fd.get("global")).toBe("true");
-  });
-
-  it("omits removed legacy fields (gameType, image, words, prizeDescription, packageId)", () => {
-    const fd = buildAdCampaignFormData(baseData);
-    for (const removedField of ["gameType", "image", "words", "prizeDescription", "packageId"]) {
+    for (const removedField of ["questions", "global", "geoTarget", "numberOfWeeks"]) {
       expect(fd.has(removedField)).toBe(false);
     }
   });

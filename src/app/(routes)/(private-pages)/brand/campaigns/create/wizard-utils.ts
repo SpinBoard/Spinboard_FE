@@ -1,9 +1,7 @@
-// Pure helpers for the ad-campaign creation wizard (API_CONTRACT_ADS_REWARD_PLATFORM.md
-// §4), kept free of React/DOM dependencies (besides getVideoDuration, which
-// needs the browser video element) so validation logic is easy to unit test.
-
-export const QUIZ_QUESTION_COUNT = 3;
-export const QUIZ_CHOICES_PER_QUESTION = 4;
+// Pure helpers for the ad-campaign creation wizard (docs/openapi.yaml
+// POST /ad-campaigns), kept free of React/DOM dependencies (besides
+// getVideoDuration, which needs the browser video element) so validation
+// logic is easy to unit test.
 
 export interface ValidationResult {
   valid: boolean;
@@ -59,79 +57,34 @@ export function getVideoDuration(file: File): Promise<number> {
   });
 }
 
-export interface QuizQuestionInput {
-  question: string;
-  choices: string[];
-  correctIndex: number;
-}
-
-export function validateQuizQuestions(
-  questions: QuizQuestionInput[]
-): ValidationResult {
-  if (questions.length !== QUIZ_QUESTION_COUNT) {
-    return {
-      valid: false,
-      message: `Exactly ${QUIZ_QUESTION_COUNT} quiz questions are required.`,
-    };
-  }
-  for (const q of questions) {
-    if (q.question.trim().length < 5) {
-      return {
-        valid: false,
-        message: "Each question must be at least 5 characters.",
-      };
-    }
-    if (
-      q.choices.length !== QUIZ_CHOICES_PER_QUESTION ||
-      q.choices.some((c) => !c.trim())
-    ) {
-      return {
-        valid: false,
-        message: `Each question needs ${QUIZ_CHOICES_PER_QUESTION} non-empty choices.`,
-      };
-    }
-    if (q.correctIndex < 0 || q.correctIndex > QUIZ_CHOICES_PER_QUESTION - 1) {
-      return {
-        valid: false,
-        message: "Select a valid correct answer for each question.",
-      };
-    }
-  }
-  return { valid: true };
-}
-
-// `pro` tier removed entirely (AD_CAMPAIGN_PRICING_AND_GOLIVE_UPDATE.md §1).
 export type AdCampaignTierId = "basic" | "premium";
 
 export interface TierMeta {
   id: AdCampaignTierId;
   name: string;
-  priceUSD: number; // USD per week
+  priceUSD: number; // flat, one-time — 30-day activation
   analytics: boolean;
-  globalToggle: boolean;
   blurb: string;
 }
 
 // Prices here are display fallbacks — the wizard prefers live values from
-// GET /admin/config (campaign.tierPrices) via useAdminConfig, never
-// hardcoding what the contract calls out as admin-adjustable (§10). Total
-// cost = priceUSD × numberOfWeeks, chosen later at go-live time, not here.
+// GET /admin/config (campaign.tiers) via useAdminConfig, never hardcoding
+// what CONFIG.md calls out as admin-adjustable. Flat pricing, no per-week
+// duration to choose — activation is a fixed 30 days from payment.
 export const TIER_META: TierMeta[] = [
   {
     id: "basic",
     name: "Basic",
-    priceUSD: 10,
+    priceUSD: 20,
     analytics: false,
-    globalToggle: false,
-    blurb: "Standard rotation in your home country.",
+    blurb: "Standard rotation in the billboard, 30-day activation.",
   },
   {
     id: "premium",
     name: "Premium",
-    priceUSD: 15,
+    priceUSD: 30,
     analytics: true,
-    globalToggle: true,
-    blurb: "Full analytics, plus the option to go global.",
+    blurb: "Higher rotation weight, plus the full analytics dashboard.",
   },
 ];
 
@@ -141,14 +94,12 @@ export interface AdCampaignWizardData {
   brandUrl?: string;
   campaignUrl?: string;
   video: File;
-  questions: QuizQuestionInput[];
   tier: AdCampaignTierId;
-  global?: boolean;
 }
 
-// Builds the multipart body matching AD_CAMPAIGN_PRICING_AND_GOLIVE_UPDATE.md
-// §3 (POST /ad-campaigns). `global` is only meaningful (and only sent) for
-// Premium — pricing/weeks are chosen later, at go-live, not here.
+// Builds the multipart body matching openapi.yaml's POST /ad-campaigns
+// exactly: title, description, tier, video, and two optional URLs. No
+// quiz questions, no geo-target flag — neither field exists anymore.
 export function buildAdCampaignFormData(data: AdCampaignWizardData): FormData {
   const formData = new FormData();
   formData.append("title", data.title);
@@ -157,10 +108,6 @@ export function buildAdCampaignFormData(data: AdCampaignWizardData): FormData {
   if (data.campaignUrl?.trim())
     formData.append("campaignUrl", data.campaignUrl.trim());
   formData.append("video", data.video);
-  formData.append("questions", JSON.stringify(data.questions));
   formData.append("tier", data.tier);
-  if (data.tier === "premium" && data.global) {
-    formData.append("global", String(data.global));
-  }
   return formData;
 }

@@ -62,9 +62,8 @@ function VerifyOTPForm() {
       const { userData, dashboardRoute } = await fetchUserDataForSession(data.data)
       setUser(userData)
       toast.success('Success', { description: 'Account verified successfully!' })
-      // §1 — a completed anon ad-cycle/spin credit migrates to this account
-      // automatically server-side; returnTo (e.g. back to /watch) preserves
-      // the client-side spin-machine state too.
+      // returnTo (e.g. back to /watch) preserves the viewer's place on the
+      // billboard after verifying.
       router.push(
         returnTo ||
           (dashboardRoute === 'gamer'

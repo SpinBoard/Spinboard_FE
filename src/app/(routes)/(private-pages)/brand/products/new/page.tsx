@@ -1,12 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { isAxiosError } from "axios";
 import { useMutation } from "@tanstack/react-query";
-import { ArrowLeft, Loader2, Package } from "lucide-react";
+import { ArrowLeft, Loader2, Package, Upload, X } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -29,52 +29,68 @@ import {
 import { api } from "@/lib/api";
 import { ENDPOINTS } from "@/app/_utils/endpoints";
 import { routes } from "@/app/_utils/routes";
+import { apiErrorMessage } from "@/app/_utils/helper";
 import { MarketplaceProductResponse } from "@/types";
 
-// §7: at least one of deliveryAsset (link) or fulfillmentInstructions is required.
-const productSchema = z
-  .object({
-    name: z.string().min(3, "Name must be at least 3 characters"),
-    description: z.string().min(10, "Description must be at least 10 characters"),
-    priceUSD: z.number().positive("Enter a price greater than 0"),
-    category: z.string().min(2, "Category is required"),
-    deliveryAsset: z.string().url("Enter a valid URL").optional().or(z.literal("")),
-    fulfillmentInstructions: z.string().optional().or(z.literal("")),
-  })
-  .refine((data) => !!data.deliveryAsset?.trim() || !!data.fulfillmentInstructions?.trim(), {
-    message: "Provide a delivery link or fulfillment instructions",
-    path: ["deliveryAsset"],
-  });
+const MAX_IMAGES = 6;
+
+// No price/checkout fields anymore — priceLabel is optional free-form
+// display text ("From ₦5,000", "Contact for quote"), never a charged amount.
+const productSchema = z.object({
+  name: z.string().min(3, "Name must be at least 3 characters"),
+  description: z.string().min(10, "Description must be at least 10 characters"),
+  category: z.string().min(2, "Category is required"),
+  priceLabel: z.string().optional(),
+});
 
 type ProductFormValues = z.infer<typeof productSchema>;
 
 export default function NewProductPage() {
   const router = useRouter();
+  const [images, setImages] = useState<File[]>([]);
+  const [previews, setPreviews] = useState<string[]>([]);
 
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(productSchema),
     defaultValues: {
       name: "",
       description: "",
-      priceUSD: 0,
       category: "",
-      deliveryAsset: "",
-      fulfillmentInstructions: "",
+      priceLabel: "",
     },
   });
 
+  const handleImagesChange = (files: FileList | null) => {
+    if (!files) return;
+    const next = [...images, ...Array.from(files)].slice(0, MAX_IMAGES);
+    setImages(next);
+    setPreviews(next.map((f) => URL.createObjectURL(f)));
+  };
+
+  const removeImage = (index: number) => {
+    const next = images.filter((_, i) => i !== index);
+    setImages(next);
+    setPreviews(next.map((f) => URL.createObjectURL(f)));
+  };
+
   const createProductMutation = useMutation({
-    mutationFn: (payload: ProductFormValues) =>
-      api.post<MarketplaceProductResponse>(ENDPOINTS.MARKETPLACE_PRODUCTS, payload),
+    mutationFn: (values: ProductFormValues) => {
+      const formData = new FormData();
+      formData.append("name", values.name);
+      formData.append("description", values.description);
+      formData.append("category", values.category);
+      if (values.priceLabel?.trim()) formData.append("priceLabel", values.priceLabel.trim());
+      images.forEach((file) => formData.append("images", file));
+      return api.post<MarketplaceProductResponse>(ENDPOINTS.MARKETPLACE_PRODUCTS, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+    },
     onSuccess: () => {
       toast.success("Product listed successfully!");
       router.push(routes.BRAND.PRODUCTS);
     },
     onError: (error) => {
-      const message = isAxiosError(error)
-        ? (error.response?.data as { message?: string } | undefined)?.message
-        : undefined;
-      toast.error(message || "Failed to create product");
+      toast.error(apiErrorMessage(error, "Failed to create product"));
     },
   });
 
@@ -89,8 +105,8 @@ export default function NewProductPage() {
           </Button>
         </Link>
         <div>
-          <h1 className="text-3xl font-bold text-foreground font-sora">New Digital Product</h1>
-          <p className="text-muted-foreground">List a digital product on the marketplace</p>
+          <h1 className="text-3xl font-bold text-foreground font-sora">New Showcase Product</h1>
+          <p className="text-muted-foreground">Add a product or service to your directory listing</p>
         </div>
       </div>
 
@@ -111,7 +127,7 @@ export default function NewProductPage() {
                   <FormItem>
                     <FormLabel>Name</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g. Premium eBook Bundle" {...field} />
+                      <Input placeholder="e.g. Oak Dining Table" {...field} />
                     </FormControl>
                     <FormMessage className="text-destructive" />
                   </FormItem>
@@ -124,7 +140,7 @@ export default function NewProductPage() {
                   <FormItem>
                     <FormLabel>Description</FormLabel>
                     <FormControl>
-                      <Textarea className="min-h-[100px]" placeholder="Describe your product..." {...field} />
+                      <Textarea className="min-h-[100px]" placeholder="Describe your product or service..." {...field} />
                     </FormControl>
                     <FormMessage className="text-destructive" />
                   </FormItem>
@@ -133,20 +149,12 @@ export default function NewProductPage() {
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
-                  name="priceUSD"
+                  name="category"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Price (USD)</FormLabel>
+                      <FormLabel>Category</FormLabel>
                       <FormControl>
-                        <Input
-                          type="number"
-                          min={0}
-                          step="0.01"
-                          value={field.value || ""}
-                          onChange={(e) =>
-                            field.onChange(e.target.value === "" ? 0 : Number(e.target.value))
-                          }
-                        />
+                        <Input placeholder="e.g. Furniture" {...field} />
                       </FormControl>
                       <FormMessage className="text-destructive" />
                     </FormItem>
@@ -154,49 +162,52 @@ export default function NewProductPage() {
                 />
                 <FormField
                   control={form.control}
-                  name="category"
+                  name="priceLabel"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Category</FormLabel>
+                      <FormLabel>
+                        Price label <span className="text-muted-foreground text-xs font-normal">(optional)</span>
+                      </FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g. Ebooks" {...field} />
+                        <Input placeholder="e.g. From ₦5,000" {...field} />
                       </FormControl>
                       <FormMessage className="text-destructive" />
                     </FormItem>
                   )}
                 />
               </div>
-              <FormField
-                control={form.control}
-                name="deliveryAsset"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>
-                      Delivery link <span className="text-muted-foreground text-xs font-normal">(optional)</span>
-                    </FormLabel>
-                    <FormControl>
-                      <Input type="url" placeholder="https://..." {...field} />
-                    </FormControl>
-                    <FormMessage className="text-destructive" />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="fulfillmentInstructions"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>
-                      Fulfillment instructions{" "}
-                      <span className="text-muted-foreground text-xs font-normal">(optional)</span>
-                    </FormLabel>
-                    <FormControl>
-                      <Textarea placeholder="e.g. License key emailed within 24 hours" {...field} />
-                    </FormControl>
-                    <FormMessage className="text-destructive" />
-                  </FormItem>
-                )}
-              />
+
+              <div>
+                <label className="text-sm font-medium text-foreground mb-1.5 block">
+                  Photos <span className="text-muted-foreground text-xs font-normal">(up to {MAX_IMAGES}, optional)</span>
+                </label>
+                <div className="flex flex-wrap gap-3">
+                  {previews.map((src, i) => (
+                    <div key={i} className="relative w-20 h-20 rounded-lg overflow-hidden border border-border">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={src} alt="" className="w-full h-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => removeImage(i)}
+                        className="absolute top-0.5 right-0.5 bg-black/60 rounded-full p-0.5">
+                        <X className="h-3 w-3 text-white" />
+                      </button>
+                    </div>
+                  ))}
+                  {images.length < MAX_IMAGES && (
+                    <label className="w-20 h-20 rounded-lg border-2 border-dashed border-border flex items-center justify-center cursor-pointer hover:border-white/30">
+                      <Upload className="h-5 w-5 text-muted-foreground" />
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        className="hidden"
+                        onChange={(e) => handleImagesChange(e.target.files)}
+                      />
+                    </label>
+                  )}
+                </div>
+              </div>
 
               <Button
                 type="submit"

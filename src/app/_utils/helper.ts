@@ -5,6 +5,51 @@ export const endpointUrl = (endpoint: string) => {
   return `${BASE_URL}${endpoint}`;
 };
 
+// Every non-2xx response uses { success:false, message, code? }, except one
+// documented quirk: a protected route hit with no Authorization header at
+// all returns { error: "Authentication Failed" } instead — no `success`
+// field. Handle both shapes so callers get a real message either way.
+export function apiErrorMessage(error: unknown, fallback: string): string {
+  const data = (error as { response?: { data?: unknown } } | undefined)
+    ?.response?.data as { message?: string; error?: string } | undefined;
+  return data?.message || data?.error || fallback;
+}
+
+export function apiErrorCode(error: unknown): string | undefined {
+  const data = (error as { response?: { data?: unknown } } | undefined)
+    ?.response?.data as { code?: string } | undefined;
+  return data?.code;
+}
+
+export function apiErrorDetails<T = Record<string, unknown>>(
+  error: unknown
+): T | undefined {
+  const data = (error as { response?: { data?: unknown } } | undefined)
+    ?.response?.data as { details?: T } | undefined;
+  return data?.details;
+}
+
+const DEVICE_ID_KEY = "pazzell_device_id";
+
+// A stable per-browser identifier sent as X-Device-Id on freebie claims —
+// feeds the device-ceiling anti-abuse check (docs/CONFIG.md `freebie.deviceDailyCap`).
+export function getOrCreateDeviceId(): string {
+  if (typeof window === "undefined") return "";
+  try {
+    let id = localStorage.getItem(DEVICE_ID_KEY);
+    if (!id) {
+      id =
+        typeof crypto !== "undefined" && "randomUUID" in crypto
+          ? crypto.randomUUID()
+          : `dev_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+      localStorage.setItem(DEVICE_ID_KEY, id);
+    }
+    return id;
+  } catch {
+    return "";
+  }
+}
+
 export const formatPuzzleType = (type: string) => {
   return type
     ?.split("_")

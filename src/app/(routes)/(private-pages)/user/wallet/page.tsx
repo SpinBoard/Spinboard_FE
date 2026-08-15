@@ -5,27 +5,20 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { useAtomValue } from "jotai";
 import { userAtom } from "@/atom/user";
-import { endpointUrl } from "@/app/_utils/helper";
+import { endpointUrl, apiErrorMessage } from "@/app/_utils/helper";
 import { ENDPOINTS } from "@/app/_utils/endpoints";
 import {
   WalletBalanceResponse,
   WalletTransactionsResponse,
   BankAccountsResponse,
   BankAccount,
-  WithdrawalsResponse,
 } from "@/types";
 import { MainLayout } from "@/components/layout/main-layout";
 import { PageLoader } from "@/components/ui/page-loader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Progress } from "@/components/ui/progress";
 import {
   Wallet as WalletIcon,
   Plus,
@@ -33,16 +26,11 @@ import {
   Loader2,
   AlertCircle,
   CheckCircle2,
-  ArrowDownToLine,
   Landmark,
   Receipt,
+  Calendar,
 } from "lucide-react";
-import {
-  generateIdempotencyKey,
-  formatCurrency,
-  validateWithdrawalAmount,
-  WITHDRAWAL_STATUS_STYLES,
-} from "./wallet-utils";
+import { formatCurrency, payoutProgressPercent } from "./wallet-utils";
 
 export default function WalletPage() {
   const user = useAtomValue(userAtom);
@@ -51,11 +39,6 @@ export default function WalletPage() {
 
   const [bankForm, setBankForm] = useState({ accountNumber: "", bankCode: "", bankName: "" });
   const [addBankMessage, setAddBankMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
-
-  const [withdrawAmount, setWithdrawAmount] = useState("");
-  const [selectedBankAccountId, setSelectedBankAccountId] = useState("");
-  const [withdrawalIdempotencyKey, setWithdrawalIdempotencyKey] = useState<string | null>(null);
-  const [withdrawError, setWithdrawError] = useState("");
 
   const { data: balance, isLoading: loadingBalance } = useQuery({
     queryKey: ["wallet-balance"],
@@ -87,15 +70,6 @@ export default function WalletPage() {
     enabled: !!user?.accessToken,
   });
 
-  const { data: withdrawals, isLoading: loadingWithdrawals } = useQuery({
-    queryKey: ["wallet-withdrawals"],
-    queryFn: () =>
-      axios
-        .get<WithdrawalsResponse>(endpointUrl(ENDPOINTS.WALLET_WITHDRAWALS), authHeaders)
-        .then((res) => res.data.withdrawals),
-    enabled: !!user?.accessToken,
-  });
-
   // POST /wallet/bank-accounts resolves the account name via Paystack and
   // saves in the same call — there's no separate "preview" endpoint, so the
   // resolved name is shown right after saving rather than before.
@@ -116,10 +90,10 @@ export default function WalletPage() {
       setBankForm({ accountNumber: "", bankCode: "", bankName: "" });
       queryClient.invalidateQueries({ queryKey: ["wallet-bank-accounts"] });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       setAddBankMessage({
         type: "error",
-        text: error?.response?.data?.message ?? "Couldn't add this bank account. Please check the details and try again.",
+        text: apiErrorMessage(error, "Couldn't add this bank account. Please check the details and try again."),
       });
     },
   });
@@ -132,56 +106,17 @@ export default function WalletPage() {
     },
   });
 
-  const withdrawMutation = useMutation({
-    mutationFn: (payload: { bankAccountId: string; amount: number; idempotencyKey: string }) =>
-      axios.post(endpointUrl(ENDPOINTS.WALLET_WITHDRAWALS), payload, authHeaders),
-    onSuccess: () => {
-      setWithdrawAmount("");
-      setSelectedBankAccountId("");
-      setWithdrawalIdempotencyKey(null);
-      setWithdrawError("");
-      queryClient.invalidateQueries({ queryKey: ["wallet-withdrawals"] });
-      queryClient.invalidateQueries({ queryKey: ["wallet-balance"] });
-    },
-    onError: (error: any) => {
-      // Deliberately keep withdrawalIdempotencyKey unchanged so a retry
-      // reuses the same key and can't create a duplicate withdrawal.
-      setWithdrawError(
-        error?.response?.data?.message ?? "Withdrawal failed. You can safely retry."
-      );
-    },
-  });
-
   const handleAddBankAccount = (e: React.FormEvent) => {
     e.preventDefault();
     setAddBankMessage(null);
     addBankAccountMutation.mutate();
   };
 
-  const handleWithdraw = () => {
-    setWithdrawError("");
-    const amount = Number(withdrawAmount);
-    const validation = validateWithdrawalAmount(amount, balance?.balance ?? 0);
-    if (!validation.valid) {
-      setWithdrawError(validation.message ?? "Invalid amount.");
-      return;
-    }
-    if (!selectedBankAccountId) {
-      setWithdrawError("Select a bank account.");
-      return;
-    }
-    const key = withdrawalIdempotencyKey ?? generateIdempotencyKey();
-    setWithdrawalIdempotencyKey(key);
-    withdrawMutation.mutate({
-      bankAccountId: selectedBankAccountId,
-      amount,
-      idempotencyKey: key,
-    });
-  };
-
   if (loadingBalance) {
     return <PageLoader message="Loading your wallet..." />;
   }
+
+  const progressPct = payoutProgressPercent(balance?.balance ?? 0, balance?.payoutThreshold ?? 0);
 
   return (
     <MainLayout maxWidth="4xl">
@@ -192,19 +127,44 @@ export default function WalletPage() {
             Wallet
           </h1>
           <p className="text-white/70">
-            Your weekly cash winnings, and withdrawals to your bank account.
+            Cash from redeemed freebie codes — paid out weekly, once your balance clears the threshold.
           </p>
         </div>
 
-        {/* Balance */}
+        {/* Balance + payout progress */}
         <Card className="bg-card/50 backdrop-blur-sm border-white/10">
-          <CardContent className="pt-6">
-            <p className="text-white/60 text-xs uppercase tracking-wider mb-1">
-              Available Balance
-            </p>
-            <p className="text-4xl font-bold text-white font-sora" data-testid="wallet-balance">
-              {formatCurrency(balance?.balance ?? 0, balance?.currency ?? "NGN")}
-            </p>
+          <CardContent className="pt-6 space-y-4">
+            <div>
+              <p className="text-white/60 text-xs uppercase tracking-wider mb-1">
+                Available Balance
+              </p>
+              <p className="text-4xl font-bold text-white font-sora" data-testid="wallet-balance">
+                {formatCurrency(balance?.balance ?? 0, balance?.currency ?? "NGN")}
+              </p>
+            </div>
+
+            {balance && (
+              <div className="space-y-2" data-testid="payout-progress">
+                <Progress value={progressPct} />
+                <div className="flex items-center justify-between text-xs text-white/60">
+                  <span>
+                    {balance.amountToThreshold > 0
+                      ? `${formatCurrency(balance.amountToThreshold, balance.currency)} to next payout`
+                      : "Threshold met — included in the next payout run"}
+                  </span>
+                  {balance.nextPayoutDate && (
+                    <span className="flex items-center gap-1">
+                      <Calendar className="h-3.5 w-3.5" />
+                      {new Date(balance.nextPayoutDate).toLocaleDateString()}
+                    </span>
+                  )}
+                </div>
+                <p className="text-white/40 text-xs">
+                  Cash only leaves via a manual weekly payout run to your default bank account — there&apos;s
+                  no self-serve withdrawal.
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -300,105 +260,6 @@ export default function WalletPage() {
           </CardContent>
         </Card>
 
-        {/* Withdraw */}
-        <Card className="bg-card/50 backdrop-blur-sm border-white/10">
-          <CardHeader>
-            <CardTitle className="text-white font-sora flex items-center gap-2">
-              <ArrowDownToLine className="h-5 w-5 text-secondary" />
-              Withdraw
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {!bankAccounts || bankAccounts.length === 0 ? (
-              <p className="text-white/60 text-sm">
-                Add a bank account above before requesting a withdrawal.
-              </p>
-            ) : (
-              <>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <Input
-                    type="number"
-                    min={1}
-                    placeholder="Amount"
-                    value={withdrawAmount}
-                    onChange={(e) => setWithdrawAmount(e.target.value)}
-                    className="bg-white/5 border-white/10 text-white placeholder:text-white/40"
-                  />
-                  <Select value={selectedBankAccountId} onValueChange={setSelectedBankAccountId}>
-                    <SelectTrigger className="bg-white/5 border-white/10 text-white">
-                      <SelectValue placeholder="Select bank account" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-card border-white/10">
-                      {bankAccounts.map((acc) => (
-                        <SelectItem key={acc._id} value={acc._id} className="text-white hover:bg-white/10">
-                          {acc.bankName} &bull; ****{acc.accountNumber.slice(-4)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <Button
-                  onClick={handleWithdraw}
-                  disabled={withdrawMutation.isPending}
-                  className="bg-secondary hover:bg-secondary/80 text-secondary-foreground">
-                  {withdrawMutation.isPending ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Processing...
-                    </>
-                  ) : withdrawError ? (
-                    "Retry Withdrawal"
-                  ) : (
-                    "Request Withdrawal"
-                  )}
-                </Button>
-                {withdrawError && (
-                  <p className="text-red-400 text-sm flex items-center gap-2">
-                    <AlertCircle className="h-4 w-4" />
-                    {withdrawError}
-                  </p>
-                )}
-              </>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Withdrawal history */}
-        <Card className="bg-card/50 backdrop-blur-sm border-white/10">
-          <CardHeader>
-            <CardTitle className="text-white font-sora">Withdrawal History</CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            {loadingWithdrawals ? (
-              <div className="p-6">
-                <Loader2 className="h-5 w-5 animate-spin text-secondary" />
-              </div>
-            ) : withdrawals && withdrawals.length > 0 ? (
-              <div className="space-y-1">
-                {withdrawals.map((w) => (
-                  <div
-                    key={w._id}
-                    data-testid="withdrawal-row"
-                    className="flex items-center justify-between p-4 border-b border-white/5 last:border-b-0">
-                    <div>
-                      <p className="text-white font-medium">{formatCurrency(w.amount)}</p>
-                      <p className="text-white/50 text-xs">
-                        {new Date(w.createdAt).toLocaleDateString()}
-                      </p>
-                    </div>
-                    <span
-                      className={`px-2.5 py-1 rounded-full text-xs font-semibold border capitalize ${WITHDRAWAL_STATUS_STYLES[w.status]}`}>
-                      {w.status}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="p-6 text-white/50 text-sm">No withdrawals yet.</p>
-            )}
-          </CardContent>
-        </Card>
-
         {/* Transaction history */}
         <Card className="bg-card/50 backdrop-blur-sm border-white/10">
           <CardHeader>
@@ -419,16 +280,16 @@ export default function WalletPage() {
                     key={tx._id}
                     className="flex items-center justify-between p-4 border-b border-white/5 last:border-b-0">
                     <div>
-                      <p className="text-white text-sm">{tx.description ?? tx.type}</p>
+                      <p className="text-white text-sm capitalize">{tx.reason.replace(/_/g, " ").toLowerCase()}</p>
                       <p className="text-white/50 text-xs">
                         {new Date(tx.createdAt).toLocaleDateString()}
                       </p>
                     </div>
                     <span
                       className={`font-mono font-semibold ${
-                        tx.amount >= 0 ? "text-green-400" : "text-red-400"
+                        tx.type === "credit" ? "text-green-400" : "text-red-400"
                       }`}>
-                      {tx.amount >= 0 ? "+" : ""}
+                      {tx.type === "credit" ? "+" : "-"}
                       {formatCurrency(tx.amount)}
                     </span>
                   </div>

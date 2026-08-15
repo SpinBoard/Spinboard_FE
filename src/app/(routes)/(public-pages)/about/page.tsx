@@ -29,13 +29,13 @@ export default function AboutPage() {
       icon: Video,
       title: "Attention-First",
       description:
-        "We believe ads should earn attention, not steal it. A short video and a quick quiz — that's the whole ask.",
+        "We believe ads should earn attention, not steal it. The billboard plays continuously — no gate, no quiz.",
     },
     {
       icon: Shield,
       title: "Fair Rewards",
       description:
-        "Every viewer deserves fair compensation for their time. We ensure transparent, auditable spin outcomes.",
+        "First to type a live freebie code wins it, every time. Transparent, first-come mechanics, nothing hidden.",
     },
     {
       icon: TrendingUp,
@@ -47,7 +47,7 @@ export default function AboutPage() {
       icon: Zap,
       title: "Innovation-Driven",
       description:
-        "We're constantly refining the watch-quiz-spin loop to make it faster, fairer, and more rewarding.",
+        "We're constantly refining the billboard and freebie-code strip to make it faster, fairer, and more rewarding.",
     },
   ];
 
@@ -62,9 +62,9 @@ export default function AboutPage() {
               <span className="text-primary"> Real Rewards</span>
             </h1>
             <p className="text-lg sm:text-xl text-white/70 mb-8 max-w-3xl mx-auto px-4">
-              Spinboard connects brands with real, engaged viewers. Watch a short video
-              ad, answer a quick quiz, and spin for cash, discounts, and prizes — brands
-              get authentic attention, viewers get paid.
+              Pazzell connects brands with real, engaged viewers. Brand ads play continuously on
+              the billboard — no gate, no quiz — and freebie codes for real cash and airtime pop
+              up on the strip for the first viewer to type them.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center px-4">
               <Link href={routes.WATCH}>
@@ -123,7 +123,7 @@ export default function AboutPage() {
                   <div>
                     <h4 className="font-semibold text-white">Genuine Engagement</h4>
                     <p className="text-white/60">
-                      Every quiz answer is a real interaction, not a passive skip-through
+                      Racing to catch a live freebie code is a real interaction, not a passive skip-through
                     </p>
                   </div>
                 </div>
@@ -132,7 +132,7 @@ export default function AboutPage() {
                   <div>
                     <h4 className="font-semibold text-white">Fair Rewards</h4>
                     <p className="text-white/60">
-                      Auditable spin outcomes and fast payouts for every viewer
+                      First-to-type wins it, and nothing you win ever expires
                     </p>
                   </div>
                 </div>
@@ -154,11 +154,11 @@ export default function AboutPage() {
                     <Sparkles className="h-12 w-12 text-primary" />
                   </div>
                   <h3 className="text-2xl font-bold text-white mb-4 font-sora">
-                    Watch. Answer. Spin.
+                    Watch. Catch a Code. Get Paid.
                   </h3>
                   <p className="text-white/60">
-                    Our platform turns brand videos into a fast, fair loop viewers
-                    actually want to finish.
+                    Our platform turns brand videos into a continuous stream viewers
+                    actually want to stick around for.
                   </p>
                 </div>
               </Card>
@@ -197,7 +197,7 @@ export default function AboutPage() {
         <section className="py-20">
           <Card className="bg-gradient-to-r from-primary to-primary/70 text-white mx-4">
             <CardContent className="p-8 sm:p-12 text-center">
-              <h2 className="text-3xl font-bold mb-4 font-sora">Join Spinboard</h2>
+              <h2 className="text-3xl font-bold mb-4 font-sora">Join Pazzell</h2>
               <p className="text-xl mb-8 text-white/90 max-w-2xl mx-auto">
                 Whether you want to earn money watching ads or create engaging
                 campaigns for your brand, we&apos;d love to have you.
@@ -217,10 +217,10 @@ export default function AboutPage() {
               <div className="mt-8 pt-8 border-t border-white/20">
                 <p className="text-white/90 mb-4">Have questions? We&apos;d love to hear from you.</p>
                 <a
-                  href="mailto:hello@spinboard.com"
+                  href="mailto:hello@pazzell.com"
                   className="inline-flex items-center text-white hover:text-white/80 transition-colors">
                   <Mail className="h-4 w-4 mr-2" />
-                  hello@spinboard.com
+                  hello@pazzell.com
                 </a>
               </div>
             </CardContent>

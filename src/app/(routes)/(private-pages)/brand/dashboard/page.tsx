@@ -15,12 +15,7 @@ import { useAtomValue } from "jotai";
 import { userAtom } from "@/atom/user";
 import { PageLoader } from "@/components/ui/page-loader";
 import { PageError } from "@/components/ui/page-error";
-
-const STATUS_STYLES: Record<AdCampaign["status"], string> = {
-  draft: "bg-white/10 text-muted-foreground border-white/20",
-  active: "bg-success/20 text-success border-success/30",
-  inactive: "bg-white/10 text-muted-foreground border-white/20",
-};
+import { STATUS_STYLES, formatStatusLabel } from "../campaigns/campaign-status";
 
 export default function BrandDashboard() {
   const user = useAtomValue(userAtom);
@@ -33,23 +28,20 @@ export default function BrandDashboard() {
   });
 
   const { data: products } = useQuery<MarketplaceProduct[]>({
-    queryKey: ["marketplace-products"],
+    queryKey: ["marketplace-products-mine"],
     queryFn: () =>
-      api.get<MarketplaceProductsResponse>(ENDPOINTS.MARKETPLACE_PRODUCTS).then((res) => res.data.products),
+      api.get<MarketplaceProductsResponse>(ENDPOINTS.MARKETPLACE_PRODUCTS_MINE).then((res) => res.data.products),
     enabled: !!user?.accessToken,
   });
 
-  const myProductCount = useMemo(
-    () => (products ?? []).filter((p) => p.brandId === user?.id).length,
-    [products, user?.id]
-  );
+  const myProductCount = products?.length ?? 0;
 
   const stats = useMemo(() => {
     const list = campaigns ?? [];
     return {
-      active: list.filter((c) => c.status === "active").length,
-      draft: list.filter((c) => c.status === "draft").length,
-      inactive: list.filter((c) => c.status === "inactive").length,
+      active: list.filter((c) => c.status === "ACTIVE").length,
+      draft: list.filter((c) => c.status === "DRAFT").length,
+      pendingReview: list.filter((c) => c.moderationStatus === "PENDING" && c.status !== "DRAFT").length,
       total: list.length,
     };
   }, [campaigns]);
@@ -165,8 +157,8 @@ export default function BrandDashboard() {
                   <div>
                     <h4 className="text-foreground font-semibold">{campaign.title}</h4>
                     <div className="flex items-center gap-3 mt-1">
-                      <Badge className={`${STATUS_STYLES[campaign.status]} text-xs capitalize`}>
-                        {campaign.status}
+                      <Badge className={`${STATUS_STYLES[campaign.status]} text-xs`}>
+                        {formatStatusLabel(campaign.status)}
                       </Badge>
                       <span className="text-muted-foreground text-sm capitalize">{campaign.tier}</span>
                     </div>

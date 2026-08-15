@@ -57,6 +57,9 @@ vi.mock("axios", () => {
       if (url.includes("/referrals/events")) {
         return Promise.resolve({ data: events });
       }
+      if (url.includes("/admin/config")) {
+        return Promise.reject({ response: { status: 403 } });
+      }
       return Promise.reject(new Error(`Unhandled GET ${url}`));
     }),
     interceptors: { request: { use: vi.fn() }, response: { use: vi.fn() } },
@@ -90,34 +93,37 @@ function renderPage() {
 }
 
 describe("ReferralsPage", () => {
-  it("explains qualification (email verified + profile complete + 1 full ad cycle), not the old points mechanic", async () => {
+  it("explains qualification (email verified + profile complete + 1 verified Billboard view)", async () => {
     renderPage();
     expect(
-      await screen.findByText(/verifies their email, completes their profile, and/i)
+      await screen.findByText(/verifies their email, completes their profile, and racks up/i)
     ).toBeInTheDocument();
     expect(screen.queryByText(/21 lifetime points/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/bonus points/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/% off/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/discount code/i)).not.toBeInTheDocument();
   });
 
-  it("shows progress toward the 20 and 40 qualified-referral discount thresholds", async () => {
+  it("shows progress toward the qualified-referral wallet-credit thresholds, in NGN", async () => {
     renderPage();
     await screen.findByText(/verifies their email/i);
 
     expect(screen.getByText("3")).toBeInTheDocument(); // qualified count
     expect(screen.getAllByText("Qualified Referrals").length).toBeGreaterThan(0);
-    // 3 qualified so far → 17 more to the 20% off threshold
+    // 3 qualified so far → 17 more to the first (20-referral) threshold
     expect(screen.getByText("17")).toBeInTheDocument();
-    expect(screen.getByText("To next 20% off")).toBeInTheDocument();
+    expect(screen.getByText("To next ₦1,000")).toBeInTheDocument();
     expect(screen.getByText("2")).toBeInTheDocument(); // pending count
     expect(screen.getByText("Pending")).toBeInTheDocument();
   });
 
-  it("labels recent activity events using qualification language, not points", async () => {
+  it("labels recent activity events using qualification/wallet-credit language, not points or discount codes", async () => {
     renderPage();
     expect(
       await screen.findByText(/pending until they qualify/i)
     ).toBeInTheDocument();
-    expect(screen.getByText(/one step closer to your next discount code/i)).toBeInTheDocument();
+    expect(screen.getByText(/one step closer to your next wallet credit/i)).toBeInTheDocument();
     expect(screen.queryByText(/pts/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/discount code/i)).not.toBeInTheDocument();
   });
 });

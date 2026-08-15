@@ -17,6 +17,7 @@ import {
   LogOut,
   Building2,
   User,
+  Store,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { routes } from '@/app/_utils/routes'
@@ -39,6 +40,11 @@ const sidebarNavItems = [
     title: 'Campaigns',
     href: routes.BRAND.CAMPAIGNS,
     icon: Megaphone,
+  },
+  {
+    title: 'Marketplace',
+    href: routes.BRAND.MARKETPLACE_PROFILE,
+    icon: Store,
   },
   {
     title: 'Settings',
@@ -79,7 +85,7 @@ export default function BrandLayout({
             {/* Logo */}
             <div className="flex items-center gap-2 text-2xl font-bold text-white font-fredoka mb-8">
               <LogoIcon />
-              Spinboard
+              Pazzell
             </div>
             
             {/* Navigation */}
@@ -134,7 +140,7 @@ export default function BrandLayout({
             <div className="flex items-center justify-between mb-8">
               <div className="flex items-center gap-2 text-xl font-bold text-white font-fredoka">
                 <LogoIcon />
-                Spinboard
+                Pazzell
               </div>
               <Button
                 variant="ghost"

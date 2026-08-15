@@ -21,33 +21,32 @@ const loggedInUser = {
   refreshToken: "test-refresh",
 };
 
-function ad(campaignId: string, adsWatchedSoFar: number) {
-  return {
-    success: true,
-    adsWatchedSoFar,
-    ad: {
-      campaignId,
-      title: `Ad ${campaignId}`,
-      description: "desc",
-      brandUrl: "https://brand.example",
-      videoUrl: "https://cdn.example/video.mp4",
-      videoDurationSeconds: 90,
-      questions: [
-        { question: "Q1?", choices: ["A", "B"] },
-        { question: "Q2?", choices: ["C", "D"] },
-        { question: "Q3?", choices: ["E", "F"] },
-      ],
-    },
-  };
-}
+const queueSlot = {
+  slotId: "slot_1",
+  type: "AD" as const,
+  campaignId: "camp1",
+  brandName: "Naija Snacks Co.",
+  title: "Crunch Time",
+  videoUrl: "https://cdn.example/video.mp4",
+  durationSec: 30,
+};
 
-let currentAd = ad("camp1", 2);
-let quizSubmitResponse: {
-  success: true;
-  allCorrect: boolean;
-  attemptsSoFar: number;
-  cycleCompleted: boolean;
-  spinCreditGranted: boolean;
+const stripFeed = {
+  serverTime: "2026-08-14T13:22:05.000Z",
+  items: [
+    {
+      kind: "FREEBIE" as const,
+      display: "PINNED" as const,
+      positionHint: "TOP" as const,
+      codeId: "code1",
+      publicCode: "PZL7K2Q9",
+      valueLabel: "₦500 MTN Airtime",
+      type: "AIRTIME" as const,
+      state: "AVAILABLE" as const,
+      liveUntil: "2026-08-14T13:32:05.000Z",
+    },
+    { kind: "PROMO" as const, display: "SCROLLING" as const, text: "Eyes on the edges." },
+  ],
 };
 
 const axiosGet = vi.fn();
@@ -58,7 +57,7 @@ vi.mock("axios", () => {
     post: (...args: unknown[]) => axiosPost(...(args as [string])),
     interceptors: { request: { use: vi.fn() }, response: { use: vi.fn() } },
   };
-  return { default: { ...instance, create: () => instance } };
+  return { default: { ...instance, create: () => instance }, isAxiosError: () => false };
 });
 
 import WatchPage from "./page";
@@ -81,92 +80,60 @@ describe("WatchPage", () => {
     localStorage.clear();
     axiosGet.mockReset();
     axiosPost.mockReset();
-    currentAd = ad("camp1", 2);
     axiosGet.mockImplementation((url: string) => {
-      if (url.includes("/ads/next")) return Promise.resolve({ data: currentAd });
+      if (url.includes("/billboard/queue")) return Promise.resolve({ data: { success: true, slots: [queueSlot] } });
+      if (url.includes("/freebies/strip")) return Promise.resolve({ data: stripFeed });
       if (url.includes("/admin/config")) return Promise.reject({ response: { status: 403 } });
       return Promise.reject(new Error(`Unhandled GET ${url}`));
     });
     axiosPost.mockImplementation((url: string) => {
-      if (url.includes("/video/start") || url.includes("/video/complete")) {
-        return Promise.resolve({ data: { success: true } });
-      }
-      if (url.includes("/quiz/submit")) {
-        return Promise.resolve({ data: quizSubmitResponse });
+      if (url.includes("/billboard/session")) return Promise.resolve({ data: { success: true, sessionId: "sess1" } });
+      if (url.includes("/billboard/impressions/heartbeat")) return Promise.resolve({ data: { success: true } });
+      if (url.includes("/billboard/impressions/complete")) return Promise.resolve({ data: { success: true, completed: true } });
+      if (url.includes("/freebies/apply")) {
+        return Promise.resolve({
+          data: { success: true, action: "CLAIMED", claimId: "c1", type: "AIRTIME", valueLabel: "₦500 MTN Airtime", secretCode: "SECRET123" },
+        });
       }
       return Promise.reject(new Error(`Unhandled POST ${url}`));
     });
   });
 
-  it("renders the video and the quiz on the same page, with a responsive side-by-side layout", async () => {
+  it("mints a session, loads the queue, and plays the first slot with no gate", async () => {
     renderPage();
-    const heading = await screen.findByText("Ad camp1");
-    expect(heading).toBeInTheDocument();
-
-    // Video and quiz mount together — proves the "same page" requirement.
+    await waitFor(() => expect(axiosPost).toHaveBeenCalledWith("/billboard/session"));
+    expect(await screen.findByText(/Crunch Time/)).toBeInTheDocument();
     expect(document.querySelector("video")).toBeInTheDocument();
-    expect(screen.getByTestId("quiz-panel")).toBeInTheDocument();
-
-    // Desktop: side-by-side (lg:grid-cols-2). Mobile: stacked (grid-cols-1,
-    // the default before the lg breakpoint applies) — same DOM, CSS handles
-    // the responsive switch, so asserting the responsive classes covers
-    // both widths without needing a real viewport.
-    const layout = heading.closest(".grid");
-    expect(layout?.className).toContain("grid-cols-1");
-    expect(layout?.className).toContain("lg:grid-cols-2");
+    // No quiz panel, no spin machine — the billboard is never gated.
+    expect(screen.queryByTestId("quiz-panel")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("spin-machine")).not.toBeInTheDocument();
   });
 
-  it("shows cycle position out of the configured ads-per-cycle", async () => {
-    currentAd = ad("camp1", 2); // 3rd ad in a 5-ad cycle
+  it("renders the freebie strip with the pinned code and scrolling promo", async () => {
     renderPage();
-    await waitFor(() =>
-      expect(screen.getByTestId("cycle-progress")).toHaveTextContent("Ad 3 of 5")
-    );
+    expect(await screen.findByText("PZL7K2Q9")).toBeInTheDocument();
+    expect(screen.getAllByText("Eyes on the edges.").length).toBeGreaterThan(0);
   });
 
-  it("requires all 3 answers before submit, and shows a retry banner on a wrong pass", async () => {
-    quizSubmitResponse = {
-      success: true,
-      allCorrect: false,
-      attemptsSoFar: 1,
-      cycleCompleted: false,
-      spinCreditGranted: false,
-    };
+  it("the Apply box always renders and submits a code to /freebies/apply", async () => {
     renderPage();
-    await screen.findByTestId("quiz-panel");
-
+    const input = await screen.findByPlaceholderText(/type a code/i);
     const user = userEvent.setup();
-    await user.click(screen.getByTestId("quiz-choice-0-0"));
-    await user.click(screen.getByTestId("quiz-choice-1-0"));
-    await user.click(screen.getByTestId("quiz-choice-2-0"));
-    await user.click(screen.getByRole("button", { name: /submit answers/i }));
+    await user.type(input, "PZL7K2Q9");
+    await user.click(screen.getByRole("button", { name: /apply code/i }));
 
-    expect(await screen.findByRole("alert")).toHaveTextContent(/wrong/i);
-    // Unlimited retries — the quiz panel (not a dead end) is still shown.
-    expect(screen.getByTestId("quiz-panel")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(axiosPost).toHaveBeenCalledWith(
+        "/freebies/apply",
+        { code: "PZL7K2Q9" },
+        expect.anything()
+      )
+    );
+    expect(await screen.findByText(/you won it/i)).toBeInTheDocument();
   });
 
-  it("on the 5th ad's passed quiz, activates the spin machine and advances via Next", async () => {
-    currentAd = ad("camp5", 4); // 5th ad
-    quizSubmitResponse = {
-      success: true,
-      allCorrect: true,
-      attemptsSoFar: 1,
-      cycleCompleted: true,
-      spinCreditGranted: true,
-    };
-    renderPage();
-    await screen.findByTestId("quiz-panel");
-
-    const user = userEvent.setup();
-    await user.click(screen.getByTestId("quiz-choice-0-0"));
-    await user.click(screen.getByTestId("quiz-choice-1-0"));
-    await user.click(screen.getByTestId("quiz-choice-2-0"));
-    await user.click(screen.getByRole("button", { name: /submit answers/i }));
-
-    expect(await screen.findByTestId("next-ad-button")).toBeInTheDocument();
-    await waitFor(() =>
-      expect(screen.getByTestId("spin-machine")).toHaveAttribute("data-state", "active")
-    );
+  it("works with no logged-in user at all", async () => {
+    renderPage(null);
+    expect(await screen.findByText(/Crunch Time/)).toBeInTheDocument();
   });
 });

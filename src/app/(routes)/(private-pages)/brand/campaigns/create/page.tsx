@@ -2,11 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useForm, useFieldArray } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { isAxiosError } from "axios";
 import Link from "next/link";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,7 +13,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -31,13 +29,6 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   ArrowLeft,
   ArrowRight,
   Upload,
@@ -45,34 +36,25 @@ import {
   AlertCircle,
   Video as VideoIcon,
   FileText,
-  HelpCircle,
   Loader2,
   Save,
   X,
-  Globe,
   Rocket,
+  Clock,
 } from "lucide-react";
 import { routes } from "@/app/_utils/routes";
 import { ENDPOINTS } from "@/app/_utils/endpoints";
 import { api } from "@/lib/api";
+import { apiErrorMessage } from "@/app/_utils/helper";
 import { useAdminConfig } from "@/hooks/use-admin-config";
 import { AdCampaign, AdCampaignResponse } from "@/types";
 import { GoLiveDialog } from "@/components/brand/go-live-dialog";
 import {
-  QUIZ_QUESTION_COUNT,
   TIER_META,
   getVideoDuration,
   validateVideoFile,
   buildAdCampaignFormData,
 } from "./wizard-utils";
-
-const questionSchema = z.object({
-  question: z.string().min(5, "Question must be at least 5 characters"),
-  choices: z
-    .array(z.string().min(1, "Choice cannot be empty"))
-    .length(4, "Must have exactly 4 choices"),
-  correctIndex: z.number().min(0).max(3),
-});
 
 const wizardSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters"),
@@ -86,39 +68,26 @@ const wizardSchema = z.object({
   video: z
     .any()
     .refine((f) => f instanceof File && f.size > 0, "Please upload a campaign video"),
-  questions: z
-    .array(questionSchema)
-    .length(
-      QUIZ_QUESTION_COUNT,
-      `Exactly ${QUIZ_QUESTION_COUNT} quiz questions are required`
-    ),
   tier: z.enum(["basic", "premium"]),
-  global: z.boolean(),
 });
 
 type WizardFormData = z.infer<typeof wizardSchema>;
 
-const STEPS = ["Details", "Video", "Quiz", "Tier", "Review"] as const;
+const STEPS = ["Details", "Video", "Tier", "Review"] as const;
 
 const STEP_FIELDS: (keyof WizardFormData)[][] = [
   ["title", "description", "brandUrl", "campaignUrl"],
   ["video"],
-  ["questions"],
   ["tier"],
   [],
 ];
-
-const emptyQuestion = () => ({
-  question: "",
-  choices: ["", "", "", ""],
-  correctIndex: 0,
-});
 
 export default function CreateCampaignWizardPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { get: getConfig } = useAdminConfig();
-  const tierPrices = getConfig("campaign.tierPrices");
+  const tiers = getConfig("campaign.tiers");
+  const activeDurationDays = getConfig("campaign.activeDurationDays");
 
   const [step, setStep] = useState(0);
   const [videoPreviewUrl, setVideoPreviewUrl] = useState<string>("");
@@ -139,21 +108,13 @@ export default function CreateCampaignWizardPage() {
       brandUrl: "",
       campaignUrl: "",
       video: undefined,
-      questions: Array(QUIZ_QUESTION_COUNT).fill(null).map(emptyQuestion),
       tier: "basic",
-      global: false,
     },
   });
 
-  const { fields: questionFields } = useFieldArray({
-    control: form.control,
-    name: "questions",
-  });
-
   const tier = form.watch("tier");
-  const global = form.watch("global");
   const selectedTierMeta = TIER_META.find((t) => t.id === tier)!;
-  const priceUSD = tierPrices?.[tier] ?? selectedTierMeta.priceUSD;
+  const priceUSD = tiers?.[tier]?.price ?? selectedTierMeta.priceUSD;
 
   const createCampaignMutation = useMutation({
     mutationFn: async (formData: FormData) =>
@@ -173,10 +134,7 @@ export default function CreateCampaignWizardPage() {
       queryClient.invalidateQueries({ queryKey: ["ad-campaigns-mine"] });
     },
     onError: (error) => {
-      const message = isAxiosError(error)
-        ? (error.response?.data as { message?: string } | undefined)?.message
-        : undefined;
-      setApiError(message || "Failed to create campaign. Please try again.");
+      setApiError(apiErrorMessage(error, "Failed to create campaign. Please try again."));
       setShowSubmitModal(false);
       setUploadProgress(0);
     },
@@ -237,9 +195,7 @@ export default function CreateCampaignWizardPage() {
       brandUrl: data.brandUrl,
       campaignUrl: data.campaignUrl,
       video: data.video,
-      questions: data.questions,
       tier: data.tier,
-      global: data.tier === "premium" ? data.global : false,
     });
     createCampaignMutation.mutate(formData);
   };
@@ -255,7 +211,7 @@ export default function CreateCampaignWizardPage() {
         <div>
           <h1 className="text-3xl font-bold text-foreground font-sora">Create Ad Campaign</h1>
           <p className="text-muted-foreground">
-            Upload your video ad, add a 3-question quiz, and pick a tier.
+            Upload your video ad and pick a tier — it plays continuously on the billboard, no quiz to build.
           </p>
         </div>
       </div>
@@ -366,7 +322,7 @@ export default function CreateCampaignWizardPage() {
                   Ad Video
                 </CardTitle>
                 <p className="text-muted-foreground text-sm">
-                  ~90 seconds. Viewers watch this before the quiz. Max{" "}
+                  Plays continuously in the billboard rotation. Max{" "}
                   {Math.round(getConfig("video.maxDurationSeconds"))}s,{" "}
                   {Math.round(getConfig("video.maxSizeBytes") / (1024 * 1024))}MB.
                 </p>
@@ -431,93 +387,10 @@ export default function CreateCampaignWizardPage() {
           {step === 2 && (
             <Card className="bg-card/50 backdrop-blur-sm border-border">
               <CardHeader>
-                <CardTitle className="text-foreground font-sora flex items-center gap-2">
-                  <HelpCircle className="h-5 w-5 text-secondary" />
-                  Quiz Questions
-                  <span className="text-muted-foreground text-xs font-normal ml-1">
-                    (exactly {QUIZ_QUESTION_COUNT})
-                  </span>
-                </CardTitle>
-                <p className="text-muted-foreground text-sm">
-                  Viewers answer these after watching the video, with unlimited retries.
-                </p>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {questionFields.map((question, questionIndex) => (
-                  <div key={question.id} className="space-y-4 p-4 bg-white/5 rounded-lg border border-border">
-                    <h4 className="text-foreground font-medium">Question {questionIndex + 1}</h4>
-                    <FormField
-                      control={form.control}
-                      name={`questions.${questionIndex}.question`}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Question</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Enter your question..." {...field} />
-                          </FormControl>
-                          <FormMessage className="text-destructive" />
-                        </FormItem>
-                      )}
-                    />
-                    <div className="grid grid-cols-2 gap-2">
-                      {Array.from({ length: 4 }).map((_, choiceIndex) => (
-                        <FormField
-                          key={choiceIndex}
-                          control={form.control}
-                          name={`questions.${questionIndex}.choices.${choiceIndex}`}
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="text-sm">
-                                Choice {String.fromCharCode(65 + choiceIndex)}
-                              </FormLabel>
-                              <FormControl>
-                                <Input placeholder={`Option ${String.fromCharCode(65 + choiceIndex)}`} {...field} />
-                              </FormControl>
-                              <FormMessage className="text-destructive" />
-                            </FormItem>
-                          )}
-                        />
-                      ))}
-                    </div>
-                    <FormField
-                      control={form.control}
-                      name={`questions.${questionIndex}.correctIndex`}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Correct Answer</FormLabel>
-                          <Select
-                            onValueChange={(value) => field.onChange(parseInt(value))}
-                            value={field.value.toString()}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select correct answer" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {["A", "B", "C", "D"].map((letter, index) => (
-                                <SelectItem key={index} value={index.toString()}>
-                                  Option {letter}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage className="text-destructive" />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          )}
-
-          {step === 3 && (
-            <Card className="bg-card/50 backdrop-blur-sm border-border">
-              <CardHeader>
                 <CardTitle className="text-foreground font-sora">Choose your tier</CardTitle>
                 <p className="text-muted-foreground text-sm">
-                  Premium unlocks analytics and global visibility. You&apos;ll pick how many
-                  weeks to run this campaign — and pay — when you go live.
+                  Flat price, {activeDurationDays}-day activation — no weeks to pick. Premium gets a
+                  higher rotation weight plus the analytics dashboard.
                 </p>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -533,8 +406,11 @@ export default function CreateCampaignWizardPage() {
                       }`}>
                       <h4 className="font-sora font-bold text-lg text-foreground">{t.name}</h4>
                       <p className="text-2xl font-bold text-primary my-1">
-                        ${tierPrices?.[t.id] ?? t.priceUSD}
-                        <span className="text-sm font-normal text-muted-foreground">/week</span>
+                        ${tiers?.[t.id]?.price ?? t.priceUSD}
+                        <span className="text-sm font-normal text-muted-foreground">
+                          {" "}
+                          / {activeDurationDays} days
+                        </span>
                       </p>
                       <p className="text-xs text-muted-foreground mb-3">{t.blurb}</p>
                       <ul className="space-y-1 text-xs text-muted-foreground">
@@ -542,39 +418,15 @@ export default function CreateCampaignWizardPage() {
                           <CheckCircle className={`h-3 w-3 ${t.analytics ? "text-success" : "opacity-30"}`} />
                           Analytics dashboard
                         </li>
-                        <li className="flex items-center gap-1.5">
-                          <Globe className={`h-3 w-3 ${t.globalToggle ? "text-success" : "opacity-30"}`} />
-                          Global visibility toggle
-                        </li>
                       </ul>
                     </button>
                   ))}
                 </div>
-
-                {selectedTierMeta.globalToggle && (
-                  <FormField
-                    control={form.control}
-                    name="global"
-                    render={({ field }) => (
-                      <FormItem className="flex items-center justify-between rounded-lg border border-border p-4">
-                        <div>
-                          <FormLabel>Show globally</FormLabel>
-                          <p className="text-xs text-muted-foreground">
-                            Off shows only in your brand&apos;s country; on shows worldwide.
-                          </p>
-                        </div>
-                        <FormControl>
-                          <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                )}
               </CardContent>
             </Card>
           )}
 
-          {step === 4 && (
+          {step === 3 && (
             <Card className="bg-card/50 backdrop-blur-sm border-border">
               <CardHeader>
                 <CardTitle className="text-foreground font-sora flex items-center gap-2">
@@ -591,15 +443,11 @@ export default function CreateCampaignWizardPage() {
                   <span>Tier</span>
                   <span className="text-foreground capitalize">{tier}</span>
                 </div>
-                {selectedTierMeta.globalToggle && (
-                  <div className="flex justify-between text-muted-foreground">
-                    <span>Visibility</span>
-                    <span className="text-foreground">{global ? "Global" : "Home country only"}</span>
-                  </div>
-                )}
-                <div className="border-t border-border pt-3 text-xs text-muted-foreground">
-                  This creates your campaign as a draft at ${priceUSD}/week. You&apos;ll choose
-                  how many weeks to run it — and pay — when you go live.
+                <div className="border-t border-border pt-3 text-xs text-muted-foreground flex items-start gap-2">
+                  <Clock className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
+                  This creates your campaign as a draft. Going live charges ${priceUSD} flat and
+                  starts a {activeDurationDays}-day activation window — the campaign then enters
+                  pending review before it appears on the billboard.
                 </div>
               </CardContent>
             </Card>
@@ -655,7 +503,7 @@ export default function CreateCampaignWizardPage() {
             </DialogTitle>
             <DialogDescription>
               {createdCampaign
-                ? "Your campaign is saved as a draft. Go live anytime to choose how many weeks to run it and pay."
+                ? "Your campaign is saved as a draft. Go live anytime to pay the flat tier price and start its 30-day activation."
                 : "This creates your campaign as a draft."}
             </DialogDescription>
           </DialogHeader>

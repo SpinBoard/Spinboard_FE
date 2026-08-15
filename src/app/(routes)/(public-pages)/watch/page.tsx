@@ -1,167 +1,138 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { AlertCircle, ArrowRight, Loader2 } from "lucide-react";
-import { isAxiosError } from "axios";
-import { toast } from "sonner";
+import { Loader2, Tv } from "lucide-react";
 import { MainLayout } from "@/components/layout/main-layout";
-import { Button } from "@/components/ui/button";
 import { VideoPlayer } from "@/components/watch/video-player";
-import { QuizPanel } from "@/components/watch/quiz-panel";
-import { SpinMachine } from "@/components/spin/spin-machine";
-import { useAdNext, useAdQuizSubmit, useAdVideoComplete, useAdVideoStart } from "@/hooks/use-ads";
-import { useSpinCredit } from "@/hooks/use-spin";
+import { PerimeterStrip } from "@/components/billboard/perimeter-strip";
+import { ApplyBox } from "@/components/billboard/apply-box";
+import {
+  useBillboardComplete,
+  useBillboardHeartbeat,
+  useBillboardQueue,
+  useBillboardSession,
+} from "@/hooks/use-billboard";
+import { useStripFeed } from "@/hooks/use-freebies";
 import { useAdminConfig } from "@/hooks/use-admin-config";
+import { BillboardQueueSlot } from "@/types";
 
-function apiErrorMessage(error: unknown, fallback: string) {
-  const message = isAxiosError(error)
-    ? (error.response?.data as { message?: string } | undefined)?.message
-    : undefined;
-  return message || fallback;
-}
-
+// The billboard plays continuously — no quiz, no "watch 5 to unlock,"
+// nothing to gate on. Auth/profile completeness only matter when claiming a
+// freebie code (handled inside ApplyBox), never for watching.
 export default function WatchPage() {
-  const { data, isLoading, isError, refetch, isFetching } = useAdNext();
-  const videoStartMutation = useAdVideoStart();
-  const videoCompleteMutation = useAdVideoComplete();
-  const quizSubmitMutation = useAdQuizSubmit();
-  const { setHasCredit } = useSpinCredit();
   const { get } = useAdminConfig();
-  const adsPerCycle = get("spin.adsPerCycle");
+  const completionFraction = get("billboard.completionWatchFraction");
+  const heartbeatToleranceMs = get("billboard.heartbeatToleranceMs");
 
-  const [quizResult, setQuizResult] = useState<{ allCorrect: boolean } | null>(null);
-  const [passed, setPassed] = useState(false);
-  const startedForCampaignId = useRef<string | null>(null);
+  const sessionMutation = useBillboardSession();
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [queue, setQueue] = useState<BillboardQueueSlot[]>([]);
+  const [index, setIndex] = useState(0);
 
-  const ad = data?.ad;
+  const queueQuery = useBillboardQueue(sessionId);
+  const heartbeat = useBillboardHeartbeat();
+  const complete = useBillboardComplete();
+  const stripFeed = useStripFeed();
+
+  const completedForSlot = useRef<string | null>(null);
+  const lastHeartbeatAt = useRef(0);
 
   useEffect(() => {
-    setQuizResult(null);
-    setPassed(false);
-  }, [ad?.campaignId]);
+    sessionMutation.mutate(undefined, {
+      onSuccess: (id) => setSessionId(id),
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
-    if (ad?.campaignId && startedForCampaignId.current !== ad.campaignId) {
-      startedForCampaignId.current = ad.campaignId;
-      videoStartMutation.mutate(ad.campaignId, {
-        onError: (error) => {
-          // Not just cosmetic: if the backend requires a successful
-          // video/start before it'll accept a quiz submission, a silent
-          // failure here surfaces later as a misleading "wrong answer" on
-          // quiz submit. Surface it here so the real cause is visible.
-          toast.error("Couldn't start tracking this ad", {
-            description: apiErrorMessage(error, "Please refresh and try again."),
-          });
-        },
-      });
+    if (queueQuery.data && queueQuery.data.length > 0) {
+      setQueue((prev) => [...prev, ...queueQuery.data!]);
+    }
+  }, [queueQuery.data]);
+
+  const current = queue[index];
+
+  // Fetch a fresh batch once we're down to the last slot.
+  useEffect(() => {
+    if (!sessionId) return;
+    if (queue.length > 0 && index >= queue.length - 1) {
+      queueQuery.refetch();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ad?.campaignId]);
+  }, [index, sessionId]);
 
-  const handleVideoEnded = () => {
-    if (ad?.campaignId) videoCompleteMutation.mutate(ad.campaignId);
+  const advance = () => {
+    completedForSlot.current = null;
+    lastHeartbeatAt.current = 0;
+    setIndex((i) => i + 1);
   };
 
-  const handleQuizSubmit = async (answers: number[]) => {
-    if (!ad?.campaignId) return;
-    try {
-      const result = await quizSubmitMutation.mutateAsync({
-        campaignId: ad.campaignId,
-        answers,
-      });
-      setQuizResult({ allCorrect: result.allCorrect });
-      if (result.allCorrect) {
-        setPassed(true);
-        if (result.cycleCompleted) setHasCredit(true);
-      }
-    } catch {
-      // Confirmed with backend: quiz/submit 400s when the video hasn't been
-      // played successfully first (video/start + video/complete must have
-      // registered). That's not a graded "wrong answer" — don't relabel it
-      // as one.
-      toast.error("Watch the video first to be able to submit the correct answer");
+  const handleTimeUpdate = (watchedMs: number, durationMs: number) => {
+    if (!sessionId || !current) return;
+
+    if (watchedMs - lastHeartbeatAt.current >= heartbeatToleranceMs) {
+      lastHeartbeatAt.current = watchedMs;
+      heartbeat.mutate({ sessionId, slotId: current.slotId, watchedMs });
+    }
+
+    const target = durationMs > 0 ? durationMs : current.durationSec * 1000;
+    if (
+      completedForSlot.current !== current.slotId &&
+      target > 0 &&
+      watchedMs / target >= completionFraction
+    ) {
+      completedForSlot.current = current.slotId;
+      complete.mutate({ sessionId, slotId: current.slotId, watchedMs });
     }
   };
 
-  const handleNext = () => refetch();
-
-  const position = data ? Math.min(data.adsWatchedSoFar + 1, adsPerCycle) : 1;
+  const handleEnded = () => {
+    if (sessionId && current && completedForSlot.current !== current.slotId) {
+      completedForSlot.current = current.slotId;
+      complete.mutate({ sessionId, slotId: current.slotId, watchedMs: current.durationSec * 1000 });
+    }
+    advance();
+  };
 
   return (
-    <MainLayout maxWidth="7xl">
+    <MainLayout maxWidth="4xl">
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Tv className="h-7 w-7 text-primary" />
           <div>
             <h1 className="font-sora text-2xl sm:text-3xl font-bold text-foreground">
-              Watch &amp; earn
+              The Billboard
             </h1>
-            <p className="text-muted-foreground text-sm" data-testid="cycle-progress">
-              Ad {position} of {adsPerCycle}
+            <p className="text-muted-foreground text-sm">
+              Playing continuously — catch a freebie code on the strip and be first to type it.
             </p>
           </div>
         </div>
 
-        {isLoading && (
+        {stripFeed.data && <PerimeterStrip items={stripFeed.data.items} />}
+
+        {!current ? (
           <div className="flex items-center justify-center py-24 text-muted-foreground">
             <Loader2 className="h-6 w-6 animate-spin mr-2" />
-            Loading next ad...
+            Loading the billboard...
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <VideoPlayer
+              key={current.slotId}
+              src={current.videoUrl}
+              onEnded={handleEnded}
+              onTimeUpdate={handleTimeUpdate}
+            />
+            <p className="text-sm text-muted-foreground">
+              {current.type === "AD" ? current.brandName : "Pazzell"} — {current.title}
+            </p>
           </div>
         )}
 
-        {isError && (
-          <div className="flex flex-col items-center justify-center gap-3 py-24 text-center">
-            <AlertCircle className="h-8 w-8 text-destructive" />
-            <p className="text-foreground">Couldn&apos;t load an ad right now.</p>
-            <Button onClick={() => refetch()} variant="outline">
-              Try again
-            </Button>
-          </div>
-        )}
-
-        {ad && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-            <div className="space-y-4 lg:sticky lg:top-28">
-              <div>
-                <h2 className="font-sora text-xl font-bold text-foreground">
-                  {ad.title}
-                </h2>
-                <p className="text-sm text-muted-foreground">{ad.description}</p>
-              </div>
-              <VideoPlayer src={ad.videoUrl} onEnded={handleVideoEnded} />
-              <SpinMachine />
-            </div>
-
-            <div className="space-y-4">
-              {passed ? (
-                <div className="p-6 rounded-2xl border border-success bg-success/10 text-center space-y-4">
-                  <p className="font-sora text-lg font-bold text-foreground">
-                    All correct!
-                  </p>
-                  <Button
-                    onClick={handleNext}
-                    disabled={isFetching}
-                    data-testid="next-ad-button"
-                    className="bg-primary hover:bg-primary/90 text-primary-foreground">
-                    {isFetching ? (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    ) : (
-                      <ArrowRight className="h-4 w-4 mr-2" />
-                    )}
-                    Next ad
-                  </Button>
-                </div>
-              ) : (
-                <QuizPanel
-                  questions={ad.questions}
-                  onSubmit={handleQuizSubmit}
-                  submitting={quizSubmitMutation.isPending}
-                  lastResult={quizResult}
-                  campaignKey={ad.campaignId}
-                />
-              )}
-            </div>
-          </div>
-        )}
+        <div className="p-4 rounded-2xl border border-border bg-card/50 backdrop-blur-sm">
+          <ApplyBox />
+        </div>
       </div>
     </MainLayout>
   );

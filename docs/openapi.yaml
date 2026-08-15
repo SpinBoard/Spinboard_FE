@@ -1,0 +1,1381 @@
+openapi: 3.0.3
+info:
+  title: Pazzell API
+  description: >
+    Billboard + Perimeter Freebie Codes platform. All paths are relative to
+    /api/v1. See docs/frontend/API_GUIDE.md for a narrative walkthrough,
+    DATA_MODELS.md for full shape detail, and BUSINESS_RULES.md for behavior
+    that isn't obvious from the schema alone.
+  version: "2.0.0"
+servers:
+  - url: /api/v1
+tags:
+  - name: Auth
+  - name: Profile
+  - name: Billboard
+  - name: Freebies
+  - name: Wallet
+  - name: Referrals
+  - name: AdCampaigns
+  - name: Marketplace
+  - name: Forum
+  - name: Analytics
+  - name: Admin
+
+security:
+  - bearerAuth: []
+
+paths:
+  # ---------------------------------------------------------------- Auth
+  /auth/google:
+    post:
+      tags: [Auth]
+      security: []
+      summary: Google OAuth sign-in / sign-up
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                idToken: { type: string }
+                email: { type: string }
+                name: { type: string }
+                avatar: { type: string }
+                googleId: { type: string }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/AuthResponse" } } } }
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      security: []
+      summary: Unified login (gamer or brand)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string }
+                password: { type: string }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/AuthResponse" } } } }
+        "401": { $ref: "#/components/responses/Error" }
+
+  /auth/gamer/register:
+    post:
+      tags: [Auth]
+      security: []
+      summary: Register a gamer account (email/password)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, email, password]
+              properties:
+                username: { type: string }
+                email: { type: string }
+                password: { type: string }
+                referrerId: { type: string }
+      responses:
+        "201": { description: Activation email sent, content: { application/json: { schema: { $ref: "#/components/schemas/ActivationPending" } } } }
+
+  /auth/brand/register:
+    post:
+      tags: [Auth]
+      security: []
+      summary: Register a brand account (email/password)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, email, password]
+              properties:
+                username: { type: string }
+                email: { type: string }
+                password: { type: string }
+      responses:
+        "201": { description: Activation email sent, content: { application/json: { schema: { $ref: "#/components/schemas/ActivationPending" } } } }
+
+  /auth/user/activate:
+    post:
+      tags: [Auth]
+      security: []
+      summary: Activate a registered account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [activation_token, activation_code]
+              properties:
+                activation_token: { type: string }
+                activation_code: { type: string }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/AuthResponse" } } } }
+        "201": { description: Account created, content: { application/json: { schema: { $ref: "#/components/schemas/AuthResponse" } } } }
+
+  /auth/user/resend-activation:
+    post:
+      tags: [Auth]
+      security: []
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [email], properties: { email: { type: string } } } } }
+      responses:
+        "200": { description: OK }
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      responses:
+        "200": { description: OK }
+
+  /auth/forgot-password:
+    post:
+      tags: [Auth]
+      security: []
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [email], properties: { email: { type: string } } } } }
+      responses:
+        "200": { description: Always 200 regardless of whether the email exists }
+
+  /auth/reset-password:
+    post:
+      tags: [Auth]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, new_password]
+              properties:
+                token: { type: string }
+                new_password: { type: string, minLength: 6 }
+      responses:
+        "200": { description: OK }
+
+  # ---------------------------------------------------------------- Profile
+  /me:
+    get:
+      tags: [Profile]
+      summary: Cached session user
+      responses:
+        "200": { description: OK }
+
+  /profile/gamer:
+    get:
+      tags: [Profile]
+      summary: Full gamer profile with points/leaderboard/referral stats
+      responses:
+        "200": { description: OK }
+    put:
+      tags: [Profile]
+      summary: Update gamer profile (multipart, optional avatar file)
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                avatar: { type: string, format: binary }
+                firstName: { type: string }
+                lastName: { type: string }
+                username: { type: string }
+                age: { type: integer, minimum: 0, maximum: 120 }
+                sex: { type: string, enum: [man, woman, prefer_not_to_say] }
+                country: { type: string }
+                state: { type: string }
+                city: { type: string }
+      responses:
+        "200": { description: OK }
+
+  /profile/brand:
+    get:
+      tags: [Profile]
+      summary: Brand profile with brand details and campaign count
+      responses:
+        "200": { description: OK }
+    put:
+      tags: [Profile]
+      summary: Update brand profile (multipart, optional avatar file)
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                avatar: { type: string, format: binary }
+                name: { type: string }
+                companyName: { type: string }
+                businessCategories: { type: array, items: { type: string } }
+                country: { type: string }
+                state: { type: string }
+                city: { type: string }
+      responses:
+        "200": { description: OK }
+
+  /settings:
+    get:
+      tags: [Profile]
+      responses: { "200": { description: OK } }
+
+  /profile/change-password:
+    patch:
+      tags: [Profile]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [currentPassword, newPassword]
+              properties: { currentPassword: { type: string }, newPassword: { type: string, minLength: 6 } }
+      responses: { "200": { description: OK } }
+
+  /profile/notifications:
+    patch:
+      tags: [Profile]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                emailNotifications: { type: boolean }
+                referralBonusAlerts: { type: boolean }
+                leaderboardUpdates: { type: boolean }
+                newCampaignAlerts: { type: boolean }
+                weeklyDigest: { type: boolean }
+      responses: { "200": { description: OK } }
+
+  /profile/privacy:
+    patch:
+      tags: [Profile]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [showOnLeaderboard], properties: { showOnLeaderboard: { type: boolean } } } } }
+      responses: { "200": { description: OK } }
+
+  /profile/account:
+    delete:
+      tags: [Profile]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [password], properties: { password: { type: string } } } } }
+      responses: { "200": { description: OK } }
+
+  # ---------------------------------------------------------------- Billboard
+  /billboard/session:
+    post:
+      tags: [Billboard]
+      security: []
+      summary: Mint a viewing session (works with or without auth)
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { success: { type: boolean }, sessionId: { type: string } }
+
+  /billboard/queue:
+    get:
+      tags: [Billboard]
+      security: []
+      summary: Fetch upcoming billboard slots
+      parameters:
+        - name: sessionId
+          in: query
+          required: true
+          schema: { type: string }
+        - name: size
+          in: query
+          schema: { type: integer, default: 5 }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  slots: { type: array, items: { $ref: "#/components/schemas/BillboardSlot" } }
+
+  /billboard/impressions/heartbeat:
+    post:
+      tags: [Billboard]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [sessionId, slotId]
+              properties: { sessionId: { type: string }, slotId: { type: string }, watchedMs: { type: number } }
+      responses: { "200": { description: OK } }
+
+  /billboard/impressions/complete:
+    post:
+      tags: [Billboard]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [sessionId, slotId]
+              properties: { sessionId: { type: string }, slotId: { type: string }, watchedMs: { type: number } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { success: { type: boolean }, ok: { type: boolean }, completed: { type: boolean } }
+
+  # ---------------------------------------------------------------- Freebies
+  /freebies/strip:
+    get:
+      tags: [Freebies]
+      security: []
+      summary: Poll the perimeter strip feed (pinned codes + scrolling promo)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/StripFeed" }
+
+  /freebies/strip/events:
+    get:
+      tags: [Freebies]
+      security: []
+      summary: SSE variant of the strip feed
+      responses:
+        "200": { description: "text/event-stream of StripFeed payloads" }
+
+  /freebies/phrases:
+    get:
+      tags: [Freebies]
+      security: []
+      summary: Full active phrase pool, ETag-cacheable
+      responses:
+        "200": { description: OK }
+        "304": { description: Not modified (If-None-Match matched current ETag) }
+
+  /freebies/apply:
+    post:
+      tags: [Freebies]
+      summary: Claim a live public code, or redeem one of the caller's own secret codes
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          schema: { type: string }
+          description: Retry-safe on the claim branch
+        - name: X-Device-Id
+          in: header
+          schema: { type: string }
+          description: Strongly recommended — feeds the device-ceiling anti-abuse check
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [code], properties: { code: { type: string } } }
+      responses:
+        "200":
+          description: Claimed or redeemed
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/ClaimedResult"
+                  - $ref: "#/components/schemas/RedeemedCashResult"
+                  - $ref: "#/components/schemas/RedeemedAirtimeResult"
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
+        "429": { $ref: "#/components/responses/Error" }
+
+  /me/claims:
+    get:
+      tags: [Freebies]
+      summary: Full claim history — secret codes always visible
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  claims: { type: array, items: { $ref: "#/components/schemas/ClaimHistoryItem" } }
+
+  /me/claims/{claimId}/redeem:
+    post:
+      tags: [Freebies]
+      summary: Redeem a claim without needing its secret code (ownership proven by auth)
+      parameters:
+        - name: claimId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Redeemed
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/RedeemedCashResult"
+                  - $ref: "#/components/schemas/RedeemedAirtimeResult"
+
+  # ---------------------------------------------------------------- Wallet
+  /wallet/balance:
+    get:
+      tags: [Wallet]
+      responses:
+        "200":
+          description: OK
+          content: { application/json: { schema: { $ref: "#/components/schemas/WalletBalance" } } }
+
+  /wallet/transactions:
+    get:
+      tags: [Wallet]
+      parameters:
+        - name: limit
+          in: query
+          schema: { type: integer, default: 50 }
+      responses: { "200": { description: OK } }
+
+  /wallet/bank-accounts:
+    post:
+      tags: [Wallet]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [accountNumber, bankCode, bankName]
+              properties: { accountNumber: { type: string }, bankCode: { type: string }, bankName: { type: string } }
+      responses: { "201": { description: Created }, "409": { description: Already saved } }
+    get:
+      tags: [Wallet]
+      responses: { "200": { description: OK } }
+
+  /wallet/bank-accounts/{id}:
+    delete:
+      tags: [Wallet]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses: { "200": { description: OK }, "404": { description: Not found } }
+
+  # ---------------------------------------------------------------- Referrals
+  /referrals/summary:
+    get:
+      tags: [Referrals]
+      security: []
+      parameters:
+        - { name: month, in: query, schema: { type: string, example: "2026-08" } }
+        - { name: limit, in: query, schema: { type: integer, default: 100 } }
+      responses: { "200": { description: OK } }
+
+  /referrals/events:
+    get:
+      tags: [Referrals]
+      security: []
+      parameters:
+        - { name: month, in: query, schema: { type: string } }
+        - { name: eventType, in: query, schema: { type: string } }
+      responses: { "200": { description: OK } }
+
+  /referrals/my-stats:
+    get:
+      tags: [Referrals]
+      parameters: [{ name: month, in: query, schema: { type: string } }]
+      responses: { "200": { description: OK } }
+
+  # ---------------------------------------------------------------- Ad campaigns
+  /ad-campaigns:
+    post:
+      tags: [AdCampaigns]
+      summary: Create a campaign (brand only, multipart with a video file)
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [title, description, tier, video]
+              properties:
+                video: { type: string, format: binary }
+                title: { type: string }
+                description: { type: string }
+                tier: { type: string, enum: [basic, premium] }
+                brandUrl: { type: string }
+                campaignUrl: { type: string }
+      responses:
+        "201": { description: Created, content: { application/json: { schema: { $ref: "#/components/schemas/AdCampaign" } } } }
+    get:
+      tags: [AdCampaigns]
+      summary: List all campaigns (admin only)
+      parameters:
+        - { name: status, in: query, schema: { type: string } }
+        - { name: tier, in: query, schema: { type: string } }
+      responses: { "200": { description: OK } }
+
+  /ad-campaigns/mine:
+    get:
+      tags: [AdCampaigns]
+      summary: List the calling brand's own campaigns
+      responses: { "200": { description: OK } }
+
+  /ad-campaigns/{campaignId}:
+    get:
+      tags: [AdCampaigns]
+      security: []
+      parameters: [{ name: campaignId, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/AdCampaign" } } } }
+        "404": { $ref: "#/components/responses/Error" }
+
+  /ad-campaigns/{campaignId}/moderate:
+    post:
+      tags: [AdCampaigns]
+      summary: Approve or reject a campaign's video (admin only)
+      parameters: [{ name: campaignId, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [decision]
+              properties:
+                decision: { type: string, enum: [APPROVED, REJECTED] }
+                reason: { type: string, description: "Required when decision is REJECTED" }
+      responses: { "200": { description: OK } }
+
+  /ad-campaigns/{campaignId}/analytics:
+    get:
+      tags: [AdCampaigns]
+      summary: Campaign analytics summary + time series (Premium tier only, 403 on Basic)
+      parameters:
+        - { name: campaignId, in: path, required: true, schema: { type: string } }
+        - { name: from, in: query, schema: { type: string, format: date } }
+        - { name: to, in: query, schema: { type: string, format: date } }
+      responses: { "200": { description: OK }, "403": { $ref: "#/components/responses/Error" } }
+
+  /ad-campaigns/{campaignId}/analytics/breakdown:
+    get:
+      tags: [AdCampaigns]
+      summary: "Combinable demographic breakdown, cohort-suppressed below Config: analytics.minCohort"
+      parameters:
+        - { name: campaignId, in: path, required: true, schema: { type: string } }
+        - { name: dimension, in: query, required: true, schema: { type: string, enum: [country, state, sex, ageBand, device, hour] } }
+        - { name: country, in: query, schema: { type: string } }
+        - { name: state, in: query, schema: { type: string } }
+        - { name: city, in: query, schema: { type: string } }
+        - { name: sex, in: query, schema: { type: string } }
+        - { name: ageBand, in: query, schema: { type: string } }
+        - { name: device, in: query, schema: { type: string } }
+      responses: { "200": { description: OK } }
+
+  /ad-campaigns/{campaignId}/analytics/export.csv:
+    get:
+      tags: [AdCampaigns]
+      parameters:
+        - { name: campaignId, in: path, required: true, schema: { type: string } }
+        - { name: from, in: query, schema: { type: string, format: date } }
+        - { name: to, in: query, schema: { type: string, format: date } }
+      responses: { "200": { description: "text/csv" } }
+
+  /ad-payments/initialize:
+    post:
+      tags: [AdCampaigns]
+      summary: Start Paystack checkout for a campaign's flat tier price
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [campaignId, email]
+              properties: { campaignId: { type: string }, email: { type: string } }
+      responses:
+        "200": { description: OK }
+        "403": { description: "PROFILE_INCOMPLETE — brand profile not complete yet" }
+
+  /ad-payments/verify/{reference}:
+    get:
+      tags: [AdCampaigns]
+      parameters: [{ name: reference, in: path, required: true, schema: { type: string } }]
+      responses: { "200": { description: OK }, "400": { description: Verification failed } }
+
+  # -------------------------------------------------- Marketplace (business directory, no checkout)
+  /marketplace/business/profile/mine:
+    get:
+      tags: [Marketplace]
+      summary: The calling brand's own directory profile, regardless of isListed
+      responses:
+        "200":
+          description: OK
+          content: { application/json: { schema: { $ref: "#/components/schemas/BusinessProfileResponse" } } }
+        "404": { $ref: "#/components/responses/Error" }
+
+  /marketplace/business/profile:
+    put:
+      tags: [Marketplace]
+      summary: Create/update the calling brand's directory profile (brand only)
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                logo: { type: string, format: binary }
+                coverImage: { type: string, format: binary }
+                logoUrl: { type: string, description: "Alternative to uploading a file" }
+                coverImageUrl: { type: string }
+                businessName: { type: string }
+                businessDescription: { type: string }
+                contactEmail: { type: string }
+                contactPhone: { type: string }
+                whatsappNumber: { type: string }
+                address: { type: string }
+                socialLinks:
+                  type: object
+                  properties:
+                    website: { type: string }
+                    instagram: { type: string }
+                    facebook: { type: string }
+                    twitter: { type: string }
+                    tiktok: { type: string }
+                    linkedin: { type: string }
+                    youtube: { type: string }
+                isListed: { type: boolean }
+      responses:
+        "200":
+          description: OK
+          content: { application/json: { schema: { $ref: "#/components/schemas/BusinessProfileResponse" } } }
+        "400":
+          description: "PROFILE_NOT_LISTABLE — tried to set isListed:true without a name and a contact method"
+          content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+
+  /marketplace/businesses:
+    get:
+      tags: [Marketplace]
+      security: []
+      summary: Public directory browse/search — isListed:true businesses only
+      parameters:
+        - { name: category, in: query, schema: { type: string } }
+        - { name: country, in: query, schema: { type: string } }
+        - { name: state, in: query, schema: { type: string } }
+        - { name: city, in: query, schema: { type: string } }
+        - { name: search, in: query, schema: { type: string } }
+        - { name: limit, in: query, schema: { type: integer, default: 50 } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  businesses: { type: array, items: { $ref: "#/components/schemas/BusinessProfile" } }
+
+  /marketplace/businesses/{brandId}:
+    get:
+      tags: [Marketplace]
+      security: []
+      summary: A listed business's full profile plus its active products
+      parameters: [{ name: brandId, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  business: { $ref: "#/components/schemas/BusinessProfile" }
+                  products: { type: array, items: { $ref: "#/components/schemas/MarketplaceProduct" } }
+        "404":
+          description: Business not found or not listed — the two are never distinguished
+          content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+
+  /marketplace/products/mine:
+    get:
+      tags: [Marketplace]
+      summary: The calling brand's own listings, including inactive ones
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  products: { type: array, items: { $ref: "#/components/schemas/MarketplaceProduct" } }
+
+  /marketplace/products:
+    post:
+      tags: [Marketplace]
+      summary: Create a showcase product/service (brand only) — no price/checkout fields
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [name, description, category]
+              properties:
+                images: { type: array, items: { type: string, format: binary }, description: "Up to 6 photos" }
+                name: { type: string }
+                description: { type: string }
+                category: { type: string }
+                priceLabel: { type: string, description: 'Free display text, e.g. "From ₦5,000" — never a charged amount' }
+      responses:
+        "201":
+          description: Created
+          content: { application/json: { schema: { type: object, properties: { success: { type: boolean }, product: { $ref: "#/components/schemas/MarketplaceProduct" } } } } }
+    get:
+      tags: [Marketplace]
+      security: []
+      summary: Public browse — active products belonging to currently-listed businesses only
+      parameters:
+        - { name: category, in: query, schema: { type: string } }
+        - { name: brandId, in: query, schema: { type: string } }
+        - { name: search, in: query, schema: { type: string } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  products: { type: array, items: { $ref: "#/components/schemas/MarketplaceProduct" } }
+
+  /marketplace/products/{productId}:
+    get:
+      tags: [Marketplace]
+      security: []
+      summary: Product detail, with the owning business's contact info denormalized in
+      parameters: [{ name: productId, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  product: { $ref: "#/components/schemas/MarketplaceProduct" }
+                  business: { $ref: "#/components/schemas/BusinessProfile" }
+        "404": { $ref: "#/components/responses/Error" }
+    put:
+      tags: [Marketplace]
+      summary: Update a product/service (brand only, own listings only)
+      parameters: [{ name: productId, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                images: { type: array, items: { type: string, format: binary } }
+                name: { type: string }
+                description: { type: string }
+                category: { type: string }
+                priceLabel: { type: string }
+                isActive: { type: boolean }
+      responses:
+        "200": { description: OK }
+        "403": { $ref: "#/components/responses/Error" }
+    delete:
+      tags: [Marketplace]
+      summary: Delete a product/service (brand only, own listings only)
+      parameters: [{ name: productId, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: OK }
+        "403": { $ref: "#/components/responses/Error" }
+
+  # ---------------------------------------------------------------- Analytics
+  /analytics/app:
+    get:
+      tags: [Analytics]
+      security: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  analytics:
+                    type: object
+                    properties:
+                      totalAdsWatched: { type: integer }
+                      adsWatchedToday: { type: integer }
+                      currentlyPlaying: { type: integer }
+                      onlineUsers: { type: integer }
+
+  # ---------------------------------------------------------------- Admin
+  /admin/dashboard:
+    get:
+      tags: [Admin]
+      responses: { "200": { description: OK } }
+
+  /admin/config:
+    get:
+      tags: [Admin]
+      responses: { "200": { description: OK } }
+
+  /admin/config/{key}:
+    put:
+      tags: [Admin]
+      parameters: [{ name: key, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [value]
+              properties: { value: {}, description: { type: string } }
+      responses: { "200": { description: OK }, "400": { description: Unknown config key } }
+
+  /admin/freebie-prizes/batch/airtime:
+    post:
+      tags: [Admin]
+      summary: "Bulk-upload airtime prizes. CSV columns: value,carrier,country,pin[,rechargeString]"
+      requestBody:
+        content:
+          multipart/form-data:
+            schema: { type: object, required: [file], properties: { file: { type: string, format: binary } } }
+      responses: { "201": { description: "Per-row result array — a bad row is reported, not silently dropped" } }
+
+  /admin/freebie-prizes/batch/cash:
+    post:
+      tags: [Admin]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                prizes:
+                  type: array
+                  items: { type: object, properties: { value: { type: number }, currency: { type: string } } }
+      responses: { "201": { description: Created } }
+
+  /admin/freebie-prizes:
+    get:
+      tags: [Admin]
+      parameters:
+        - { name: type, in: query, schema: { type: string, enum: [AIRTIME, CASH] } }
+        - { name: status, in: query, schema: { type: string } }
+      responses: { "200": { description: OK } }
+
+  /admin/freebie-prizes/low-inventory:
+    get:
+      tags: [Admin]
+      responses: { "200": { description: OK } }
+
+  /admin/freebie-prizes/{prizeItemId}:
+    get:
+      tags: [Admin]
+      parameters: [{ name: prizeItemId, in: path, required: true, schema: { type: string } }]
+      responses: { "200": { description: OK }, "404": { description: Not found } }
+
+  /admin/freebie-prizes/{prizeItemId}/void:
+    post:
+      tags: [Admin]
+      parameters: [{ name: prizeItemId, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [reason], properties: { reason: { type: string } } } } }
+      responses: { "200": { description: OK } }
+
+  /admin/freebie-prizes/{prizeItemId}/reveal-pin:
+    post:
+      tags: [Admin]
+      summary: The one explicit, audit-logged path a PIN is exposed outside a real redemption
+      parameters: [{ name: prizeItemId, in: path, required: true, schema: { type: string } }]
+      responses: { "200": { description: OK } }
+
+  /admin/freebies/schedule:
+    get:
+      tags: [Admin]
+      parameters: [{ name: date, in: query, required: true, schema: { type: string, format: date } }]
+      responses: { "200": { description: OK } }
+
+  /admin/freebies/schedule/generate:
+    post:
+      tags: [Admin]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [date], properties: { date: { type: string, format: date } } } } }
+      responses: { "201": { description: Created } }
+
+  /admin/freebies/schedule/{scheduleId}/cancel:
+    post:
+      tags: [Admin]
+      parameters: [{ name: scheduleId, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [reason], properties: { reason: { type: string } } } } }
+      responses: { "200": { description: OK } }
+
+  /admin/freebies/force-live:
+    post:
+      tags: [Admin]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [type], properties: { type: { type: string, enum: [AIRTIME, CASH] } } }
+      responses: { "201": { description: Created } }
+
+  /admin/phrases:
+    get:
+      tags: [Admin]
+      parameters: [{ name: slot, in: query, schema: { type: string } }]
+      responses: { "200": { description: OK } }
+    post:
+      tags: [Admin]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [slot, text]
+              properties:
+                slot: { type: string, enum: [PROMO, FREEBIE_LIVE, FREEBIE_GONE, WELCOME, EMPTY_STATE] }
+                text: { type: string }
+                weight: { type: number }
+      responses: { "201": { description: Created } }
+
+  /admin/phrases/{phraseId}:
+    put:
+      tags: [Admin]
+      parameters: [{ name: phraseId, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties: { text: { type: string }, weight: { type: number }, active: { type: boolean } }
+      responses: { "200": { description: OK } }
+    delete:
+      tags: [Admin]
+      parameters: [{ name: phraseId, in: path, required: true, schema: { type: string } }]
+      responses: { "200": { description: OK } }
+
+  /admin/claims:
+    get:
+      tags: [Admin]
+      parameters:
+        - { name: secretCode, in: query, schema: { type: string } }
+        - { name: userId, in: query, schema: { type: string } }
+      responses: { "200": { description: OK } }
+
+  /admin/claims/{claimId}/void:
+    post:
+      tags: [Admin]
+      parameters: [{ name: claimId, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [reason], properties: { reason: { type: string } } } } }
+      responses: { "200": { description: OK } }
+
+  /admin/payout-runs:
+    get:
+      tags: [Admin]
+      responses: { "200": { description: OK } }
+    post:
+      tags: [Admin]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [periodStart, periodEnd]
+              properties: { periodStart: { type: string, format: date-time }, periodEnd: { type: string, format: date-time } }
+      responses: { "201": { description: Created } }
+
+  /admin/payout-runs/{runId}/items:
+    get:
+      tags: [Admin]
+      parameters: [{ name: runId, in: path, required: true, schema: { type: string } }]
+      responses: { "200": { description: OK } }
+
+  /admin/payout-runs/{runId}/lock:
+    post:
+      tags: [Admin]
+      parameters: [{ name: runId, in: path, required: true, schema: { type: string } }]
+      responses: { "200": { description: OK } }
+
+  /admin/payout-runs/{runId}/export.csv:
+    get:
+      tags: [Admin]
+      parameters: [{ name: runId, in: path, required: true, schema: { type: string } }]
+      responses: { "200": { description: "text/csv" } }
+
+  /admin/payout-runs/{runId}/items/{itemId}/paid:
+    post:
+      tags: [Admin]
+      parameters:
+        - { name: runId, in: path, required: true, schema: { type: string } }
+        - { name: itemId, in: path, required: true, schema: { type: string } }
+      requestBody:
+        content: { application/json: { schema: { type: object, properties: { method: { type: string }, reference: { type: string } } } } }
+      responses: { "200": { description: OK } }
+
+  /admin/payout-runs/{runId}/items/paid-bulk:
+    post:
+      tags: [Admin]
+      parameters: [{ name: runId, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [itemIds]
+              properties:
+                itemIds: { type: array, items: { type: string } }
+                method: { type: string }
+                reference: { type: string }
+      responses: { "200": { description: OK } }
+
+  /admin/payout-runs/{runId}/items/{itemId}/skip:
+    post:
+      tags: [Admin]
+      parameters:
+        - { name: runId, in: path, required: true, schema: { type: string } }
+        - { name: itemId, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [reason], properties: { reason: { type: string } } } } }
+      responses: { "200": { description: OK } }
+
+  /admin/payout-runs/{runId}/items/{itemId}/fail:
+    post:
+      tags: [Admin]
+      parameters:
+        - { name: runId, in: path, required: true, schema: { type: string } }
+        - { name: itemId, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [reason], properties: { reason: { type: string } } } } }
+      responses: { "200": { description: OK } }
+
+  /admin/payout-runs/{runId}/complete:
+    post:
+      tags: [Admin]
+      parameters: [{ name: runId, in: path, required: true, schema: { type: string } }]
+      responses: { "200": { description: OK } }
+
+  # ---------------------------------------------------------------- Forum
+  /forum/threads:
+    get:
+      tags: [Forum]
+      security: []
+      responses: { "200": { description: OK } }
+    post:
+      tags: [Forum]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object } } }
+      responses: { "201": { description: Created } }
+
+  /forum/threads/{id}/posts:
+    get:
+      tags: [Forum]
+      security: []
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses: { "200": { description: OK } }
+    post:
+      tags: [Forum]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object } } }
+      responses: { "201": { description: Created } }
+
+  /forum/posts/{id}/like:
+    post:
+      tags: [Forum]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses: { "200": { description: OK } }
+    delete:
+      tags: [Forum]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses: { "200": { description: OK } }
+
+  /forum/posts/{id}/flag:
+    post:
+      tags: [Forum]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses: { "200": { description: OK } }
+
+  /forum/winner-submissions:
+    post:
+      tags: [Forum]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object } } }
+      responses: { "201": { description: Created } }
+    get:
+      tags: [Forum]
+      summary: All submissions (admin only)
+      responses: { "200": { description: OK } }
+
+  /forum/winner-submissions/mine:
+    get:
+      tags: [Forum]
+      responses: { "200": { description: OK } }
+
+  # -------------------------------------------------------- Payments (shared)
+  /payments/transactions:
+    get:
+      tags: [AdCampaigns]
+      summary: Brand's own transaction history
+      responses: { "200": { description: OK } }
+
+  /payments/webhook/paystack:
+    post:
+      tags: [AdCampaigns]
+      security: []
+      summary: Paystack webhook — called by Paystack, not the frontend
+      responses: { "200": { description: OK } }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: >
+        The accessToken returned in the JSON body of any auth response.
+        access_token/refresh_token httpOnly cookies are also set but every
+        protected route in practice reads this header, not the cookie.
+
+  responses:
+    Error:
+      description: Standard error envelope
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        success: { type: boolean, example: false }
+        message: { type: string }
+        code: { type: string, description: "Machine-readable — branch on this, not on message text" }
+        details: { type: object }
+
+    AuthResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        user: { type: object }
+        accessToken: { type: string }
+        refreshToken: { type: string }
+
+    ActivationPending:
+      type: object
+      properties:
+        success: { type: boolean }
+        message: { type: string }
+        activationToken: { type: string }
+
+    BillboardSlot:
+      type: object
+      properties:
+        slotId: { type: string }
+        type: { type: string, enum: [AD, HOUSE] }
+        campaignId: { type: string }
+        brandName: { type: string }
+        title: { type: string }
+        videoUrl: { type: string }
+        durationSec: { type: number }
+
+    StripFeedItem:
+      type: object
+      properties:
+        kind: { type: string, enum: [FREEBIE, PROMO] }
+        display: { type: string, enum: [PINNED, SCROLLING] }
+        positionHint: { type: string, enum: [TOP, BOTTOM, LEFT, RIGHT] }
+        codeId: { type: string }
+        publicCode: { type: string }
+        valueLabel: { type: string }
+        type: { type: string, enum: [AIRTIME, CASH] }
+        state: { type: string, enum: [AVAILABLE, TAKEN] }
+        liveUntil: { type: string, format: date-time }
+        text: { type: string }
+
+    StripFeed:
+      type: object
+      properties:
+        serverTime: { type: string, format: date-time }
+        items: { type: array, items: { $ref: "#/components/schemas/StripFeedItem" } }
+
+    ClaimedResult:
+      type: object
+      properties:
+        success: { type: boolean }
+        action: { type: string, enum: [CLAIMED] }
+        claimId: { type: string }
+        type: { type: string, enum: [AIRTIME, CASH] }
+        valueLabel: { type: string }
+        secretCode: { type: string }
+
+    RedeemedCashResult:
+      type: object
+      properties:
+        success: { type: boolean }
+        action: { type: string, enum: [REDEEMED] }
+        claimId: { type: string }
+        type: { type: string, enum: [CASH] }
+        walletBalance: { type: number }
+        redeemedAt: { type: string, format: date-time }
+
+    RedeemedAirtimeResult:
+      type: object
+      properties:
+        success: { type: boolean }
+        action: { type: string, enum: [REDEEMED] }
+        claimId: { type: string }
+        type: { type: string, enum: [AIRTIME] }
+        display: { type: string }
+        rechargeString: { type: string }
+        redeemedAt: { type: string, format: date-time }
+
+    ClaimHistoryItem:
+      type: object
+      properties:
+        claimId: { type: string }
+        type: { type: string, enum: [AIRTIME, CASH] }
+        value: { type: number }
+        currency: { type: string }
+        secretCode: { type: string, description: "Always visible to the owner — never has a deadline" }
+        status: { type: string, enum: [ISSUED, REDEEMED, VOID] }
+        issuedAt: { type: string, format: date-time }
+        redeemedAt: { type: string, format: date-time }
+
+    WalletBalance:
+      type: object
+      properties:
+        success: { type: boolean }
+        balance: { type: number }
+        currency: { type: string }
+        payoutThreshold: { type: number }
+        amountToThreshold: { type: number }
+        nextPayoutDate: { type: string, format: date-time }
+
+    AdCampaign:
+      type: object
+      properties:
+        success: { type: boolean }
+        campaign:
+          type: object
+          properties:
+            _id: { type: string }
+            brandId: { type: string }
+            tier: { type: string, enum: [basic, premium] }
+            title: { type: string }
+            description: { type: string }
+            videoUrl: { type: string }
+            videoDurationSeconds: { type: number }
+            status: { type: string, enum: [DRAFT, PENDING_PAYMENT, ACTIVE, PAUSED, EXPIRED, REJECTED] }
+            paymentStatus: { type: string, enum: [unpaid, paid] }
+            moderationStatus: { type: string, enum: [PENDING, APPROVED, REJECTED] }
+            activatedAt: { type: string, format: date-time }
+            expiresAt: { type: string, format: date-time }
+
+    BusinessSocialLinks:
+      type: object
+      properties:
+        website: { type: string }
+        instagram: { type: string }
+        facebook: { type: string }
+        twitter: { type: string }
+        tiktok: { type: string }
+        linkedin: { type: string }
+        youtube: { type: string }
+
+    BusinessProfile:
+      type: object
+      description: "brandId is always the brand's User _id, matching AdCampaign.brandId's convention elsewhere in the API."
+      properties:
+        brandId: { type: string }
+        businessName: { type: string }
+        businessDescription: { type: string }
+        logoUrl: { type: string }
+        coverImageUrl: { type: string }
+        category: { type: array, items: { type: string } }
+        contactEmail: { type: string }
+        contactPhone: { type: string }
+        whatsappNumber: { type: string }
+        address: { type: string }
+        country: { type: string }
+        state: { type: string }
+        city: { type: string }
+        socialLinks: { $ref: "#/components/schemas/BusinessSocialLinks" }
+        isListed: { type: boolean }
+
+    BusinessProfileResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        profile:
+          allOf:
+            - $ref: "#/components/schemas/BusinessProfile"
+            - type: object
+              properties:
+                isListable: { type: boolean, description: "Only present on the brand's own profile reads" }
+
+    MarketplaceProduct:
+      type: object
+      description: A catalogue showcase item, not a purchasable SKU — no price/checkout fields.
+      properties:
+        _id: { type: string }
+        brandId: { type: string }
+        name: { type: string }
+        description: { type: string }
+        category: { type: string }
+        images: { type: array, items: { type: string } }
+        priceLabel: { type: string, description: 'Free display text, e.g. "From ₦5,000" — never a charged amount' }
+        isActive: { type: boolean }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }

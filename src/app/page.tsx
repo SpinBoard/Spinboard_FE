@@ -7,7 +7,7 @@ import { routes } from "@/app/_utils/routes";
 import { useState } from "react";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
-import { HeroSpinWheel } from "@/components/marketing/hero-spin-wheel";
+import { HeroBillboard } from "@/components/marketing/hero-billboard";
 import { PlayCircle, Video, Target } from "lucide-react";
 
 export default function Home() {
@@ -22,15 +22,15 @@ export default function Home() {
         <div className="max-w-[75rem] grid lg:grid-cols-2 gap-16 items-center">
           <div className="text-left">
             <h1 className="text-5xl lg:text-6xl font-bold mb-6 leading-tight font-sora">
-              Watch. Answer.
+              A billboard that
               <br />
               <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-                Spin to Win.
+                pays you back.
               </span>
             </h1>
             <p className="text-xl text-white/70 mb-8 leading-relaxed">
-              Watch short brand video ads, pass a quick quiz, and spin for cash,
-              discounts, and prizes — every ad watched is a shot at winning big.
+              Brand video ads play continuously — no gate, no quiz. Freebie codes for real cash
+              and airtime pop up on the strip; first to type one wins it.
             </p>
             <div className="flex flex-wrap gap-4 justify-center lg:justify-start">
               <Link href={routes.WATCH}>
@@ -47,7 +47,7 @@ export default function Home() {
             </div>
           </div>
           <div className="flex justify-center">
-            <HeroSpinWheel />
+            <HeroBillboard />
           </div>
         </div>
       </section>
@@ -105,15 +105,15 @@ export default function Home() {
         {activeAudience === "viewers" && (
           <div className="max-w-6xl mx-auto">
             <h2 className="text-[2.5rem] font-bold text-center mb-12 font-sora">
-              Watch. Answer. <span className="text-success">Get Paid.</span>
+              Watch. Catch a Code. <span className="text-success">Get Paid.</span>
             </h2>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
               {[
-                { num: "1", title: "Start Watching", desc: "No account needed — jump straight into a brand video ad." },
-                { num: "2", title: "Answer 3 Questions", desc: "Pass a quick quiz about the ad. Unlimited retries, no pressure." },
-                { num: "3", title: "Finish a Cycle", desc: "Complete 5 ads to unlock a spin on the reward machine." },
-                { num: "4", title: "Spin & Cash Out", desc: "Win cash, discounts, or prizes, then withdraw straight to your bank." },
+                { num: "1", title: "Start Watching", desc: "No account needed — jump straight into the billboard, no gate." },
+                { num: "2", title: "Watch the Strip", desc: "Freebie codes for cash and airtime appear on the perimeter." },
+                { num: "3", title: "Be First to Type It", desc: "One Apply box claims the code the moment it goes live." },
+                { num: "4", title: "Get Paid Weekly", desc: "Cash redeems straight to your wallet; airtime reveals a PIN instantly." },
               ].map((step, index) => (
                 <div
                   key={index}
@@ -133,9 +133,9 @@ export default function Home() {
               </h3>
               <div className="grid md:grid-cols-3 gap-6">
                 {[
-                  { icon: "trophy-flat-icon.png", title: "Spin Wins", desc: "Cash, free products, and discount codes straight from the spin machine." },
-                  { icon: "flash-flat-icon.png", title: "Try-Again Boards", desc: "Bank enough try-agains and spend them on a guaranteed-win board." },
-                  { icon: "money-flat-icon.png", title: "Referral Program", desc: "20 qualified referrals earns 20% off, 40 earns 50% off." },
+                  { icon: "trophy-flat-icon.png", title: "Freebie Codes", desc: "Cash and airtime codes pop up on the strip — first to type wins." },
+                  { icon: "flash-flat-icon.png", title: "Nothing Ever Expires", desc: "A code you win stays claimable forever — no deadline, no rush." },
+                  { icon: "money-flat-icon.png", title: "Referral Program", desc: "Qualified referrals earn you a flat wallet-cash credit." },
                 ].map((earning, index) => (
                   <div
                     key={index}
@@ -161,9 +161,9 @@ export default function Home() {
 
             <div className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
               {[
-                { num: "1", title: "Upload Your Ad", desc: "A ~90-second video plus a 3-question quiz — that's the whole campaign." },
-                { num: "2", title: "Pick a Tier", desc: "Basic or Premium — Premium gets more visibility and unlocks analytics." },
-                { num: "3", title: "Track Performance", desc: "Views, completions, per-question correctness, and viewer demographics." },
+                { num: "1", title: "Upload Your Ad", desc: "A short video — that's the whole campaign, no quiz to build." },
+                { num: "2", title: "Pick a Tier", desc: "Flat $20 Basic or $30 Premium — 30-day activation, Premium unlocks analytics." },
+                { num: "3", title: "Track Performance", desc: "Views, verified completions, and a demographic breakdown, live." },
               ].map((step, index) => (
                 <div
                   key={index}
@@ -183,14 +183,14 @@ export default function Home() {
       {/* Features */}
       <section className="py-24 bg-gradient-to-b from-transparent to-primary/10 relative z-10" id="features">
         <h2 className="text-[2.5rem] font-bold text-center mb-16 max-w-4xl mx-auto px-[5%] font-sora">
-          Why Everyone <span className="text-primary">Loves</span> Spinboard
+          Why Everyone <span className="text-primary">Loves</span> Pazzell
         </h2>
         <div className="max-w-7xl mx-auto px-[5%] grid md:grid-cols-2 gap-8">
           {[
-            { icon: "money-flat-icon.png", title: "Real Rewards, Fast Payouts", desc: "Cash wins land straight in your wallet — withdraw whenever you like." },
-            { icon: "chart-flat-icon.png", title: "Real Tier Analytics", desc: "Premium brands see views, completions, and demographics live." },
-            { icon: "target-flat-icon.png", title: "Genuine Engagement", desc: "Every quiz answer is a real interaction, not a passive skip-through." },
-            { icon: "mobile-flat-icon.png", title: "Mobile-First", desc: "Video, quiz, and spin machine all built to feel great on any screen." },
+            { icon: "money-flat-icon.png", title: "Real Rewards, Weekly Payouts", desc: "Redeemed cash lands in your wallet and pays out in the weekly run." },
+            { icon: "chart-flat-icon.png", title: "Real Tier Analytics", desc: "Premium brands see views, completions, and a demographic breakdown live." },
+            { icon: "target-flat-icon.png", title: "Genuine Engagement", desc: "First-to-type freebie codes reward attention, not passive skip-through." },
+            { icon: "mobile-flat-icon.png", title: "Mobile-First", desc: "The billboard, strip, and Apply box are all built to feel great on any screen." },
           ].map((feature, index) => (
             <div
               key={index}

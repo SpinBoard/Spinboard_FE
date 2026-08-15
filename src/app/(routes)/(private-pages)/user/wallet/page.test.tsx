@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor, fireEvent, within } from "@testing-library/react";
+import { describe, it, expect, beforeEach, vi } from "vitest";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createStore, Provider } from "jotai";
@@ -13,14 +13,14 @@ vi.mock("next/navigation", () => ({
 let bankAccounts: { _id: string; accountName: string; bankName: string; accountNumber: string }[] = [
   { _id: "b1", accountName: "Jane Doe", bankName: "GTBank", accountNumber: "0123456789" },
 ];
-let withdrawalPostCalls: { body: any }[] = [];
-let failNextWithdrawal = false;
 
 vi.mock("axios", () => {
   const instance = {
     get: vi.fn((url: string) => {
       if (url.includes("/wallet/balance")) {
-        return Promise.resolve({ data: { balance: 1000, currency: "NGN" } });
+        return Promise.resolve({
+          data: { balance: 850, currency: "NGN", payoutThreshold: 1500, amountToThreshold: 650, nextPayoutDate: "2026-08-15T00:00:00.000Z" },
+        });
       }
       if (url.includes("/wallet/transactions")) {
         return Promise.resolve({ data: { success: true, transactions: [] } });
@@ -28,12 +28,9 @@ vi.mock("axios", () => {
       if (url.includes("/wallet/bank-accounts")) {
         return Promise.resolve({ data: { success: true, bankAccounts } });
       }
-      if (url.includes("/wallet/withdrawals")) {
-        return Promise.resolve({ data: { success: true, withdrawals: [] } });
-      }
       return Promise.reject(new Error(`Unhandled GET ${url}`));
     }),
-    post: vi.fn((url: string, body: any) => {
+    post: vi.fn((url: string, body: { bankName: string; accountNumber: string }) => {
       if (url.includes("/wallet/bank-accounts")) {
         const newAccount = {
           _id: "b2",
@@ -43,14 +40,6 @@ vi.mock("axios", () => {
         };
         bankAccounts = [...bankAccounts, newAccount];
         return Promise.resolve({ data: { bankAccount: newAccount } });
-      }
-      if (url.includes("/wallet/withdrawals")) {
-        withdrawalPostCalls.push({ body });
-        if (failNextWithdrawal) {
-          failNextWithdrawal = false;
-          return Promise.reject({ response: { data: { message: "Provider error" } } });
-        }
-        return Promise.resolve({ data: { success: true } });
       }
       return Promise.reject(new Error(`Unhandled POST ${url}`));
     }),
@@ -89,13 +78,18 @@ describe("WalletPage", () => {
     bankAccounts = [
       { _id: "b1", accountName: "Jane Doe", bankName: "GTBank", accountNumber: "0123456789" },
     ];
-    withdrawalPostCalls = [];
-    failNextWithdrawal = false;
   });
 
   it("shows the wallet balance", async () => {
     renderPage();
-    expect(await screen.findByTestId("wallet-balance")).toHaveTextContent("₦1,000");
+    expect(await screen.findByTestId("wallet-balance")).toHaveTextContent("₦850");
+  });
+
+  it("shows payout progress toward the threshold, with no withdraw action anywhere", async () => {
+    renderPage();
+    await screen.findByTestId("payout-progress");
+    expect(screen.getByText(/₦650 to next payout/i)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /withdraw/i })).not.toBeInTheDocument();
   });
 
   it("shows the resolved account name after adding a bank account", async () => {
@@ -111,42 +105,5 @@ describe("WalletPage", () => {
     expect(
       await screen.findByText(/resolved account name: resolved name/i)
     ).toBeInTheDocument();
-  });
-
-  it("blocks a withdrawal request that exceeds the available balance", async () => {
-    const user = userEvent.setup();
-    renderPage();
-    await screen.findByTestId("wallet-balance");
-
-    await user.type(screen.getByPlaceholderText("Amount"), "5000");
-    await user.click(screen.getByRole("button", { name: /request withdrawal/i }));
-
-    expect(await screen.findByText(/exceeds your available balance/i)).toBeInTheDocument();
-    expect(withdrawalPostCalls).toHaveLength(0);
-  });
-
-  it("reuses the same idempotency key when retrying a failed withdrawal", async () => {
-    failNextWithdrawal = true;
-    const user = userEvent.setup();
-    renderPage();
-    await screen.findByTestId("wallet-balance");
-
-    await user.type(screen.getByPlaceholderText("Amount"), "500");
-    fireEvent.click(screen.getByRole("combobox"));
-    const listbox = await screen.findByRole("listbox");
-    fireEvent.click(within(listbox).getByText(/gtbank/i));
-
-    await user.click(screen.getByRole("button", { name: /request withdrawal/i }));
-    await waitFor(() => expect(withdrawalPostCalls).toHaveLength(1));
-    expect(await screen.findByText(/provider error/i)).toBeInTheDocument();
-
-    const retryButton = await screen.findByRole("button", { name: /retry withdrawal/i });
-    await user.click(retryButton);
-    await waitFor(() => expect(withdrawalPostCalls).toHaveLength(2));
-
-    const firstKey = withdrawalPostCalls[0].body.idempotencyKey;
-    const secondKey = withdrawalPostCalls[1].body.idempotencyKey;
-    expect(firstKey).toBeTruthy();
-    expect(secondKey).toBe(firstKey);
   });
 });

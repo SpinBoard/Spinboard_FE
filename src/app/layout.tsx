@@ -9,7 +9,7 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 const sora = Sora({ subsets: ["latin"], variable: "--font-sora" });
 
 export const metadata: Metadata = {
-  title: "Spinboard - Watch Ads, Earn Rewards",
+  title: "Pazzell - Watch Ads, Earn Rewards",
   description: "Watch brand video ads, pass a quick quiz, and spin to win cash, discounts, and prizes. Brands run ad campaigns and reach real, engaged viewers.",
 };
 

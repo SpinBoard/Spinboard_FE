@@ -32,6 +32,8 @@ import {
 import { useAtomValue } from "jotai";
 import { userAtom } from "@/atom/user";
 import { PageLoader } from "@/components/ui/page-loader";
+import { useAdminConfig } from "@/hooks/use-admin-config";
+import { formatCurrency } from "../wallet/wallet-utils";
 
 const getInitials = (name: string): string =>
   name
@@ -44,6 +46,15 @@ const getInitials = (name: string): string =>
 export default function ReferralsPage() {
   const user = useAtomValue(userAtom);
   const [copied, setCopied] = useState(false);
+  const { get } = useAdminConfig();
+  const thresholds = get("referral.qualifiedThresholds");
+  const thresholdKeys = Object.keys(thresholds)
+    .map(Number)
+    .sort((a, b) => a - b);
+  const firstThreshold = thresholdKeys[0] ?? 20;
+  const secondThreshold = thresholdKeys[1] ?? 40;
+  const firstReward = thresholds[String(firstThreshold)] ?? 1000;
+  const secondReward = thresholds[String(secondThreshold)] ?? 2500;
 
   const referralLink =
     user?.username && typeof window !== "undefined"
@@ -76,16 +87,18 @@ export default function ReferralsPage() {
   });
 
   const stats = myStatsData?.stats;
-  // §6: qualification is now anti-fraud gated (verified email + complete
-  // profile + one full 5-ad cycle), and rewards are discount codes at 20/40
-  // qualified referrals, not points — the underlying GET /referrals/my-stats
-  // route is unchanged, so its "successful"/"pending" counts are reused here
-  // as qualified/pending against the new 20 & 40 thresholds.
+  // A referral qualifies once the referred user verifies their email,
+  // completes their profile, and racks up one server-verified completed
+  // Billboard impression — the underlying GET /referrals/my-stats route is
+  // unchanged, so its "successful"/"pending" counts are reused here as
+  // qualified/pending against the configured thresholds. The reward itself
+  // is now a flat wallet-cash credit (reason: REFERRAL_REWARD), not a
+  // discount code — there's nothing left in the product to discount against.
   const qualifiedCount = stats?.successfulReferralsThisMonth ?? 0;
   const pendingCount = stats?.pendingReferrals ?? 0;
   const referredUsers = stats?.referredUsersThisMonth ?? [];
-  const distanceTo20 = Math.max(0, 20 - qualifiedCount);
-  const distanceTo40 = Math.max(0, 40 - qualifiedCount);
+  const distanceToFirst = Math.max(0, firstThreshold - qualifiedCount);
+  const distanceToSecond = Math.max(0, secondThreshold - qualifiedCount);
 
   const events = eventsData?.events || [];
 
@@ -101,8 +114,8 @@ export default function ReferralsPage() {
     if (navigator.share) {
       try {
         await navigator.share({
-          title: "Join Spinboard",
-          text: "Watch ads, answer quizzes, and spin to win real rewards. Sign up with my link!",
+          title: "Join Pazzell",
+          text: "Watch the billboard and catch freebie codes for real cash and airtime. Sign up with my link!",
           url: referralLink,
         });
       } catch {
@@ -127,7 +140,8 @@ export default function ReferralsPage() {
             Refer &amp; Earn
           </h1>
           <p className="text-white/70">
-            Invite friends — 20 qualified referrals earns a 20% off code, 40 earns 50% off.
+            Invite friends — {firstThreshold} qualified referrals earns a {formatCurrency(firstReward)}{" "}
+            wallet credit, {secondThreshold} earns {formatCurrency(secondReward)}.
           </p>
         </div>
 
@@ -137,15 +151,15 @@ export default function ReferralsPage() {
           <div className="text-sm text-white/80 space-y-1">
             <p>
               A referral becomes <span className="text-secondary font-semibold">qualified</span>{" "}
-              once your friend verifies their email, completes their profile, and
-              finishes one full 5-ad watch cycle.
+              once your friend verifies their email, completes their profile, and racks up one
+              verified view on the Billboard.
             </p>
             <p className="text-white/50 text-xs">
-              {distanceTo20 > 0
-                ? `${distanceTo20} more qualified referral${distanceTo20 !== 1 ? "s" : ""} unlocks a 20% off code.`
-                : distanceTo40 > 0
-                  ? `20% off unlocked! ${distanceTo40} more unlocks a 50% off code.`
-                  : "Both the 20% and 50% off codes are unlocked!"}
+              {distanceToFirst > 0
+                ? `${distanceToFirst} more qualified referral${distanceToFirst !== 1 ? "s" : ""} unlocks a ${formatCurrency(firstReward)} wallet credit.`
+                : distanceToSecond > 0
+                  ? `${formatCurrency(firstReward)} credit unlocked! ${distanceToSecond} more unlocks ${formatCurrency(secondReward)}.`
+                  : `Both wallet credits (${formatCurrency(firstReward)} and ${formatCurrency(secondReward)}) are unlocked!`}
             </p>
           </div>
         </div>
@@ -158,7 +172,7 @@ export default function ReferralsPage() {
               Your Referral Link
             </CardTitle>
             <CardDescription className="text-white/70">
-              Share this link — qualified referrals count toward your 20%/50% off codes.
+              Share this link — qualified referrals count toward your wallet-credit rewards.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -225,10 +239,10 @@ export default function ReferralsPage() {
                 </div>
                 <div>
                   <p className="text-2xl font-bold text-white font-sora">
-                    {distanceTo20 > 0 ? distanceTo20 : distanceTo40}
+                    {distanceToFirst > 0 ? distanceToFirst : distanceToSecond}
                   </p>
                   <p className="text-xs text-white/60 uppercase tracking-wider">
-                    To next {distanceTo20 > 0 ? "20% off" : "50% off"}
+                    To next {distanceToFirst > 0 ? formatCurrency(firstReward) : formatCurrency(secondReward)}
                   </p>
                 </div>
               </div>
@@ -325,7 +339,7 @@ export default function ReferralsPage() {
                   const label =
                     event.type === "signup"
                       ? `${name} signed up using your link — pending until they qualify`
-                      : `${name} qualified — one step closer to your next discount code`;
+                      : `${name} qualified — one step closer to your next wallet credit`;
 
                   return (
                     <div

@@ -1,0 +1,417 @@
+{
+  "_comment": "Realistic mock payloads for local frontend development, matching the exact response shapes in DATA_MODELS.md. Keyed by scenario name so a mock server / MSW handler can pick the right one per test.",
+
+  "stripFeed_threeConcurrentLiveCodes": {
+    "serverTime": "2026-08-14T13:22:05.000Z",
+    "items": [
+      {
+        "kind": "FREEBIE",
+        "display": "PINNED",
+        "positionHint": "TOP",
+        "codeId": "66c1a1f2b1e4a2a1b8f8e001",
+        "publicCode": "PZL7K2Q9",
+        "valueLabel": "₦500 MTN Airtime",
+        "type": "AIRTIME",
+        "state": "AVAILABLE",
+        "liveUntil": "2026-08-14T13:32:05.000Z"
+      },
+      {
+        "kind": "FREEBIE",
+        "display": "PINNED",
+        "positionHint": "BOTTOM",
+        "codeId": "66c1a1f2b1e4a2a1b8f8e002",
+        "publicCode": "PZL3M8R4",
+        "valueLabel": "₦1,000 Cash",
+        "type": "CASH",
+        "state": "AVAILABLE",
+        "liveUntil": "2026-08-14T13:31:40.000Z"
+      },
+      {
+        "kind": "FREEBIE",
+        "display": "PINNED",
+        "positionHint": "LEFT",
+        "codeId": "66c1a1f2b1e4a2a1b8f8e003",
+        "publicCode": "PZL9X2V7",
+        "valueLabel": "₦200 Airtel Airtime",
+        "type": "AIRTIME",
+        "state": "AVAILABLE",
+        "liveUntil": "2026-08-14T13:35:12.000Z"
+      },
+      {
+        "kind": "PROMO",
+        "display": "SCROLLING",
+        "text": "₦500 MTN Airtime is live — type it before someone else does!"
+      },
+      {
+        "kind": "PROMO",
+        "display": "SCROLLING",
+        "text": "Eyes on the edges. That's where the money shows up."
+      },
+      {
+        "kind": "PROMO",
+        "display": "SCROLLING",
+        "text": "The fastest fingers eat here."
+      }
+    ]
+  },
+
+  "stripFeed_justClaimedRedCode": {
+    "serverTime": "2026-08-14T13:40:00.000Z",
+    "items": [
+      {
+        "kind": "FREEBIE",
+        "display": "PINNED",
+        "positionHint": "RIGHT",
+        "codeId": "66c1a1f2b1e4a2a1b8f8e004",
+        "publicCode": "PZL5D1N6",
+        "valueLabel": "₦300 Cash",
+        "type": "CASH",
+        "state": "TAKEN",
+        "liveUntil": "2026-08-14T13:45:00.000Z"
+      },
+      {
+        "kind": "PROMO",
+        "display": "SCROLLING",
+        "text": "Claimed. Stay right there."
+      },
+      {
+        "kind": "PROMO",
+        "display": "SCROLLING",
+        "text": "Somebody's about to get lucky. Could be you."
+      }
+    ]
+  },
+
+  "stripFeed_empty": {
+    "serverTime": "2026-08-14T04:15:00.000Z",
+    "items": [
+      {
+        "kind": "PROMO",
+        "display": "SCROLLING",
+        "text": "The board is warming up…"
+      }
+    ]
+  },
+
+  "billboardQueue_mixed": {
+    "success": true,
+    "slots": [
+      {
+        "slotId": "slot_9f2a7c1e4b6d",
+        "type": "AD",
+        "campaignId": "66c0a1f2b1e4a2a1b8f8d101",
+        "brandName": "Naija Snacks Co.",
+        "title": "Naija Snacks — Crunch Time",
+        "videoUrl": "https://cdn.pazzell.com/ad-campaign-videos/1755180000-crunch-time.mp4",
+        "durationSec": 30
+      },
+      {
+        "slotId": "slot_3e7b1d9a2f4c",
+        "type": "HOUSE",
+        "title": "Invite a friend, earn together",
+        "videoUrl": "",
+        "durationSec": 15
+      },
+      {
+        "slotId": "slot_1c4f8e2b9a3d",
+        "type": "AD",
+        "campaignId": "66c0a1f2b1e4a2a1b8f8d102",
+        "brandName": "QuickPay",
+        "title": "QuickPay — Send Money Instantly",
+        "videoUrl": "https://cdn.pazzell.com/ad-campaign-videos/1755180500-quickpay.mp4",
+        "durationSec": 45
+      }
+    ]
+  },
+
+  "applyResponse_claimed_cash": {
+    "success": true,
+    "action": "CLAIMED",
+    "claimId": "66c1b2a3c4d5e6f7a8b9c001",
+    "type": "CASH",
+    "valueLabel": "₦1,000 Cash",
+    "secretCode": "n3F8kQ7pL2mX9rT4vW1zY6bA0cD5eG_h"
+  },
+
+  "applyResponse_claimed_airtime": {
+    "success": true,
+    "action": "CLAIMED",
+    "claimId": "66c1b2a3c4d5e6f7a8b9c002",
+    "type": "AIRTIME",
+    "valueLabel": "₦500 MTN Airtime",
+    "secretCode": "q9Z2mN5jR8kL1oP4sV7tX0wY3bC6dF_i"
+  },
+
+  "applyResponse_redeemed_cash": {
+    "success": true,
+    "action": "REDEEMED",
+    "claimId": "66c1b2a3c4d5e6f7a8b9c001",
+    "type": "CASH",
+    "walletBalance": 2300,
+    "redeemedAt": "2026-08-14T13:41:12.000Z"
+  },
+
+  "applyResponse_redeemed_airtime": {
+    "success": true,
+    "action": "REDEEMED",
+    "claimId": "66c1b2a3c4d5e6f7a8b9c002",
+    "type": "AIRTIME",
+    "display": "₦500 Airtime — MTN Nigeria — 1234567890123",
+    "rechargeString": "*555*1234567890123#",
+    "redeemedAt": "2026-08-14T13:42:30.000Z"
+  },
+
+  "myClaims_withOneUnredeemed": {
+    "success": true,
+    "claims": [
+      {
+        "claimId": "66c1b2a3c4d5e6f7a8b9c003",
+        "type": "CASH",
+        "value": 500,
+        "currency": "NGN",
+        "secretCode": "r5T8yU1iO4pA7sD0fG3hJ6kL_9mN2qW",
+        "status": "ISSUED",
+        "issuedAt": "2026-07-02T09:14:00.000Z"
+      },
+      {
+        "claimId": "66c1b2a3c4d5e6f7a8b9c004",
+        "type": "AIRTIME",
+        "value": 200,
+        "currency": "NGN",
+        "secretCode": "x8V1cB4nM7lK0jH3gF6dS9aP_2zQ5wE",
+        "status": "REDEEMED",
+        "issuedAt": "2026-06-20T18:02:00.000Z",
+        "redeemedAt": "2026-06-21T07:45:00.000Z"
+      }
+    ]
+  },
+
+  "errorResponse_codeAlreadyTaken": {
+    "success": false,
+    "message": "This code has already been claimed",
+    "code": "CODE_ALREADY_TAKEN"
+  },
+
+  "errorResponse_dailyLimitReached": {
+    "success": false,
+    "message": "You've already claimed your cash freebie for today",
+    "code": "DAILY_LIMIT_REACHED",
+    "details": {
+      "type": "CASH",
+      "resetsAt": "2026-08-15T09:14:00.000Z"
+    }
+  },
+
+  "errorResponse_profileIncomplete": {
+    "success": false,
+    "message": "Complete your profile (age, sex, country, state, city) and verify your email before claiming",
+    "code": "PROFILE_INCOMPLETE"
+  },
+
+  "errorResponse_deviceLimitReached": {
+    "success": false,
+    "message": "You've hit a claim limit — please try again later",
+    "code": "DEVICE_LIMIT_REACHED"
+  },
+
+  "errorResponse_tooManyAttempts": {
+    "success": false,
+    "message": "Too many redemption attempts — please slow down",
+    "code": "TOO_MANY_ATTEMPTS"
+  },
+
+  "errorResponse_authRequired_noHeaderAtAll": {
+    "error": "Authentication Failed",
+    "_note": "Deliberately different shape (no `success` field) — only happens when the Authorization header is missing entirely. Every other auth failure uses the standard { success:false, message, code } shape with statusCode 401."
+  },
+
+  "walletBalance_belowThreshold": {
+    "success": true,
+    "balance": 850,
+    "currency": "NGN",
+    "payoutThreshold": 1500,
+    "amountToThreshold": 650,
+    "nextPayoutDate": "2026-08-15T00:00:00.000Z"
+  },
+
+  "walletBalance_atThreshold": {
+    "success": true,
+    "balance": 2300,
+    "currency": "NGN",
+    "payoutThreshold": 1500,
+    "amountToThreshold": 0,
+    "nextPayoutDate": "2026-08-15T00:00:00.000Z"
+  },
+
+  "payoutRun_locked": {
+    "success": true,
+    "run": {
+      "_id": "66c2a1f2b1e4a2a1b8f8f001",
+      "periodStart": "2026-08-08T00:00:00.000Z",
+      "periodEnd": "2026-08-14T23:59:59.000Z",
+      "createdBy": "66c0000000000000000000aa",
+      "status": "LOCKED",
+      "totalAmount": 47250,
+      "userCount": 19,
+      "lockedAt": "2026-08-14T09:00:00.000Z"
+    }
+  },
+
+  "adCampaign_pendingModeration": {
+    "success": true,
+    "campaign": {
+      "_id": "66c0a1f2b1e4a2a1b8f8d103",
+      "brandId": "66c0000000000000000000bb",
+      "tier": "premium",
+      "title": "Fresh Bites — Weekend Special",
+      "description": "New weekend combo, delivered hot.",
+      "videoUrl": "https://cdn.pazzell.com/ad-campaign-videos/1755181000-fresh-bites.mp4",
+      "videoDurationSeconds": 40,
+      "videoSizeBytes": 18874368,
+      "videoMimeType": "video/mp4",
+      "currency": "NGN",
+      "status": "DRAFT",
+      "paymentStatus": "unpaid",
+      "moderationStatus": "PENDING"
+    }
+  },
+
+  "businessDirectory_listing": {
+    "success": true,
+    "businesses": [
+      {
+        "brandId": "66c0000000000000000000bb",
+        "businessName": "Naija Snacks Co.",
+        "businessDescription": "Handmade snacks, delivered fresh across Lagos.",
+        "logoUrl": "https://cdn.pazzell.com/business-logos/naijasnacks.jpg",
+        "coverImageUrl": "https://cdn.pazzell.com/business-covers/naijasnacks.jpg",
+        "category": ["food"],
+        "contactEmail": "hello@naijasnacks.example",
+        "contactPhone": "+2348012345678",
+        "whatsappNumber": "+2348012345678",
+        "address": "12 Marina Street, Lagos Island",
+        "country": "NG",
+        "state": "Lagos",
+        "city": "Lagos Island",
+        "socialLinks": {
+          "instagram": "https://instagram.com/naijasnacks",
+          "website": "https://naijasnacks.example"
+        },
+        "isListed": true
+      },
+      {
+        "brandId": "66c0000000000000000000cc",
+        "businessName": "QuickFix Repairs",
+        "businessDescription": "Same-day phone and laptop repair.",
+        "logoUrl": "",
+        "coverImageUrl": "",
+        "category": ["electronics"],
+        "contactEmail": "",
+        "contactPhone": "+2348099999999",
+        "whatsappNumber": "+2348099999999",
+        "address": "",
+        "country": "NG",
+        "state": "FCT",
+        "city": "Abuja",
+        "socialLinks": {},
+        "isListed": true
+      }
+    ]
+  },
+
+  "businessProfile_mine_notYetListable": {
+    "success": true,
+    "profile": {
+      "brandId": "66c0000000000000000000dd",
+      "businessName": "",
+      "businessDescription": "",
+      "logoUrl": "",
+      "coverImageUrl": "",
+      "category": [],
+      "contactEmail": "",
+      "contactPhone": "",
+      "whatsappNumber": "",
+      "address": "",
+      "country": "NG",
+      "state": "",
+      "city": "",
+      "socialLinks": {},
+      "isListed": false,
+      "isListable": false
+    }
+  },
+
+  "errorResponse_profileNotListable": {
+    "success": false,
+    "message": "Add a business name and at least one contact method (email, phone, or WhatsApp) before listing your business",
+    "code": "PROFILE_NOT_LISTABLE"
+  },
+
+  "businessDetail_withProducts": {
+    "success": true,
+    "business": {
+      "brandId": "66c0000000000000000000bb",
+      "businessName": "Craft Furniture Co.",
+      "businessDescription": "Handmade solid-wood furniture, made to order.",
+      "logoUrl": "https://cdn.pazzell.com/business-logos/craft.jpg",
+      "coverImageUrl": "",
+      "category": ["furniture"],
+      "contactEmail": "sales@craft.example",
+      "contactPhone": "+2348033334444",
+      "whatsappNumber": "+2348033334444",
+      "address": "45 Awolowo Road, Ikoyi",
+      "country": "NG",
+      "state": "Lagos",
+      "city": "Ikoyi",
+      "socialLinks": { "instagram": "https://instagram.com/craftfurnitureco" },
+      "isListed": true
+    },
+    "products": [
+      {
+        "_id": "66c3a1f2b1e4a2a1b8f8g001",
+        "brandId": "66c0000000000000000000bb",
+        "name": "Oak Dining Table",
+        "description": "Seats 6, solid oak, hand-finished.",
+        "category": "furniture",
+        "images": ["https://cdn.pazzell.com/marketplace-products/oak-table-1.jpg"],
+        "priceLabel": "From ₦180,000",
+        "isActive": true,
+        "createdAt": "2026-07-01T10:00:00.000Z",
+        "updatedAt": "2026-07-01T10:00:00.000Z"
+      }
+    ]
+  },
+
+  "productDetail_withBusinessContact": {
+    "success": true,
+    "product": {
+      "_id": "66c3a1f2b1e4a2a1b8f8g001",
+      "brandId": "66c0000000000000000000bb",
+      "name": "Oak Dining Table",
+      "description": "Seats 6, solid oak, hand-finished.",
+      "category": "furniture",
+      "images": ["https://cdn.pazzell.com/marketplace-products/oak-table-1.jpg"],
+      "priceLabel": "From ₦180,000",
+      "isActive": true,
+      "createdAt": "2026-07-01T10:00:00.000Z",
+      "updatedAt": "2026-07-01T10:00:00.000Z"
+    },
+    "business": {
+      "brandId": "66c0000000000000000000bb",
+      "businessName": "Craft Furniture Co.",
+      "businessDescription": "Handmade solid-wood furniture, made to order.",
+      "logoUrl": "https://cdn.pazzell.com/business-logos/craft.jpg",
+      "coverImageUrl": "",
+      "category": ["furniture"],
+      "contactEmail": "sales@craft.example",
+      "contactPhone": "+2348033334444",
+      "whatsappNumber": "+2348033334444",
+      "address": "45 Awolowo Road, Ikoyi",
+      "country": "NG",
+      "state": "Lagos",
+      "city": "Ikoyi",
+      "socialLinks": { "instagram": "https://instagram.com/craftfurnitureco" },
+      "isListed": true
+    }
+  }
+}

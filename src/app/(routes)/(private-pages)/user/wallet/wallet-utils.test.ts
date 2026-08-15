@@ -1,22 +1,5 @@
 import { describe, it, expect } from "vitest";
-import {
-  generateIdempotencyKey,
-  formatCurrency,
-  validateWithdrawalAmount,
-  WITHDRAWAL_STATUS_STYLES,
-} from "./wallet-utils";
-
-describe("generateIdempotencyKey", () => {
-  it("generates a non-empty string", () => {
-    expect(generateIdempotencyKey().length).toBeGreaterThan(0);
-  });
-
-  it("generates a different key on each call", () => {
-    const a = generateIdempotencyKey();
-    const b = generateIdempotencyKey();
-    expect(a).not.toBe(b);
-  });
-});
+import { formatCurrency, payoutProgressPercent } from "./wallet-utils";
 
 describe("formatCurrency", () => {
   it("formats NGN with a naira symbol by default", () => {
@@ -28,35 +11,21 @@ describe("formatCurrency", () => {
   });
 });
 
-describe("validateWithdrawalAmount", () => {
-  it("rejects zero or negative amounts", () => {
-    expect(validateWithdrawalAmount(0, 1000).valid).toBe(false);
-    expect(validateWithdrawalAmount(-5, 1000).valid).toBe(false);
+describe("payoutProgressPercent", () => {
+  it("returns 0 for a zero balance", () => {
+    expect(payoutProgressPercent(0, 1500)).toBe(0);
   });
 
-  it("rejects non-finite amounts", () => {
-    expect(validateWithdrawalAmount(NaN, 1000).valid).toBe(false);
+  it("returns a proportional percentage below threshold", () => {
+    expect(payoutProgressPercent(750, 1500)).toBe(50);
   });
 
-  it("rejects amounts over the available balance", () => {
-    const result = validateWithdrawalAmount(1500, 1000);
-    expect(result.valid).toBe(false);
-    expect(result.message).toMatch(/exceeds/i);
+  it("caps at 100 once at or above threshold", () => {
+    expect(payoutProgressPercent(2300, 1500)).toBe(100);
+    expect(payoutProgressPercent(1500, 1500)).toBe(100);
   });
 
-  it("accepts a valid amount within balance", () => {
-    expect(validateWithdrawalAmount(500, 1000).valid).toBe(true);
-  });
-
-  it("accepts an amount exactly equal to the balance", () => {
-    expect(validateWithdrawalAmount(1000, 1000).valid).toBe(true);
-  });
-});
-
-describe("WITHDRAWAL_STATUS_STYLES", () => {
-  it("has a style entry for every documented status", () => {
-    for (const status of ["pending", "processing", "paid", "failed"] as const) {
-      expect(WITHDRAWAL_STATUS_STYLES[status]).toBeTruthy();
-    }
+  it("treats a non-positive threshold as already met", () => {
+    expect(payoutProgressPercent(0, 0)).toBe(100);
   });
 });
