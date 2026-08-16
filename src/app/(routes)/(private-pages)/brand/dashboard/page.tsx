@@ -15,7 +15,7 @@ import { useAtomValue } from "jotai";
 import { userAtom } from "@/atom/user";
 import { PageLoader } from "@/components/ui/page-loader";
 import { PageError } from "@/components/ui/page-error";
-import { STATUS_STYLES, formatStatusLabel } from "../campaigns/campaign-status";
+import { STATUS_STYLES, formatStatusLabel, statusStyle } from "../campaigns/campaign-status";
 
 export default function BrandDashboard() {
   const user = useAtomValue(userAtom);
@@ -157,7 +157,7 @@ export default function BrandDashboard() {
                   <div>
                     <h4 className="text-foreground font-semibold">{campaign.title}</h4>
                     <div className="flex items-center gap-3 mt-1">
-                      <Badge className={`${STATUS_STYLES[campaign.status]} text-xs`}>
+                      <Badge className={`${statusStyle(STATUS_STYLES, campaign.status)} text-xs`}>
                         {formatStatusLabel(campaign.status)}
                       </Badge>
                       <span className="text-muted-foreground text-sm capitalize">{campaign.tier}</span>

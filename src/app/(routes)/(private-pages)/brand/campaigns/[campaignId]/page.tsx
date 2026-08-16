@@ -16,7 +16,7 @@ import Link from "next/link";
 import { routes } from "@/app/_utils/routes";
 import { AdCampaign, AdCampaignResponse } from "@/types";
 import { GoLiveDialog } from "@/components/brand/go-live-dialog";
-import { STATUS_STYLES, MODERATION_STYLES, daysLeft, formatStatusLabel } from "../campaign-status";
+import { STATUS_STYLES, MODERATION_STYLES, daysLeft, formatStatusLabel, statusStyle } from "../campaign-status";
 
 export default function ViewCampaignPage() {
   const params = useParams();
@@ -86,8 +86,8 @@ export default function ViewCampaignPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-4 bg-card/50 backdrop-blur-sm border border-border rounded-lg p-4">
-          <Badge className={STATUS_STYLES[campaign.status]}>{formatStatusLabel(campaign.status)}</Badge>
-          <Badge className={MODERATION_STYLES[campaign.moderationStatus]}>
+          <Badge className={statusStyle(STATUS_STYLES, campaign.status)}>{formatStatusLabel(campaign.status)}</Badge>
+          <Badge className={statusStyle(MODERATION_STYLES, campaign.moderationStatus)}>
             <ShieldCheck className="h-3 w-3 mr-1" />
             {formatStatusLabel(campaign.moderationStatus)}
           </Badge>

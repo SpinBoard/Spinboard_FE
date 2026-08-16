@@ -1,5 +1,7 @@
 import { AdCampaignModerationStatus, AdCampaignStatus } from "@/types";
 
+const FALLBACK_STYLE = "bg-white/10 text-muted-foreground border-white/20";
+
 // `status` went from draft|active|inactive to a 6-value lifecycle — paying
 // no longer puts a campaign live by itself, it moves to PENDING_PAYMENT then
 // waits on moderation too.
@@ -18,7 +20,19 @@ export const MODERATION_STYLES: Record<AdCampaignModerationStatus, string> = {
   REJECTED: "bg-destructive/20 text-destructive border-destructive/30",
 };
 
-export function formatStatusLabel(status: string): string {
+// Looks up a style for a status value that isn't guaranteed to be present
+// or to match the known enum — e.g. a legacy campaign fetched from the live
+// API without a moderationStatus set. Falls back to a neutral style instead
+// of crashing the whole list.
+export function statusStyle(
+  map: Record<string, string>,
+  status: string | undefined | null
+): string {
+  return (status && map[status]) || FALLBACK_STYLE;
+}
+
+export function formatStatusLabel(status: string | undefined | null): string {
+  if (!status) return "Unknown";
   return status
     .split("_")
     .map((word) => word.charAt(0) + word.slice(1).toLowerCase())

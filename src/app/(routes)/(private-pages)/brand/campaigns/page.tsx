@@ -30,7 +30,7 @@ import { userAtom } from "@/atom/user";
 import { PageLoader } from "@/components/ui/page-loader";
 import { PageError } from "@/components/ui/page-error";
 import { GoLiveDialog } from "@/components/brand/go-live-dialog";
-import { STATUS_STYLES, MODERATION_STYLES, daysLeft, formatStatusLabel } from "./campaign-status";
+import { STATUS_STYLES, MODERATION_STYLES, daysLeft, formatStatusLabel, statusStyle } from "./campaign-status";
 
 export default function BrandCampaignsPage() {
   const user = useAtomValue(userAtom);
@@ -127,8 +127,8 @@ export default function BrandCampaignsPage() {
             <Card key={campaign._id} className="bg-card/50 backdrop-blur-sm border-border flex flex-col">
               <CardHeader>
                 <div className="flex flex-wrap items-center gap-2">
-                  <Badge className={STATUS_STYLES[campaign.status]}>{formatStatusLabel(campaign.status)}</Badge>
-                  <Badge className={MODERATION_STYLES[campaign.moderationStatus]}>
+                  <Badge className={statusStyle(STATUS_STYLES, campaign.status)}>{formatStatusLabel(campaign.status)}</Badge>
+                  <Badge className={statusStyle(MODERATION_STYLES, campaign.moderationStatus)}>
                     {formatStatusLabel(campaign.moderationStatus)}
                   </Badge>
                   <Badge variant="secondary" className="capitalize">{campaign.tier}</Badge>

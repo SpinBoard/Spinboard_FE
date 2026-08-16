@@ -42,7 +42,6 @@ const emptyForm = {
 export default function BusinessProfilePage() {
   const queryClient = useQueryClient();
   const [form, setForm] = useState(emptyForm);
-  const [isListable, setIsListable] = useState(false);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [coverFile, setCoverFile] = useState<File | null>(null);
 
@@ -66,7 +65,6 @@ export default function BusinessProfilePage() {
       socialLinks: profile.socialLinks ?? {},
       isListed: profile.isListed,
     });
-    setIsListable(profile.isListable ?? profile.isListed);
   }, [profile]);
 
   const saveMutation = useMutation({
@@ -86,9 +84,7 @@ export default function BusinessProfilePage() {
         headers: { "Content-Type": "multipart/form-data" },
       });
     },
-    onSuccess: (response) => {
-      const updated = response.data.profile;
-      setIsListable(updated.isListable ?? updated.isListed);
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["business-profile-mine"] });
       toast.success("Directory listing saved.");
     },
@@ -102,13 +98,12 @@ export default function BusinessProfilePage() {
   const update = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) =>
     setForm((f) => ({ ...f, [key]: value }));
 
-  // Live client-side check so the Publish toggle greys out immediately as
-  // the brand types, rather than only after a save round-trip updates
-  // isListable.
-  const publishBlocked =
-    !form.businessName.trim() ||
-    (!form.contactEmail.trim() && !form.contactPhone.trim() && !form.whatsappNumber.trim());
-  const canPublish = isListable && !publishBlocked;
+  // Mirrors the backend's publish gate (name + at least one contact method,
+  // checked against the merged current+request state) so a brand can fill
+  // in the missing fields and flip the toggle in the same save.
+  const canPublish =
+    !!form.businessName.trim() &&
+    (!!form.contactEmail.trim() || !!form.contactPhone.trim() || !!form.whatsappNumber.trim());
 
   return (
     <div className="space-y-8">
