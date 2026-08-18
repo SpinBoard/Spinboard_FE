@@ -174,6 +174,15 @@ export default function BrandCampaignsPage() {
                       Go Live
                     </Button>
                   )}
+                  {campaign.status === "PENDING_PAYMENT" && (
+                    <Button
+                      size="sm"
+                      className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground"
+                      onClick={() => setGoLiveCampaign(campaign)}>
+                      <Rocket className="h-3.5 w-3.5 mr-1.5" />
+                      Complete Payment
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>

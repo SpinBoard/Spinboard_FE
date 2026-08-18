@@ -83,6 +83,14 @@ export default function ViewCampaignPage() {
               Go Live
             </Button>
           )}
+          {campaign.status === "PENDING_PAYMENT" && (
+            <Button
+              className="bg-primary hover:bg-primary/90 text-primary-foreground"
+              onClick={() => setShowGoLive(true)}>
+              <Rocket className="h-4 w-4 mr-2" />
+              Complete Payment
+            </Button>
+          )}
         </div>
 
         <div className="flex flex-wrap items-center gap-4 bg-card/50 backdrop-blur-sm border border-border rounded-lg p-4">

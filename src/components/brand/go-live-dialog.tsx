@@ -42,6 +42,7 @@ export function GoLiveDialog({ campaign, open, onOpenChange }: GoLiveDialogProps
   const [errorMessage, setErrorMessage] = useState("");
 
   const price = campaign ? (tiers?.[campaign.tier]?.price ?? 0) : 0;
+  const isResuming = campaign?.status === "PENDING_PAYMENT";
 
   const initializePayment = useMutation({
     mutationFn: async (payload: { campaignId: string; email: string }) =>
@@ -111,12 +112,12 @@ export function GoLiveDialog({ campaign, open, onOpenChange }: GoLiveDialogProps
             <DialogHeader>
               <DialogTitle className="font-sora text-xl flex items-center gap-2">
                 <Rocket className="h-5 w-5 text-primary" />
-                Go live
+                {isResuming ? "Complete payment" : "Go live"}
               </DialogTitle>
               <DialogDescription>
-                &quot;{campaign?.title}&quot; ({campaign?.tier}) — a flat ${price} activates it for{" "}
-                {activeDurationDays} days. It then enters pending review before appearing on the
-                billboard.
+                {isResuming
+                  ? `A previous payment attempt for "${campaign?.title}" (${campaign?.tier}) wasn't completed. Finish checkout to activate it — a flat $${price} for ${activeDurationDays} days.`
+                  : `"${campaign?.title}" (${campaign?.tier}) — a flat $${price} activates it for ${activeDurationDays} days. It then enters pending review before appearing on the billboard.`}
               </DialogDescription>
             </DialogHeader>
 
@@ -139,7 +140,7 @@ export function GoLiveDialog({ campaign, open, onOpenChange }: GoLiveDialogProps
                 ) : (
                   <Rocket className="h-4 w-4" />
                 )}
-                Proceed to Payment
+                {isResuming ? "Retry Payment" : "Proceed to Payment"}
               </Button>
               <Button
                 onClick={() => handleOpenChange(false)}
