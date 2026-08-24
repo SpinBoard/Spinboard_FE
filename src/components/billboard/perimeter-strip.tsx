@@ -140,6 +140,11 @@ export function PerimeterStrip({ items }: PerimeterStripProps) {
 
   return (
     <div className="space-y-3">
+      {/* The scrolling marquee leads, at the top of the frame — the most
+          visible spot — with the pinned freebie pills (if any are live)
+          underneath it. */}
+      <ScrollingPromo promos={promos} freebies={freebies} />
+
       {top.length > 0 && (
         <div className="flex flex-wrap items-center gap-2 justify-center">
           {top.map((item) => (
@@ -170,8 +175,6 @@ export function PerimeterStrip({ items }: PerimeterStripProps) {
           ))}
         </div>
       )}
-
-      <ScrollingPromo promos={promos} freebies={freebies} />
     </div>
   );
 }
