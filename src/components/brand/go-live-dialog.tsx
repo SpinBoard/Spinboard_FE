@@ -117,7 +117,7 @@ export function GoLiveDialog({ campaign, open, onOpenChange }: GoLiveDialogProps
               <DialogDescription>
                 {isResuming
                   ? `A previous payment attempt for "${campaign?.title}" (${campaign?.tier}) wasn't completed. Finish checkout to activate it — a flat $${price} for ${activeDurationDays} days.`
-                  : `"${campaign?.title}" (${campaign?.tier}) — a flat $${price} activates it for ${activeDurationDays} days. It then enters pending review before appearing on the billboard.`}
+                  : `"${campaign?.title}" (${campaign?.tier}) — a flat $${price} activates it for ${activeDurationDays} days. It goes live on the billboard the instant payment succeeds.`}
               </DialogDescription>
             </DialogHeader>
 

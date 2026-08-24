@@ -3,11 +3,19 @@
 import { useEffect, useRef, useState } from "react";
 import { AlertCircle, Volume2, VolumeX } from "lucide-react";
 
+// The playing-bar window: every ad video is capped at 60s
+// (video.maxDurationSeconds), so this is the reference length WhatsApp-style
+// status bars fill over. A shorter video just fills the same bar faster.
+const PLAYING_BAR_WINDOW_SEC = 60;
+
 interface VideoPlayerProps {
   src?: string;
   autoPlay?: boolean;
   onEnded?: () => void;
   onTimeUpdate?: (watchedMs: number, durationMs: number) => void;
+  // Expected duration hint from the queue slot, used to size the playing
+  // bar before the video's own metadata has loaded.
+  expectedDurationSec?: number;
   className?: string;
 }
 
@@ -15,18 +23,34 @@ interface VideoPlayerProps {
 // isn't blocked by the browser), no native scrub controls — just a mute
 // toggle. Reports watch progress via onTimeUpdate for heartbeat/complete
 // calls; the caller decides when a slot counts as "watched."
-export function VideoPlayer({ src, autoPlay = true, onEnded, onTimeUpdate, className }: VideoPlayerProps) {
+export function VideoPlayer({
+  src,
+  autoPlay = true,
+  onEnded,
+  onTimeUpdate,
+  expectedDurationSec,
+  className,
+}: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [failed, setFailed] = useState(false);
   const [muted, setMuted] = useState(true);
+  const [progress, setProgress] = useState(0);
 
   useEffect(() => {
     setFailed(false);
+    setProgress(0);
   }, [src]);
 
   const handleTimeUpdate = () => {
     const video = videoRef.current;
-    if (!video || !onTimeUpdate) return;
+    if (!video) return;
+
+    const durationSec =
+      video.duration && isFinite(video.duration) ? video.duration : expectedDurationSec;
+    const barWindow = Math.min(durationSec || PLAYING_BAR_WINDOW_SEC, PLAYING_BAR_WINDOW_SEC);
+    setProgress(barWindow > 0 ? Math.min(video.currentTime / barWindow, 1) : 0);
+
+    if (!onTimeUpdate) return;
     onTimeUpdate(video.currentTime * 1000, (video.duration || 0) * 1000);
   };
 
@@ -53,6 +77,12 @@ export function VideoPlayer({ src, autoPlay = true, onEnded, onTimeUpdate, class
         onTimeUpdate={handleTimeUpdate}
         className="w-full aspect-video rounded-lg border border-border bg-black object-contain"
       />
+      <div className="absolute top-2 left-2 right-2 h-1 rounded-full bg-white/25 overflow-hidden">
+        <div
+          className="h-full bg-white rounded-full transition-[width] duration-150 ease-linear"
+          style={{ width: `${progress * 100}%` }}
+        />
+      </div>
       <button
         type="button"
         onClick={() => setMuted((m) => !m)}

@@ -74,6 +74,11 @@ export const ENDPOINTS = {
   AD_PAYMENTS_VERIFY: (reference: string) =>
     `/ad-payments/verify/${reference}`,
 
+  // Ad campaigns (admin-only bulk moderation — takedown/restore after the
+  // fact, since campaigns now go live automatically on payment)
+  AD_CAMPAIGNS_DEACTIVATE: "/ad-campaigns/deactivate",
+  AD_CAMPAIGNS_REACTIVATE: "/ad-campaigns/reactivate",
+
   // Marketplace — business directory (no checkout)
   MARKETPLACE_BUSINESSES: "/marketplace/businesses",
   MARKETPLACE_BUSINESS_DETAILS: (brandId: string) =>

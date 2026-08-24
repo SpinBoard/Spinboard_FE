@@ -446,8 +446,8 @@ export default function CreateCampaignWizardPage() {
                 <div className="border-t border-border pt-3 text-xs text-muted-foreground flex items-start gap-2">
                   <Clock className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
                   This creates your campaign as a draft. Going live charges ${priceUSD} flat and
-                  starts a {activeDurationDays}-day activation window — the campaign then enters
-                  pending review before it appears on the billboard.
+                  starts a {activeDurationDays}-day activation window — the campaign appears on
+                  the billboard the instant payment succeeds.
                 </div>
               </CardContent>
             </Card>

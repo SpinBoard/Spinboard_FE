@@ -10,13 +10,13 @@ import { Loader2 } from 'lucide-react'
 
 interface ProtectedRouteProps {
   children: React.ReactNode
-  allowedUserTypes?: ('gamer' | 'brand')[]
+  allowedUserTypes?: ('gamer' | 'brand' | 'admin')[]
   redirectTo?: string
 }
 
 export function ProtectedRoute({
   children,
-  allowedUserTypes = ['gamer', 'brand'],
+  allowedUserTypes = ['gamer', 'brand', 'admin'],
   redirectTo = routes.LOGIN
 }: ProtectedRouteProps) {
   const router = useRouter()
@@ -52,6 +52,8 @@ export function ProtectedRoute({
         router.push(routes.USER.DASHBOARD)
       } else if (user.userType === 'brand') {
         router.push(routes.BRAND.DASHBOARD)
+      } else if (user.userType === 'admin') {
+        router.push(routes.ADMIN.CAMPAIGNS)
       }
       return
     }

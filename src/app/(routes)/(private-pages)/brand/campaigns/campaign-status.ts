@@ -2,9 +2,12 @@ import { AdCampaignModerationStatus, AdCampaignStatus } from "@/types";
 
 const FALLBACK_STYLE = "bg-white/10 text-muted-foreground border-white/20";
 
-// `status` went from draft|active|inactive to a 6-value lifecycle — paying
-// no longer puts a campaign live by itself, it moves to PENDING_PAYMENT then
-// waits on moderation too.
+// `status` is a 6-value lifecycle. Paying moves a campaign through
+// PENDING_PAYMENT straight to ACTIVE (moderationStatus: APPROVED) the
+// instant payment succeeds — there's no review wait. Moderation now only
+// happens after the fact: admin can deactivate a live campaign (moving it
+// off ACTIVE, moderationStatus: REJECTED) if its video turns out to be
+// inappropriate, and reactivate it later if that was a mistake.
 export const STATUS_STYLES: Record<AdCampaignStatus, string> = {
   DRAFT: "bg-white/10 text-muted-foreground border-white/20",
   PENDING_PAYMENT: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",

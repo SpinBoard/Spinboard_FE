@@ -51,4 +51,9 @@ export const routes = {
     PRODUCTS_NEW: "/brand/products/new",
     PRODUCT_EDIT: (id: string) => `/brand/products/${id}/edit`,
   },
+
+  // Admin Routes
+  ADMIN: {
+    CAMPAIGNS: "/admin/campaigns",
+  },
 };

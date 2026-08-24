@@ -5,9 +5,9 @@ import { ENDPOINTS } from "@/app/_utils/endpoints";
 import { api } from "@/lib/api";
 import { AdminConfigResponse } from "@/types";
 
-// Documented defaults from docs/CONFIG.md. GET /admin/config is admin-only,
-// and this app has no admin user type, so for everyone else these defaults
-// are the only source of truth until a public config-subset endpoint exists.
+// Documented defaults from docs/CONFIG.md. GET /admin/config is admin-only;
+// for non-admin users these defaults are the only source of truth until a
+// public config-subset endpoint exists.
 export const ADMIN_CONFIG_DEFAULTS = {
   "video.maxDurationSeconds": 60,
   "video.maxSizeBytes": 25 * 1024 * 1024,

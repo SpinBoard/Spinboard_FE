@@ -2,7 +2,17 @@
 
 What actually changed in the API surface, for anyone who worked against the old SpinBoard product ("watch 5 ads, answer 3 quiz questions per ad, spin a wheel") **or** against an earlier build of Pazzell that still had a marketplace checkout flow. If you're building fresh against this API with no history, you can skip this file — `API_GUIDE.md` and `BUSINESS_RULES.md` describe the current system standalone.
 
-## Marketplace revamp: store → business directory (most recent change)
+## Ad campaign moderation revamp: pre-publish review → post-hoc takedown (most recent change)
+
+Admin no longer approves or rejects a campaign's video before it goes live — `POST /ad-campaigns/:campaignId/moderate` is gone. A campaign now goes live (`status: "ACTIVE"`, `moderationStatus: "APPROVED"`) the instant payment succeeds, with no waiting period. This supersedes every "pending review" mention further down in this file and in `BUSINESS_RULES.md`/`FRONTEND_IMPLEMENTATION_GUIDE.md` — those described the state as it existed briefly between the SpinBoard→Billboard revamp and this one; there is no pending-review state to build UI for anymore.
+
+Admin's moderation role now happens after the fact instead: pulling an inappropriate video off the billboard even though it's live and already paid for, and undoing a takedown made by mistake. Both are bulk, multi-select operations, not single-campaign actions:
+
+- **Removed**: `POST /ad-campaigns/:campaignId/moderate`. Remove any single-campaign approve/reject UI calling it.
+- **New**: `POST /ad-campaigns/deactivate` — `{ campaignIds: string[], reason? }` → `{ success, matched, deactivated }`. `POST /ad-campaigns/reactivate` — `{ campaignIds: string[] }` → `{ success, matched, reactivated, skippedExpired: string[] }`. `skippedExpired` campaigns need the brand to re-pay, since reactivating doesn't revive a lapsed activation window for free.
+- **Unchanged shape**: `moderationStatus`/`moderationReason`/`moderatedBy`/`moderatedAt` on `AdCampaign` are still set, just by the instant-activation/deactivation code path instead of an admin review decision.
+
+## Marketplace revamp: store → business directory
 
 The marketplace used to be a small digital-goods store (list a product, pay via Paystack, get a discount code applied at checkout). It is now a **business directory/catalogue** — brands publish a contact profile, users browse and reach out directly. This is a separate, later change from the SpinBoard→Billboard revamp described in the rest of this file.
 

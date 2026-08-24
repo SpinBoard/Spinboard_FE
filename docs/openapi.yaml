@@ -556,22 +556,60 @@ paths:
         "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/AdCampaign" } } } }
         "404": { $ref: "#/components/responses/Error" }
 
-  /ad-campaigns/{campaignId}/moderate:
+  /ad-campaigns/deactivate:
     post:
       tags: [AdCampaigns]
-      summary: Approve or reject a campaign's video (admin only)
-      parameters: [{ name: campaignId, in: path, required: true, schema: { type: string } }]
+      summary: Bulk-deactivate live campaigns, e.g. for an inappropriate video (admin only)
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [decision]
+              required: [campaignIds]
               properties:
-                decision: { type: string, enum: [APPROVED, REJECTED] }
-                reason: { type: string, description: "Required when decision is REJECTED" }
-      responses: { "200": { description: OK } }
+                campaignIds: { type: array, items: { type: string } }
+                reason: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  matched: { type: integer }
+                  deactivated: { type: integer }
+
+  /ad-campaigns/reactivate:
+    post:
+      tags: [AdCampaigns]
+      summary: Bulk-reactivate previously deactivated campaigns (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [campaignIds]
+              properties:
+                campaignIds: { type: array, items: { type: string } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  matched: { type: integer }
+                  reactivated: { type: integer }
+                  skippedExpired:
+                    type: array
+                    items: { type: string }
+                    description: Campaign IDs whose activation window already lapsed — the brand must re-pay instead.
 
   /ad-campaigns/{campaignId}/analytics:
     get:

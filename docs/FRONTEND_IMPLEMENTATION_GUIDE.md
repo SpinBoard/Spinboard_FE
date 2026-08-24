@@ -29,8 +29,9 @@ This is the primary section of this document. Two revamps happened on the backen
 3. **Replace the spin-wheel screen with the perimeter strip + Apply box.** This is a net-new UI concept (see §7) — there's no old screen to adapt, the spin wheel has no replacement-in-kind, it's simply gone and this is what takes its place.
 4. **Update the wallet screen** for the new payout-progress fields (§4) and remove any withdrawal UI (§6 — the endpoint is gone).
 5. **Update the referral screen** — a milestone reward now shows as a wallet credit, not a discount code reveal (§2, Revamp 2 knock-on change).
-6. **Update the brand-side ad campaign dashboard** for the expanded `status` enum and new `moderationStatus` (§2, Revamp 1) — a campaign can now sit in "pending review" after payment, which didn't used to be a state the old UI needed to show.
+6. **Update the brand-side ad campaign dashboard** for the expanded `status` enum and new `moderationStatus` (§2, Revamp 1) — no "pending review" wait, but a campaign can now show a post-payment takedown if admin deactivates it.
 7. **Rebuild the marketplace end to end**, last, as its own effort — this is the most structurally different piece (store → directory) and has zero shared UI with what exists today. See §2 Revamp 2 and §7's marketplace section.
+8. **Build the admin bulk campaign-moderation UI** (§2, Revamp 3) — a multi-select campaign list with deactivate/reactivate bulk actions. There is no single-campaign approve/reject screen to build; that flow no longer exists.
 
 ### Revamp 1 — SpinBoard → Billboard + Freebie Codes
 
@@ -47,7 +48,7 @@ This is the primary section of this document. Two revamps happened on the backen
 - Billboard: `POST /billboard/session`, `GET /billboard/queue`, `POST /billboard/impressions/heartbeat`, `POST /billboard/impressions/complete`.
 - Freebie codes: `GET /freebies/strip` (+ SSE variant), `GET /freebies/phrases`, `POST /freebies/apply` (single endpoint for both claiming and redeeming), `GET /me/claims`, `POST /me/claims/:claimId/redeem`.
 - Weekly payout run status surfaced on `GET /wallet/balance` (`payoutThreshold`, `amountToThreshold`, `nextPayoutDate`) — new fields on an existing endpoint.
-- Campaign moderation status (`moderationStatus`) on `AdCampaign` — a campaign dashboard should show "pending review" / "approved" / "rejected," since paying no longer puts a campaign live by itself.
+- Campaign moderation status (`moderationStatus`) on `AdCampaign` — as of Revamp 3 (below), moderation is post-hoc, not a pre-publish gate: `PENDING`/`APPROVED`/`REJECTED` are set automatically the instant payment succeeds, not by a reviewer.
 - Campaign lifecycle states expanded: `status` went from `draft|active|inactive` to `DRAFT|PENDING_PAYMENT|ACTIVE|PAUSED|EXPIRED|REJECTED`.
 - Flat campaign pricing: no more brand-selectable 1–12 week duration. Flat 30-day activation at $20 Basic / $30 Premium.
 
@@ -70,6 +71,18 @@ The marketplace used to be a small digital-goods store (list a product, pay via 
 **Knock-on change — referral rewards:** milestone rewards used to be a percent-off `DiscountCode`; now they're a flat wallet-cash credit (`WalletTransaction.reason: "REFERRAL_REWARD"`), since there's no purchase left in the product to discount against. `Config: referral.qualifiedThresholds` values changed from discount-bucket keys (`"discount20"`) to flat NGN amounts (default `{20: 1000, 40: 2500}`). If old frontend code reveals a discount code on a referral milestone, replace it with a wallet-balance-updated notification.
 
 **Also removed as a direct consequence:** `WalletTransactionReason.MARKETPLACE_SPEND` (was declared but never had a consumer — now definitively unreachable, since there's no wallet-spend path in a checkout-free marketplace).
+
+### Revamp 3 — Ad campaign moderation: pre-publish review → post-hoc takedown (most recent change)
+
+Admin no longer approves or rejects a campaign's video before it goes live. A campaign now goes live (`status: "ACTIVE"`, `moderationStatus: "APPROVED"`) the instant payment succeeds — there is no waiting period. If any brand-dashboard screen showed a "pending review" state after checkout, remove it; nothing sits in that state anymore.
+
+**Removed:** `POST /ad-campaigns/:campaignId/moderate`. Remove any single-campaign approve/reject UI calling it.
+
+**New:** admin can pull an inappropriate video down after the fact, and undo a mistaken takedown — both bulk, multi-select operations, all under `/ad-campaigns`, admin-only:
+- `POST /ad-campaigns/deactivate` — `{ campaignIds: string[], reason? }` → `{ success, matched, deactivated }`. Build as a multi-select bulk action on the admin campaign list.
+- `POST /ad-campaigns/reactivate` — `{ campaignIds: string[] }` → `{ success, matched, reactivated, skippedExpired: string[] }`. Surface `skippedExpired` distinctly — those campaigns need the brand to re-pay, not just get switched back on.
+
+`moderationStatus`/`moderationReason`/`moderatedBy`/`moderatedAt` on `AdCampaign` are unchanged in shape, just set by different code now (instant-activation logic instead of an admin decision).
 
 ### Unchanged — build against these exactly as documented, no surprises
 
@@ -338,7 +351,8 @@ Every route works logged-in or logged-out — auth is never required to watch.
 - `GET /ad-campaigns/mine` — brand only.
 - `GET /ad-campaigns` — admin only, `?status=&tier=`.
 - `GET /ad-campaigns/:campaignId` — public.
-- `POST /ad-campaigns/:campaignId/moderate` — admin only. `{ decision: "APPROVED"|"REJECTED", reason? }`.
+- `POST /ad-campaigns/deactivate` — admin only, bulk. `{ campaignIds: string[], reason? }` → `{ success, matched, deactivated }`. Takes down live (already-paid) campaigns.
+- `POST /ad-campaigns/reactivate` — admin only, bulk. `{ campaignIds: string[] }` → `{ success, matched, reactivated, skippedExpired: string[] }`. `skippedExpired` campaigns need the brand to re-pay.
 - `GET /ad-campaigns/:campaignId/analytics` / `/analytics/breakdown` / `/analytics/export.csv` — brand (own) or admin, **Premium tier only** (403 on Basic).
 - `POST /ad-payments/initialize` — brand only. `{ campaignId, email }` → Paystack `authorization_url`. `403 PROFILE_INCOMPLETE` if brand profile isn't complete.
 - `GET /ad-payments/verify/:reference` — brand only. Also happens via webhook as a fallback.

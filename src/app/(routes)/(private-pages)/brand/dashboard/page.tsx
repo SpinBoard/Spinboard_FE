@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Activity, Clock, FileEdit, Package, Plus, Target } from "lucide-react";
+import { Activity, Ban, Clock, FileEdit, Package, Plus, Target } from "lucide-react";
 import Link from "next/link";
 import { routes } from "@/app/_utils/routes";
 import { useQuery } from "@tanstack/react-query";
@@ -41,7 +41,10 @@ export default function BrandDashboard() {
     return {
       active: list.filter((c) => c.status === "ACTIVE").length,
       draft: list.filter((c) => c.status === "DRAFT").length,
-      pendingReview: list.filter((c) => c.moderationStatus === "PENDING" && c.status !== "DRAFT").length,
+      // Campaigns go live automatically on payment now — the only reason a
+      // campaign stops running post-payment is an admin takedown for
+      // inappropriate content, surfaced via moderationStatus REJECTED.
+      rejected: list.filter((c) => c.moderationStatus === "REJECTED").length,
       total: list.length,
     };
   }, [campaigns]);
@@ -77,7 +80,7 @@ export default function BrandDashboard() {
         </Link>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
         <Card className="bg-card/50 backdrop-blur-sm border-border">
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
@@ -100,6 +103,19 @@ export default function BrandDashboard() {
               <div>
                 <p className="text-2xl font-bold text-foreground font-sora">{stats.draft}</p>
                 <p className="text-xs text-muted-foreground uppercase tracking-wider">Draft</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-card/50 backdrop-blur-sm border-border">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-destructive/20 rounded-lg">
+                <Ban className="h-5 w-5 text-destructive" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-foreground font-sora">{stats.rejected}</p>
+                <p className="text-xs text-muted-foreground uppercase tracking-wider">Deactivated</p>
               </div>
             </div>
           </CardContent>

@@ -111,7 +111,10 @@ describe("WatchPage", () => {
 
   it("renders the freebie strip with the pinned code and scrolling promo", async () => {
     renderPage();
-    expect(await screen.findByText("PZL7K2Q9")).toBeInTheDocument();
+    // The code renders once pinned (readable/typeable) and again inside the
+    // scrolling marquee (duplicated there for a seamless loop), so multiple
+    // matches are expected rather than a single unique one.
+    expect((await screen.findAllByText("PZL7K2Q9")).length).toBeGreaterThan(0);
     expect(screen.getAllByText("Eyes on the edges.").length).toBeGreaterThan(0);
   });
 

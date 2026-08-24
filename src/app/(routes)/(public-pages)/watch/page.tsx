@@ -121,6 +121,7 @@ export default function WatchPage() {
             <VideoPlayer
               key={current.slotId}
               src={current.videoUrl}
+              expectedDurationSec={current.durationSec}
               onEnded={handleEnded}
               onTimeUpdate={handleTimeUpdate}
             />

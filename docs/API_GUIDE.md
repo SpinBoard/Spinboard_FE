@@ -69,7 +69,8 @@ See `UI_CONTRACT.md` and `BUSINESS_RULES.md`. `POST /freebies/apply` requires au
 - `GET /ad-campaigns/mine` — brand only.
 - `GET /ad-campaigns` — admin only, `?status=&tier=` filters.
 - `GET /ad-campaigns/:campaignId` — public.
-- `POST /ad-campaigns/:campaignId/moderate` — admin only. `{ decision: "APPROVED"|"REJECTED", reason? }` (`reason` required on reject).
+- `POST /ad-campaigns/deactivate` — admin only. `{ campaignIds: string[], reason? }` → `{ success, matched, deactivated }`. Pulls one or more campaigns (including currently-`ACTIVE`, already-paid ones) off the billboard — e.g. an inappropriate video reported after it went live.
+- `POST /ad-campaigns/reactivate` — admin only. `{ campaignIds: string[] }` → `{ success, matched, reactivated, skippedExpired: string[] }`. Undoes a mistaken deactivation. `skippedExpired` lists any requested campaigns whose activation window already lapsed — those need the brand to re-pay, reactivating doesn't revive them for free.
 - `GET /ad-campaigns/:campaignId/analytics` / `/analytics/breakdown` / `/analytics/export.csv` — brand (own campaign) or admin, **Premium tier only** (403 on Basic). See `BUSINESS_RULES.md`.
 
 ### Ad campaign payment

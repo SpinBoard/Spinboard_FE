@@ -7,7 +7,7 @@ export interface UserData {
   email: string;
   leaderboardPosition?: number | null;
   avatar?: string;
-  userType: "gamer" | "brand";
+  userType: "gamer" | "brand" | "admin";
   isVerified: boolean;
   companyName?: string;
   profileComplete?: boolean;
@@ -383,6 +383,33 @@ export interface AdCampaign {
 export interface AdCampaignsResponse {
   success: boolean;
   campaigns: AdCampaign[];
+}
+
+// §4 — admin bulk moderation (campaigns go live automatically on payment now;
+// admin only steps in after the fact to pull down inappropriate ones, or to
+// undo a mistaken takedown).
+export interface AdCampaignDeactivateRequest {
+  campaignIds: string[];
+  reason?: string;
+}
+
+export interface AdCampaignDeactivateResponse {
+  success: boolean;
+  matched: number;
+  deactivated: number;
+}
+
+export interface AdCampaignReactivateRequest {
+  campaignIds: string[];
+}
+
+export interface AdCampaignReactivateResponse {
+  success: boolean;
+  matched: number;
+  reactivated: number;
+  // Campaigns whose activation window already lapsed — reactivate skips
+  // these rather than reviving them for free. The brand has to re-pay.
+  skippedExpired: string[];
 }
 
 export interface AdCampaignResponse {
