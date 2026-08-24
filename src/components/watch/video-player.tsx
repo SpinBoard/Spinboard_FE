@@ -77,9 +77,9 @@ export function VideoPlayer({
         onTimeUpdate={handleTimeUpdate}
         className="w-full aspect-video rounded-lg border border-border bg-black object-contain"
       />
-      <div className="absolute top-2 left-2 right-2 h-1 rounded-full bg-white/25 overflow-hidden">
+      <div className="absolute top-2 left-2 right-2 h-1.5 rounded-full bg-black/40 overflow-hidden">
         <div
-          className="h-full bg-white rounded-full transition-[width] duration-150 ease-linear"
+          className="h-full bg-yellow-400 rounded-full transition-[width] duration-150 ease-linear"
           style={{ width: `${progress * 100}%` }}
         />
       </div>

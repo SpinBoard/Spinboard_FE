@@ -109,27 +109,35 @@ export default function WatchPage() {
           </div>
         </div>
 
-        {stripFeed.data && <PerimeterStrip items={stripFeed.data.items} />}
+        {/* One cohesive frame — strip, video, and playing bar together — so
+            the whole billboard reads as a single unit, the same way the
+            marketing hero preview does, instead of the strip floating
+            somewhere else on the page. */}
+        <div className="rounded-2xl border border-border bg-card/50 backdrop-blur-sm overflow-hidden">
+          <div className="p-3 sm:p-4 pb-0">
+            <PerimeterStrip items={stripFeed.data?.items ?? []} />
+          </div>
 
-        {!current ? (
-          <div className="flex items-center justify-center py-24 text-muted-foreground">
-            <Loader2 className="h-6 w-6 animate-spin mr-2" />
-            Loading the billboard...
-          </div>
-        ) : (
-          <div className="space-y-3">
-            <VideoPlayer
-              key={current.slotId}
-              src={current.videoUrl}
-              expectedDurationSec={current.durationSec}
-              onEnded={handleEnded}
-              onTimeUpdate={handleTimeUpdate}
-            />
-            <p className="text-sm text-muted-foreground">
-              {current.type === "AD" ? current.brandName : "Pazzell"} — {current.title}
-            </p>
-          </div>
-        )}
+          {!current ? (
+            <div className="flex items-center justify-center py-24 text-muted-foreground">
+              <Loader2 className="h-6 w-6 animate-spin mr-2" />
+              Loading the billboard...
+            </div>
+          ) : (
+            <div className="p-3 sm:p-4 space-y-3">
+              <VideoPlayer
+                key={current.slotId}
+                src={current.videoUrl}
+                expectedDurationSec={current.durationSec}
+                onEnded={handleEnded}
+                onTimeUpdate={handleTimeUpdate}
+              />
+              <p className="text-sm text-muted-foreground">
+                {current.type === "AD" ? current.brandName : "Pazzell"} — {current.title}
+              </p>
+            </div>
+          )}
+        </div>
 
         <div className="p-4 rounded-2xl border border-border bg-card/50 backdrop-blur-sm">
           <ApplyBox />
