@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Loader2, Tv } from "lucide-react";
 import { MainLayout } from "@/components/layout/main-layout";
 import { VideoPlayer } from "@/components/watch/video-player";
+import { FreebieTakeover } from "@/components/watch/freebie-takeover";
 import { PerimeterStrip } from "@/components/billboard/perimeter-strip";
 import { ApplyBox } from "@/components/billboard/apply-box";
 import {
@@ -36,6 +37,8 @@ export default function WatchPage() {
 
   const completedForSlot = useRef<string | null>(null);
   const lastHeartbeatAt = useRef(0);
+  const applyBoxRef = useRef<HTMLDivElement>(null);
+  const [prefillCode, setPrefillCode] = useState<string | undefined>();
 
   useEffect(() => {
     sessionMutation.mutate(undefined, {
@@ -94,6 +97,11 @@ export default function WatchPage() {
     advance();
   };
 
+  const handleClaimFromTakeover = (code: string) => {
+    setPrefillCode(code);
+    applyBoxRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  };
+
   return (
     <MainLayout maxWidth="4xl">
       <div className="space-y-6">
@@ -104,7 +112,8 @@ export default function WatchPage() {
               The Billboard
             </h1>
             <p className="text-muted-foreground text-sm">
-              Playing continuously — catch a freebie code on the strip and be first to type it.
+              Playing continuously — a freebie code can pop up on the strip or take over the
+              screen. Keep watching and be first to type it.
             </p>
           </div>
         </div>
@@ -125,22 +134,37 @@ export default function WatchPage() {
             </div>
           ) : (
             <div className="p-3 sm:p-4 space-y-3">
-              <VideoPlayer
-                key={current.slotId}
-                src={current.videoUrl}
-                expectedDurationSec={current.durationSec}
-                onEnded={handleEnded}
-                onTimeUpdate={handleTimeUpdate}
-              />
-              <p className="text-sm text-muted-foreground">
-                {current.type === "AD" ? current.brandName : "Pazzell"} — {current.title}
-              </p>
+              {current.type === "FREEBIE" ? (
+                <FreebieTakeover
+                  key={current.slotId}
+                  publicCode={current.publicCode ?? ""}
+                  valueLabel={current.valueLabel}
+                  freebieType={current.freebieType}
+                  durationSec={current.durationSec}
+                  onEnded={handleEnded}
+                  onTimeUpdate={handleTimeUpdate}
+                  onClaim={handleClaimFromTakeover}
+                />
+              ) : (
+                <>
+                  <VideoPlayer
+                    key={current.slotId}
+                    src={current.videoUrl}
+                    expectedDurationSec={current.durationSec}
+                    onEnded={handleEnded}
+                    onTimeUpdate={handleTimeUpdate}
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    {current.type === "AD" ? current.brandName : "Pazzell"} — {current.title}
+                  </p>
+                </>
+              )}
             </div>
           )}
         </div>
 
-        <div className="p-4 rounded-2xl border border-border bg-card/50 backdrop-blur-sm">
-          <ApplyBox />
+        <div ref={applyBoxRef} className="p-4 rounded-2xl border border-border bg-card/50 backdrop-blur-sm">
+          <ApplyBox initialCode={prefillCode} />
         </div>
       </div>
     </MainLayout>

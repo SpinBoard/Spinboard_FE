@@ -112,7 +112,7 @@ function RegisterForm() {
               Create account
             </h1>
             <p className="text-muted-foreground text-center text-sm mb-6">
-              Watch ads, answer quizzes, spin to earn
+              Watch ads, catch freebie codes, earn real cash
             </p>
 
             <div className="flex bg-white/5 rounded-xl p-1 mb-6">
@@ -128,7 +128,7 @@ function RegisterForm() {
                     : "text-muted-foreground hover:text-foreground"
                 }`}>
                 <User className="h-4 w-4 inline mr-2" />
-                Player
+                Viewer
               </button>
               <button
                 type="button"

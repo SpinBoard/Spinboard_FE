@@ -2,11 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { AlertCircle, Volume2, VolumeX } from "lucide-react";
-
-// The playing-bar window: every ad video is capped at 60s
-// (video.maxDurationSeconds), so this is the reference length WhatsApp-style
-// status bars fill over. A shorter video just fills the same bar faster.
-const PLAYING_BAR_WINDOW_SEC = 60;
+import { PlayingBar, PLAYING_BAR_WINDOW_SEC } from "./playing-bar";
 
 interface VideoPlayerProps {
   src?: string;
@@ -77,12 +73,7 @@ export function VideoPlayer({
         onTimeUpdate={handleTimeUpdate}
         className="w-full aspect-video rounded-lg border border-border bg-black object-contain"
       />
-      <div className="absolute top-2 left-2 right-2 h-1.5 rounded-full bg-black/40 overflow-hidden">
-        <div
-          className="h-full bg-yellow-400 rounded-full transition-[width] duration-150 ease-linear"
-          style={{ width: `${progress * 100}%` }}
-        />
-      </div>
+      <PlayingBar progress={progress} />
       <button
         type="button"
         onClick={() => setMuted((m) => !m)}

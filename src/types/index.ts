@@ -221,12 +221,22 @@ export interface BillboardSessionResponse {
 
 export interface BillboardQueueSlot {
   slotId: string; // opaque, single-use — pass back verbatim to heartbeat/complete
-  type: "AD" | "HOUSE";
+  type: "AD" | "HOUSE" | "FREEBIE";
+  durationSec: number;
+
+  // AD/HOUSE only
   campaignId?: string; // AD only
   brandName?: string; // AD only
-  title: string;
-  videoUrl: string;
-  durationSec: number;
+  title?: string;
+  videoUrl?: string;
+
+  // FREEBIE only — a live freebie code taking over this slot full-screen,
+  // exactly like a real ad, at most once per session per code. No videoUrl.
+  codeId?: string;
+  publicCode?: string;
+  valueLabel?: string;
+  freebieType?: "AIRTIME" | "CASH";
+  liveUntil?: string;
 }
 
 export interface BillboardQueueResponse {

@@ -120,6 +120,16 @@
         "title": "QuickPay — Send Money Instantly",
         "videoUrl": "https://cdn.pazzell.com/ad-campaign-videos/1755180500-quickpay.mp4",
         "durationSec": 45
+      },
+      {
+        "slotId": "slot_7a2d9f4b1c8e",
+        "type": "FREEBIE",
+        "codeId": "66c1a1f2b1e4a2a1b8f8e001",
+        "publicCode": "PZL7K2Q9",
+        "valueLabel": "₦500 MTN Airtime",
+        "freebieType": "AIRTIME",
+        "liveUntil": "2026-08-14T13:32:05.000Z",
+        "durationSec": 60
       }
     ]
   },

@@ -52,11 +52,21 @@ function shuffled<T>(list: T[], seed: string): T[] {
   return arr;
 }
 
-// Promo phrases and live freebie codes, mixed and shuffled together so the
-// strip alternates between hype text and "here's a code, go type it"
-// call-outs instead of two separate lanes. The pinned strips (positioned
-// around the video frame) remain the actual click-to-type surface for a
-// freebie — this is just extra visibility for it while it scrolls by.
+// A live freebie code no longer only shows up pinned in the strip — it can
+// also take over the billboard screen full-screen for a stretch of time.
+// These client-side hints tell viewers to keep an eye on the screen itself,
+// not just the strip, since that's easy to miss otherwise.
+const WATCH_SCREEN_HINTS: MarqueeEntry[] = [
+  { key: "hint-screen-takeover", kind: "promo", text: "Keep watching — a freebie code can take over your whole screen." },
+  { key: "hint-screen-fullscreen", kind: "promo", text: "Freebies don't just show up on the strip — watch for a full-screen drop too." },
+];
+
+// Promo phrases, live freebie codes, and static "watch the screen" hints,
+// mixed and shuffled together so the strip alternates between hype text and
+// "here's a code, go type it" call-outs instead of separate lanes. The
+// pinned strips (positioned around the video frame) remain the actual
+// click-to-type surface for a freebie — this is just extra visibility for
+// it while it scrolls by.
 function ScrollingPromo({ promos, freebies }: { promos: StripFeedItem[]; freebies: StripFeedItem[] }) {
   const promoEntries: MarqueeEntry[] = promos
     .filter((i) => i.text)
@@ -75,7 +85,7 @@ function ScrollingPromo({ promos, freebies }: { promos: StripFeedItem[]; freebie
     promoEntries.map((e) => e.key).join(",") + "|" + freebieEntries.map((e) => e.key).join(",");
 
   const entries = useMemo(
-    () => shuffled([...promoEntries, ...freebieEntries], signature),
+    () => shuffled([...promoEntries, ...freebieEntries, ...WATCH_SCREEN_HINTS], signature),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [signature]
   );

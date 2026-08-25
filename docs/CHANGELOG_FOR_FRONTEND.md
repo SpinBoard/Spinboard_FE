@@ -2,7 +2,15 @@
 
 What actually changed in the API surface, for anyone who worked against the old SpinBoard product ("watch 5 ads, answer 3 quiz questions per ad, spin a wheel") **or** against an earlier build of Pazzell that still had a marketplace checkout flow. If you're building fresh against this API with no history, you can skip this file — `API_GUIDE.md` and `BUSINESS_RULES.md` describe the current system standalone.
 
-## Ad campaign moderation revamp: pre-publish review → post-hoc takedown (most recent change)
+## Freebie codes now take over the billboard (most recent change)
+
+A live freebie code used to be visible in exactly one place: pinned in the perimeter strip. It now **also** takes over one billboard slot, full-screen, for a fixed stretch of time (`Config: freebie.billboardSlotSeconds`, default 60s) — exactly like a real ad — so the freebie moment interrupts the ad reel instead of only ever being a small pin at the edge of the screen. This is additive: the strip flow described below is completely unchanged, a live code is simultaneously pinned in the strip and (once, per session) a billboard takeover.
+
+- **Changed shape**: `GET /billboard/queue` slots can now have `type: "FREEBIE"` alongside the existing `"AD"`/`"HOUSE"`: `{ slotId, type: "FREEBIE", codeId, publicCode, valueLabel, freebieType: "AIRTIME"|"CASH", liveUntil, durationSec }`. No `videoUrl` — build a code-announcement graphic (code, value, an Apply box or a route into one) instead of a video player for this slot type.
+- **Build this**: play a `FREEBIE` slot through the exact same loop as `AD`/`HOUSE` — render for `durationSec`, send the same `heartbeat`/`complete` calls on the same `slotId` mechanics. A given code takes over the billboard at most once per session, even though it stays pinned in the strip for its whole live window — don't expect one on every queue fetch, most return none. A completed `FREEBIE` slot doesn't count toward analytics or referral qualification (it's not a real ad).
+- See `UI_CONTRACT.md`'s "Freebie takeover slots" section for the full contract.
+
+## Ad campaign moderation revamp: pre-publish review → post-hoc takedown
 
 Admin no longer approves or rejects a campaign's video before it goes live — `POST /ad-campaigns/:campaignId/moderate` is gone. A campaign now goes live (`status: "ACTIVE"`, `moderationStatus: "APPROVED"`) the instant payment succeeds, with no waiting period. This supersedes every "pending review" mention further down in this file and in `BUSINESS_RULES.md`/`FRONTEND_IMPLEMENTATION_GUIDE.md` — those described the state as it existed briefly between the SpinBoard→Billboard revamp and this one; there is no pending-review state to build UI for anymore.
 

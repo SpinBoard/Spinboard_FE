@@ -77,7 +77,7 @@ export default function Home() {
       </section>
 
       {/* Audience Section with Toggle */}
-      <section className="py-20 px-[5%] relative z-10" id="for-players">
+      <section className="py-20 px-[5%] relative z-10" id="for-viewers">
         <div className="flex flex-col sm:flex-row justify-center gap-4 mb-16">
           <button
             onClick={() => setActiveAudience("viewers")}

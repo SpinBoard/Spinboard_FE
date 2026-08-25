@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useAtomValue } from "jotai";
 import { isAxiosError } from "axios";
@@ -21,11 +21,21 @@ type ResultState =
   | { kind: "login-required" }
   | { kind: "error"; message: string };
 
-export function ApplyBox() {
+interface ApplyBoxProps {
+  // Lets a caller (e.g. tapping "claim" on a freebie billboard takeover)
+  // prefill the input instead of making the viewer retype the code.
+  initialCode?: string;
+}
+
+export function ApplyBox({ initialCode }: ApplyBoxProps = {}) {
   const user = useAtomValue(userAtom);
   const [code, setCode] = useState("");
   const [result, setResult] = useState<ResultState | null>(null);
   const applyMutation = useApplyCode();
+
+  useEffect(() => {
+    if (initialCode) setCode(initialCode);
+  }, [initialCode]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

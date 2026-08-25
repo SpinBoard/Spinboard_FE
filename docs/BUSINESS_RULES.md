@@ -10,6 +10,7 @@ The rules a frontend needs to know to build correct UI, not just correct API cal
 - A campaign only enters the ad pool once it is **both** `status: "ACTIVE"` **and** `moderationStatus: "APPROVED"` — but there's no longer a pre-publish review wait for either: paying flips a campaign to `ACTIVE`/`APPROVED` immediately, so it's on the billboard the instant checkout completes. Moderation is now post-hoc: admin can bulk-deactivate a live campaign if its video turns out to be inappropriate (`POST /ad-campaigns/deactivate`) and bulk-reactivate one taken down by mistake (`POST /ad-campaigns/reactivate`) — see `API_GUIDE.md`. There is no single-campaign approve/reject endpoint anymore.
 - Premium campaigns are picked ~2x as often as Basic (`Config: campaign.tiers.*.weight`), and never repeat back-to-back or within the last 5 slots served in a session.
 - If the eligible pool is ever empty, a house-filler slot plays instead (`type: "HOUSE"` in the queue) — the stream is never empty.
+- A live freebie code isn't only pinned in the perimeter strip anymore — it can also take over one billboard slot full-screen (`type: "FREEBIE"` in the queue), exactly like a real ad, for `Config: freebie.billboardSlotSeconds` (default 60s), at most once per session per code. It plays through the identical heartbeat/complete loop as `AD`/`HOUSE`, just with no `videoUrl` — render a code-announcement takeover instead. A completed `FREEBIE` slot doesn't count toward analytics or referral qualification; it's not a real ad view.
 
 ## Freebie codes: first to type wins
 

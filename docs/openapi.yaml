@@ -1261,12 +1261,17 @@ components:
       type: object
       properties:
         slotId: { type: string }
-        type: { type: string, enum: [AD, HOUSE] }
-        campaignId: { type: string }
-        brandName: { type: string }
-        title: { type: string }
-        videoUrl: { type: string }
+        type: { type: string, enum: [AD, HOUSE, FREEBIE] }
         durationSec: { type: number }
+        campaignId: { type: string, description: "AD only" }
+        brandName: { type: string, description: "AD only" }
+        title: { type: string, description: "AD/HOUSE only" }
+        videoUrl: { type: string, description: "AD/HOUSE only — absent on FREEBIE" }
+        codeId: { type: string, description: "FREEBIE only" }
+        publicCode: { type: string, description: "FREEBIE only" }
+        valueLabel: { type: string, description: "FREEBIE only" }
+        freebieType: { type: string, enum: [AIRTIME, CASH], description: "FREEBIE only" }
+        liveUntil: { type: string, format: date-time, description: "FREEBIE only" }
 
     StripFeedItem:
       type: object

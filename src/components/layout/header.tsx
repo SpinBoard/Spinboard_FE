@@ -219,7 +219,7 @@ export function Header() {
                   <Button
                     variant="outline"
                     className="border-2 border-secondary text-white hover:bg-secondary hover:text-secondary-foreground font-semibold rounded-full text-base font-fredoka py-5 px-7">
-                    Play Now
+                    Watch Now
                   </Button>
                 </Link>
                 <Link href={`${routes.REGISTER}?type=brand`}>
@@ -369,10 +369,10 @@ export function Header() {
                     For Brands
                   </a>
                   <a
-                    href="#for-players"
+                    href="#for-viewers"
                     className="block py-3 px-2 rounded-md transition-colors text-white hover:text-secondary hover:bg-white/5"
                     onClick={closeMobileMenu}>
-                    For Players
+                    For Viewers
                   </a>
                   <Link
                     href={routes.MARKETPLACE}
@@ -394,7 +394,7 @@ export function Header() {
                       <Button
                         variant="outline"
                         className="w-full border-secondary text-white hover:bg-secondary hover:text-secondary-foreground font-fredoka">
-                        Play Now
+                        Watch Now
                       </Button>
                     </Link>
                     <Link

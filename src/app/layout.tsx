@@ -10,7 +10,7 @@ const sora = Sora({ subsets: ["latin"], variable: "--font-sora" });
 
 export const metadata: Metadata = {
   title: "Pazzell - Watch Ads, Earn Rewards",
-  description: "Watch brand video ads, pass a quick quiz, and spin to win cash, discounts, and prizes. Brands run ad campaigns and reach real, engaged viewers.",
+  description: "Watch brand video ads on a continuous billboard and catch live freebie codes for real cash and airtime. Brands run ad campaigns and reach real, engaged viewers.",
 };
 
 export default function RootLayout({

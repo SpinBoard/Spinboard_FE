@@ -28,7 +28,17 @@ Each strip item carries `positionHint: "TOP"|"BOTTOM"|"LEFT"|"RIGHT"` (freebie i
 4. On the video ending (or the viewer skipping past 95% watched — `Config: billboard.completionWatchFraction`): `POST /billboard/impressions/complete { sessionId, slotId, watchedMs }`. This is what counts as a "verified view" for analytics and referral qualification — an unverified/very-short view does not count.
 5. Move to the next slot in the queue. When the queue is exhausted, fetch another batch with the same `sessionId` (it accumulates `recentCampaignIds` server-side so you won't see the same ad twice in a row or within the last 5).
 
-A slot's `type` is either `"AD"` (real brand campaign, has `campaignId`/`brandName`) or `"HOUSE"` (a filler — no campaign metadata). Render both the same way visually; house fillers exist purely so the stream is never empty, not as a distinct ad unit the user needs to recognize.
+A slot's `type` is `"AD"` (real brand campaign, has `campaignId`/`brandName`), `"HOUSE"` (a filler — no campaign metadata), or `"FREEBIE"` (see below). Render `AD` and `HOUSE` the same way visually; house fillers exist purely so the stream is never empty, not as a distinct ad unit the user needs to recognize.
+
+## Freebie takeover slots
+
+A live freebie code isn't only ever pinned in the perimeter strip — it can also take over one billboard slot full-screen, exactly like a real ad, for `Config: freebie.billboardSlotSeconds` (default 60s). This is additive: the strip flow above is completely unchanged, a live code is simultaneously pinned in the strip *and* (at most once per session, per code) a billboard takeover.
+
+- Shape: `{ slotId, type: "FREEBIE", codeId, publicCode, valueLabel, freebieType: "AIRTIME"|"CASH", liveUntil, durationSec }`. No `videoUrl` — there's no video file for it.
+- Play it through the exact same loop as `AD`/`HOUSE`: render for `durationSec`, send the same `heartbeat`/`complete` calls on the same `slotId` mechanics. A completed `FREEBIE` slot doesn't count toward analytics or referral qualification (it's not a real ad).
+- Render a code-announcement graphic instead of a video player — the code, `valueLabel`, and a way to act on it (an inline Apply box or a route into the existing one). A progress bar communicating "this is timed" is enough; no countdown number is required.
+- Don't expect one on every queue fetch — most batches return none, and a given code takes over the billboard at most once per session even though it stays pinned in the strip for its whole live window.
+- The code can still be claimed by someone else (via the strip, or their own takeover) while showing on this screen — the Apply box's existing `409 CODE_ALREADY_TAKEN` handling covers that race, no special handling needed. Optionally poll `GET /freebies/strip` (likely already happening for the perimeter strip) during the slot and check that `codeId` for `state: "TAKEN"` to flip the takeover screen itself before the user even tries.
 
 ## Strip feed flow
 

@@ -15,16 +15,27 @@ sessionId: string
 ```
 
 ### Queue slot — new
-One item in the array returned by `GET /billboard/queue`.
+One item in the array returned by `GET /billboard/queue`. Shape depends on `type`.
 ```
-slotId: string          // opaque, single-use — pass back verbatim to heartbeat/complete
-type: "AD" | "HOUSE"     // HOUSE = house-filler, shown when the real ad pool is empty
-campaignId?: string      // AD only
-brandName?: string       // AD only
-title: string
-videoUrl: string
+slotId: string           // opaque, single-use — pass back verbatim to heartbeat/complete
+type: "AD" | "HOUSE" | "FREEBIE"
 durationSec: number
+
+// AD/HOUSE only — HOUSE = house-filler, shown when the real ad pool is empty
+campaignId?: string       // AD only
+brandName?: string        // AD only
+title?: string
+videoUrl?: string
+
+// FREEBIE only — a live freebie code taking over this slot full-screen,
+// exactly like a real ad, at most once per session per code. No videoUrl.
+codeId?: string
+publicCode?: string
+valueLabel?: string
+freebieType?: "AIRTIME" | "CASH"
+liveUntil?: string
 ```
+A `FREEBIE` slot plays through the identical heartbeat/complete loop as `AD`/`HOUSE` — render a code-announcement takeover instead of a video player. It doesn't count toward analytics/referral qualification on completion (not a real ad).
 
 ### Impression — new (never returned directly; internal analytics record)
 Not exposed via any GET endpoint. Referenced here because `slotId` in the queue response is its client-facing handle. Every field is captured once, at slot-issuance time, and never re-derived later:

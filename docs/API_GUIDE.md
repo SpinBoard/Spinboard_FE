@@ -33,7 +33,7 @@ Two token styles coexist: the server sets `access_token`/`refresh_token` **httpO
 See `UI_CONTRACT.md` for the full flow. Every route here works logged-in or logged-out (`optionalAuth` + an always-issued anonymous session cookie) — auth is never required to watch.
 
 - `POST /billboard/session` → `{ sessionId }`.
-- `GET /billboard/queue?sessionId=&size=` → `{ slots: [...] }`.
+- `GET /billboard/queue?sessionId=&size=` → `{ slots: [...] }`. `type: "AD"|"HOUSE"|"FREEBIE"` — a `FREEBIE` slot is a live freebie code taking over the billboard full-screen (no `videoUrl`); see `DATA_MODELS.md`.
 - `POST /billboard/impressions/heartbeat` — `{ sessionId, slotId, watchedMs }`.
 - `POST /billboard/impressions/complete` — `{ sessionId, slotId, watchedMs }` → `{ completed: boolean }`.
 

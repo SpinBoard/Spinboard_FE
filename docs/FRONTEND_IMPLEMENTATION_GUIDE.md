@@ -29,9 +29,9 @@ This is the primary section of this document. Two revamps happened on the backen
 3. **Replace the spin-wheel screen with the perimeter strip + Apply box.** This is a net-new UI concept (see §7) — there's no old screen to adapt, the spin wheel has no replacement-in-kind, it's simply gone and this is what takes its place.
 4. **Update the wallet screen** for the new payout-progress fields (§4) and remove any withdrawal UI (§6 — the endpoint is gone).
 5. **Update the referral screen** — a milestone reward now shows as a wallet credit, not a discount code reveal (§2, Revamp 2 knock-on change).
-6. **Update the brand-side ad campaign dashboard** for the expanded `status` enum and new `moderationStatus` (§2, Revamp 1) — no "pending review" wait, but a campaign can now show a post-payment takedown if admin deactivates it.
-7. **Rebuild the marketplace end to end**, last, as its own effort — this is the most structurally different piece (store → directory) and has zero shared UI with what exists today. See §2 Revamp 2 and §7's marketplace section.
-8. **Build the admin bulk campaign-moderation UI** (§2, Revamp 3) — a multi-select campaign list with deactivate/reactivate bulk actions. There is no single-campaign approve/reject screen to build; that flow no longer exists.
+6. **Update the brand-side ad campaign dashboard** for the expanded `status` enum and new `moderationStatus` (§2, Revamp 1) — moderation is reactive (a paid campaign goes live immediately, no waiting state), so build the admin bulk deactivate/reactivate actions instead (§2, Revamp 3), not a pending-review screen.
+7. **Rebuild the marketplace end to end** as its own effort — this is the most structurally different piece (store → directory) and has zero shared UI with what exists today. See §2 Revamp 2 and §7's marketplace section.
+8. **Build the admin bulk deactivate/reactivate actions** on the campaign moderation dashboard (§2, Revamp 3) — replaces any old single-campaign approve/reject UI.
 
 ### Revamp 1 — SpinBoard → Billboard + Freebie Codes
 
@@ -48,7 +48,7 @@ This is the primary section of this document. Two revamps happened on the backen
 - Billboard: `POST /billboard/session`, `GET /billboard/queue`, `POST /billboard/impressions/heartbeat`, `POST /billboard/impressions/complete`.
 - Freebie codes: `GET /freebies/strip` (+ SSE variant), `GET /freebies/phrases`, `POST /freebies/apply` (single endpoint for both claiming and redeeming), `GET /me/claims`, `POST /me/claims/:claimId/redeem`.
 - Weekly payout run status surfaced on `GET /wallet/balance` (`payoutThreshold`, `amountToThreshold`, `nextPayoutDate`) — new fields on an existing endpoint.
-- Campaign moderation status (`moderationStatus`) on `AdCampaign` — as of Revamp 3 (below), moderation is post-hoc, not a pre-publish gate: `PENDING`/`APPROVED`/`REJECTED` are set automatically the instant payment succeeds, not by a reviewer.
+- Campaign moderation status (`moderationStatus`) on `AdCampaign` — see Revamp 3 below for the current (reactive) moderation flow; paying *does* put a campaign live immediately.
 - Campaign lifecycle states expanded: `status` went from `draft|active|inactive` to `DRAFT|PENDING_PAYMENT|ACTIVE|PAUSED|EXPIRED|REJECTED`.
 - Flat campaign pricing: no more brand-selectable 1–12 week duration. Flat 30-day activation at $20 Basic / $30 Premium.
 
@@ -58,7 +58,7 @@ This is the primary section of this document. Two revamps happened on the backen
 - `GET /analytics/app`: counters are now Billboard-sourced (`totalAdsWatched`, `adsWatchedToday`), not puzzle-session-sourced.
 - Referral qualification event: used to fire on completing an ad-cycle; now fires on one server-verified completed Billboard impression (`POST /billboard/impressions/complete`). No frontend action needed — server-side.
 
-### Revamp 2 — Marketplace: store → business directory (most recent change)
+### Revamp 2 — Marketplace: store → business directory
 
 The marketplace used to be a small digital-goods store (list a product, pay via Paystack, apply a discount code at checkout). It is now a business directory — brands publish a contact profile, users browse and reach out directly.
 
@@ -72,21 +72,39 @@ The marketplace used to be a small digital-goods store (list a product, pay via 
 
 **Also removed as a direct consequence:** `WalletTransactionReason.MARKETPLACE_SPEND` (was declared but never had a consumer — now definitively unreachable, since there's no wallet-spend path in a checkout-free marketplace).
 
-### Revamp 3 — Ad campaign moderation: pre-publish review → post-hoc takedown (most recent change)
-
-Admin no longer approves or rejects a campaign's video before it goes live. A campaign now goes live (`status: "ACTIVE"`, `moderationStatus: "APPROVED"`) the instant payment succeeds — there is no waiting period. If any brand-dashboard screen showed a "pending review" state after checkout, remove it; nothing sits in that state anymore.
-
-**Removed:** `POST /ad-campaigns/:campaignId/moderate`. Remove any single-campaign approve/reject UI calling it.
-
-**New:** admin can pull an inappropriate video down after the fact, and undo a mistaken takedown — both bulk, multi-select operations, all under `/ad-campaigns`, admin-only:
-- `POST /ad-campaigns/deactivate` — `{ campaignIds: string[], reason? }` → `{ success, matched, deactivated }`. Build as a multi-select bulk action on the admin campaign list.
-- `POST /ad-campaigns/reactivate` — `{ campaignIds: string[] }` → `{ success, matched, reactivated, skippedExpired: string[] }`. Surface `skippedExpired` distinctly — those campaigns need the brand to re-pay, not just get switched back on.
-
-`moderationStatus`/`moderationReason`/`moderatedBy`/`moderatedAt` on `AdCampaign` are unchanged in shape, just set by different code now (instant-activation logic instead of an admin decision).
-
 ### Unchanged — build against these exactly as documented, no surprises
 
 Auth (`/auth/*`, `/registration`, `/login`, `/refresh`), user profile (`/me`, `/profile/*`, `/settings`), forum (`/forum/*`), bank accounts (`/wallet/bank-accounts*`), referral *endpoints* (only the reward payout mechanism changed, above), brand/ad-campaign creation and payment flow shape (only pricing/duration inputs and post-creation lifecycle changed, above).
+
+### Revamp 3 — Ad campaign moderation went reactive
+
+Moderation used to be a pre-payment gate: `POST /ad-campaigns/:campaignId/moderate` (`{decision: "APPROVED"|"REJECTED", reason?}`) let an admin approve or reject a video before it could ever go live, independent of payment. **That endpoint is gone.** Requiring upfront review before a paid campaign could go live was too manual a bottleneck; moderation is reactive now instead.
+
+**Removed:** `POST /ad-campaigns/:campaignId/moderate`. Don't build a single-campaign approve/reject action, and don't build a "pending review" waiting state between checkout and going live — there isn't one.
+
+**New:**
+- A campaign auto-flips to `moderationStatus: "APPROVED"` the instant payment succeeds — the same moment `status` becomes `"ACTIVE"`. Paying puts a campaign live immediately.
+- `POST /ad-campaigns/deactivate` — admin only, bulk (`{campaignIds: string[], reason?}`). Pulls any of the given campaigns that are currently `ACTIVE` out of rotation (`status → "PAUSED"`, `moderationStatus → "REJECTED"`). This is how an admin now handles an inappropriate video that's already live — after the fact, not before. Build this as a multi-select action on the admin campaign list, not a one-at-a-time flow.
+- `POST /ad-campaigns/reactivate` — admin only, bulk (`{campaignIds: string[]}`). Undoes a deactivation (`status → "ACTIVE"`, `moderationStatus → "APPROVED"`) for any given campaign currently `PAUSED`, unless its original `expiresAt` has already passed (returned separately as `skippedExpired` — surface these distinctly, since an expired-while-paused campaign needs the brand to re-pay, not just get switched back on).
+
+`moderationStatus`/`moderationReason`/`moderatedBy`/`moderatedAt` fields on `AdCampaign` are unchanged in shape — only who sets them and when changed.
+
+### Revamp 4 — Freebie codes now take over the billboard (most recent change)
+
+A live freebie code used to be visible in exactly one place: pinned in the perimeter strip. It now **also** takes over one billboard slot, full-screen, for a fixed stretch of time (`Config: freebie.billboardSlotSeconds`, default 60s) — exactly like a real ad — so the freebie moment interrupts the ad reel instead of only ever being a small pin at the edge of the screen. This is additive: the strip flow is completely unchanged, a live code is simultaneously pinned in the strip and (once, per session) a billboard takeover.
+
+**Changed shape:** `GET /billboard/queue` slots can now have `type: "FREEBIE"` alongside the existing `"AD"`/`"HOUSE"`:
+```
+{ slotId, type: "FREEBIE", codeId, publicCode, valueLabel, freebieType: "AIRTIME"|"CASH", liveUntil, durationSec }
+```
+No `videoUrl` — there's no video file for it, build a code-announcement graphic (code, value, countdown, an Apply box or a route into one) instead of a video player for this slot type.
+
+**Build this:**
+- Play a `FREEBIE` slot through the exact same loop as `AD`/`HOUSE`: render for `durationSec`, send the same `heartbeat`/`complete` calls on the same `slotId` mechanics.
+- A given code takes over the billboard **at most once per session**, even though it stays pinned in the strip for its whole live window — don't expect one on every queue fetch, most return none.
+- The code can still be claimed by someone else (via the strip, or their own takeover) while showing on this screen — the Apply box's existing `409 CODE_ALREADY_TAKEN` handling covers that race, no special handling needed. Optionally poll `GET /freebies/strip` (you're likely already doing this for the perimeter strip) during the slot and check that `codeId` for `state: "TAKEN"` to flip the takeover screen itself before the user even tries.
+
+See `UI_CONTRACT.md`'s "Freebie takeover slots" section for the full contract.
 
 ---
 
@@ -116,15 +134,24 @@ Shapes as they actually appear in API responses: camelCase, Mongo `_id` as strin
 
 ### Billboard
 
-**Queue slot** (`GET /billboard/queue`):
+**Queue slot** (`GET /billboard/queue`), shape depends on `type`:
 ```
-slotId: string          // opaque, single-use — pass back verbatim to heartbeat/complete
-type: "AD" | "HOUSE"     // HOUSE = house-filler, shown when the real ad pool is empty
+slotId: string           // opaque, single-use — pass back verbatim to heartbeat/complete
+type: "AD" | "HOUSE" | "FREEBIE"
+durationSec: number
+
+// AD/HOUSE only
 campaignId?: string      // AD only
 brandName?: string       // AD only
-title: string
-videoUrl: string
-durationSec: number
+title?: string
+videoUrl?: string
+
+// FREEBIE only — live freebie code taking over this slot full-screen, see §2 Revamp 4
+codeId?: string
+publicCode?: string
+valueLabel?: string
+freebieType?: "AIRTIME" | "CASH"
+liveUntil?: string
 ```
 
 ### Freebie codes, prizes, claims
@@ -320,7 +347,7 @@ All routes are mounted under `/api/v1`. Full schema in `openapi.yaml`; this is t
 ### Billboard (watching)
 Every route works logged-in or logged-out — auth is never required to watch.
 - `POST /billboard/session` → `{ sessionId }`.
-- `GET /billboard/queue?sessionId=&size=` → `{ slots: [...] }`.
+- `GET /billboard/queue?sessionId=&size=` → `{ slots: [...] }`. `type: "AD"|"HOUSE"|"FREEBIE"` — see §2 Revamp 4 for the FREEBIE shape.
 - `POST /billboard/impressions/heartbeat` — `{ sessionId, slotId, watchedMs }`.
 - `POST /billboard/impressions/complete` — `{ sessionId, slotId, watchedMs }` → `{ completed: boolean }`.
 
@@ -351,8 +378,8 @@ Every route works logged-in or logged-out — auth is never required to watch.
 - `GET /ad-campaigns/mine` — brand only.
 - `GET /ad-campaigns` — admin only, `?status=&tier=`.
 - `GET /ad-campaigns/:campaignId` — public.
-- `POST /ad-campaigns/deactivate` — admin only, bulk. `{ campaignIds: string[], reason? }` → `{ success, matched, deactivated }`. Takes down live (already-paid) campaigns.
-- `POST /ad-campaigns/reactivate` — admin only, bulk. `{ campaignIds: string[] }` → `{ success, matched, reactivated, skippedExpired: string[] }`. `skippedExpired` campaigns need the brand to re-pay.
+- `POST /ad-campaigns/deactivate` — admin only, bulk. `{ campaignIds: string[], reason? }` → pulls `ACTIVE` campaigns out of rotation (`status: "PAUSED"`, `moderationStatus: "REJECTED"`).
+- `POST /ad-campaigns/reactivate` — admin only, bulk. `{ campaignIds: string[] }` → restores `PAUSED` campaigns to rotation (`status: "ACTIVE"`, `moderationStatus: "APPROVED"`), skipping any whose `expiresAt` has already passed.
 - `GET /ad-campaigns/:campaignId/analytics` / `/analytics/breakdown` / `/analytics/export.csv` — brand (own) or admin, **Premium tier only** (403 on Basic).
 - `POST /ad-payments/initialize` — brand only. `{ campaignId, email }` → Paystack `authorization_url`. `403 PROFILE_INCOMPLETE` if brand profile isn't complete.
 - `GET /ad-payments/verify/:reference` — brand only. Also happens via webhook as a fallback.
@@ -394,7 +421,7 @@ Every route works logged-in or logged-out — auth is never required to watch.
 
 The rules that will make you build the wrong UI if you skip them.
 
-**The billboard never stops and is never gated.** No quiz, no "watch 5 to unlock," no try-again economy. Nobody has to be logged in or have a complete profile to watch — auth/profile-completeness only matter at claim time. Every viewer everywhere draws from the identical eligible ad pool; there is no geographic or demographic targeting anywhere, in ad selection, freebie eligibility, or referral qualification. A campaign only enters the ad pool once both `status:"ACTIVE"` and `moderationStatus:"APPROVED"`. Premium campaigns are picked ~2x as often as Basic, never repeating back-to-back or within the last 5 slots. If the eligible pool is empty, a house-filler slot plays instead — the stream is never empty.
+**The billboard never stops and is never gated.** No quiz, no "watch 5 to unlock," no try-again economy. Nobody has to be logged in or have a complete profile to watch — auth/profile-completeness only matter at claim time. Every viewer everywhere draws from the identical eligible ad pool; there is no geographic or demographic targeting anywhere, in ad selection, freebie eligibility, or referral qualification. A campaign only enters the ad pool once both `status:"ACTIVE"` and `moderationStatus:"APPROVED"`. Premium campaigns are picked ~2x as often as Basic, never repeating back-to-back or within the last 5 slots. If the eligible pool is empty, a house-filler slot plays instead — the stream is never empty. A live freebie code additionally takes over one slot full-screen (`type:"FREEBIE"`), at most once per session per code — see §2 Revamp 4.
 
 **Freebie codes: first to type wins.** A `PINNED` code is either claimable (`AVAILABLE`) or was just claimed (`TAKEN`, shown red for a grace window) — never "coming soon." There is no way to see a future/scheduled drop through any endpoint — don't build a countdown feature. Claiming is a race: first eligible submission wins, everyone else gets `409 CODE_ALREADY_TAKEN` — common and expected, not an error state. Auth is required to claim, never to watch; an unauthenticated submission is rejected with 401 and changes nothing. Claiming requires verified email + complete profile. Claim limits are per-type, per-user, rolling 24h (default 1 cash + 1 airtime) — capped on one type doesn't block the other; hitting it returns `403 DAILY_LIMIT_REACHED` with `{type, resetsAt}`.
 
@@ -418,8 +445,8 @@ The rules that will make you build the wrong UI if you skip them.
 
 1. On page load: `POST /billboard/session` → `sessionId`. Works with or without auth automatically.
 2. `GET /billboard/queue?sessionId=...&size=5` → slots with single-use `slotId`s. Fetch a fresh batch when the queue runs low.
-3. Play each slot's `videoUrl` for `durationSec`. Send periodic `POST /billboard/impressions/heartbeat`.
-4. On completion (or ≥95% watched): `POST /billboard/impressions/complete` — this is the "verified view" for analytics/referral qualification.
+3. For `AD`/`HOUSE` slots, play `videoUrl` for `durationSec`. For a `FREEBIE` slot, there's no `videoUrl` — render a code-announcement takeover (code, `valueLabel`, countdown) for `durationSec` instead; it plays through the identical loop otherwise. Send periodic `POST /billboard/impressions/heartbeat` for every slot type.
+4. On completion (or ≥95% watched): `POST /billboard/impressions/complete` — this is the "verified view" for analytics/referral qualification (a completed `FREEBIE` slot doesn't count toward either — it's not a real ad).
 5. Move to the next slot; refetch the queue when exhausted using the same `sessionId` (server tracks recent campaigns to avoid repeats).
 
 Render `type:"AD"` and `type:"HOUSE"` slots identically — house fillers exist so the stream is never empty, not as a distinct unit.
