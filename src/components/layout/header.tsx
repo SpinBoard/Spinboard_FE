@@ -287,13 +287,6 @@ export function Header() {
                     onClick={closeMobileMenu}>
                     Claims
                   </Link>
-                  {/* <Link
-                    href={routes.USER.BADGES}
-                    className="block text-white hover:text-secondary hover:bg-white/5 py-3 px-2 rounded-md transition-colors"
-                    onClick={closeMobileMenu}
-                  >
-                    Badges
-                  </Link> */}
                   <Link
                     href={routes.USER.PROFILE}
                     className="block text-white hover:text-secondary hover:bg-white/5 py-3 px-2 rounded-md transition-colors"
