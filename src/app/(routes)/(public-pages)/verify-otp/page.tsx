@@ -70,7 +70,9 @@ function VerifyOTPForm() {
             ? userData.profileComplete
               ? routes.USER.DASHBOARD
               : routes.USER.PROFILE_COMPLETE
-            : routes.BRAND.DASHBOARD)
+            : dashboardRoute === 'admin'
+              ? routes.ADMIN.CAMPAIGNS
+              : routes.BRAND.DASHBOARD)
       )
     },
   })

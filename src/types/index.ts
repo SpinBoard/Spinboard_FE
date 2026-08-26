@@ -16,6 +16,24 @@ export interface UserData {
   refreshToken: string;
 }
 
+// GET /me — cached session user, auth required, works for any role. There's
+// no role-specific GET /profile/admin, so this is what builds an admin's
+// UserData after login.
+export interface MeResponse {
+  success?: boolean;
+  user: {
+    _id: string;
+    firstName?: string;
+    lastName?: string;
+    username?: string;
+    email: string;
+    avatar?: string;
+    role: "gamer" | "brand" | "admin";
+    isVerified: boolean;
+    createdAt: string;
+  };
+}
+
 export interface GamerProfileData {
   _id: string;
   firstName: string;

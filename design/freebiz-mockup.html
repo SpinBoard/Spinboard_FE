@@ -1,0 +1,1564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Freebiz — Product UI/UX Mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   FREEBIZ DESIGN TOKENS
+   ============================================================ */
+:root{
+  /* Base — the billboard at night */
+  --ink-900:#0E0C16;
+  --ink-800:#14111F;
+  --ink-700:#1C1830;
+  --ink-600:#272041;
+  --line:rgba(255,255,255,.09);
+  --line-2:rgba(255,255,255,.16);
+
+  /* Ink on dark */
+  --txt:#EFECF7;
+  --muted:#9C96B8;
+  --faint:#6E688A;
+
+  /* Brand palette */
+  --free:#FFD23F;      /* Freebie Yellow — an unclaimed reward, always */
+  --brand:#7C5CFF;     /* Signal Violet — brand-side actions, primary CTA */
+  --live:#3DDC97;      /* Live Mint — approved, running, verified */
+  --spent:#FF4D5E;     /* Spent Red — claimed, blocked, rejected */
+  --admin:#4CC9F0;     /* Control Blue — the admin booth */
+
+  /* Route accent — remapped per route */
+  --accent:var(--free);
+  --accent-soft:rgba(255,210,63,.14);
+
+  --r-sm:8px; --r:14px; --r-lg:22px;
+  --shadow:0 18px 50px -18px rgba(0,0,0,.75);
+
+  --display:'Bricolage Grotesque','Inter Tight',system-ui,sans-serif;
+  --body:'Inter Tight',system-ui,-apple-system,sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,Menlo,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:
+    radial-gradient(1100px 600px at 78% -8%, rgba(124,92,255,.16), transparent 60%),
+    radial-gradient(800px 500px at 4% 4%, rgba(255,210,63,.07), transparent 55%),
+    var(--ink-900);
+  color:var(--txt); font-family:var(--body); font-size:14px; line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+a{color:inherit}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
+h1,h2,h3,h4{font-family:var(--display);margin:0;letter-spacing:-.02em;font-weight:800}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* ---------- Logo ---------- */
+.logo{display:flex;align-items:center;gap:10px}
+.logo svg{display:block}
+.wordmark{
+  font-family:var(--display);font-weight:800;font-size:21px;letter-spacing:-.045em;
+  line-height:1;padding-bottom:1px;
+}
+.dotless{position:relative}
+.dotless::after{
+  content:"";position:absolute;left:50%;top:-.30em;transform:translateX(-50%);
+  width:.22em;height:.22em;border-radius:50%;background:var(--free);
+}
+
+/* ---------- Top chrome ---------- */
+.chrome{
+  position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:20px;
+  padding:14px 22px;border-bottom:1px solid var(--line);
+  background:rgba(14,12,22,.82);backdrop-filter:blur(14px);
+}
+.routes{display:flex;gap:4px;padding:4px;border:1px solid var(--line);border-radius:999px;background:var(--ink-800)}
+.route-tab{
+  padding:7px 16px;border-radius:999px;font-size:12.5px;font-weight:600;color:var(--muted);
+  display:flex;align-items:center;gap:7px;transition:.18s;
+}
+.route-tab:hover{color:var(--txt)}
+.route-tab .bulb{width:7px;height:7px;border-radius:50%;background:currentColor;opacity:.45}
+.route-tab[aria-selected="true"]{background:var(--ink-600);color:var(--txt)}
+.route-tab[aria-selected="true"] .bulb{opacity:1}
+.route-tab[data-route="viewer"][aria-selected="true"] .bulb{background:var(--free)}
+.route-tab[data-route="brands"][aria-selected="true"] .bulb{background:var(--brand)}
+.route-tab[data-route="admin"][aria-selected="true"] .bulb{background:var(--admin)}
+.chrome .spacer{flex:1}
+.stamp{
+  font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--faint);border:1px dashed var(--line-2);padding:5px 10px;border-radius:6px;
+}
+
+/* ---------- Shell ---------- */
+.app{display:grid;grid-template-columns:224px 1fr;min-height:calc(100vh - 61px)}
+.side{border-right:1px solid var(--line);padding:20px 14px;background:rgba(20,17,31,.5)}
+.side-label{
+  font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--faint);padding:0 10px;margin:0 0 10px;
+}
+.nav{display:none;flex-direction:column;gap:2px}
+.nav.on{display:flex}
+.nav-item{
+  display:flex;align-items:center;gap:11px;padding:9px 11px;border-radius:10px;
+  color:var(--muted);font-size:13.5px;font-weight:500;text-align:left;transition:.15s;
+}
+.nav-item:hover{background:rgba(255,255,255,.04);color:var(--txt)}
+.nav-item[aria-current="true"]{background:var(--accent-soft);color:var(--txt);font-weight:600}
+.nav-item[aria-current="true"] .ic{color:var(--accent)}
+.ic{width:17px;height:17px;flex:0 0 17px;color:var(--faint)}
+.nav-item .tail{margin-left:auto;font-family:var(--mono);font-size:10.5px;color:var(--accent)}
+.side-foot{margin-top:26px;padding:12px;border:1px solid var(--line);border-radius:var(--r);background:var(--ink-800)}
+.side-foot p{margin:0;font-size:11.5px;color:var(--faint);line-height:1.45}
+
+.stage{padding:26px 30px 70px;max-width:1180px}
+.screen{display:none}
+.screen.on{display:block;animation:rise .28s ease both}
+@keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* ---------- Page head ---------- */
+.phead{display:flex;align-items:flex-end;gap:18px;margin-bottom:22px;flex-wrap:wrap}
+.phead h1{font-size:27px}
+.phead .sub{color:var(--muted);font-size:13.5px;margin-top:5px}
+.phead .right{margin-left:auto;display:flex;gap:9px;align-items:center}
+.crumb{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;color:var(--faint);text-transform:uppercase;margin-bottom:7px}
+
+/* ---------- Primitives ---------- */
+.card{background:var(--ink-800);border:1px solid var(--line);border-radius:var(--r-lg);padding:20px}
+.card.tight{padding:15px}
+.card h3{font-size:15px;margin-bottom:3px}
+.card .note{color:var(--muted);font-size:12.5px}
+.grid{display:grid;gap:16px}
+.g2{grid-template-columns:repeat(2,1fr)}
+.g3{grid-template-columns:repeat(3,1fr)}
+.g4{grid-template-columns:repeat(4,1fr)}
+.split{display:grid;grid-template-columns:1.55fr 1fr;gap:16px;align-items:start}
+.row{display:flex;align-items:center;gap:10px}
+.stack{display:flex;flex-direction:column;gap:14px}
+
+.btn{
+  display:inline-flex;align-items:center;gap:8px;padding:10px 16px;border-radius:10px;
+  font-weight:600;font-size:13px;background:var(--ink-600);border:1px solid var(--line-2);transition:.15s;
+}
+.btn:hover{border-color:rgba(255,255,255,.3)}
+.btn.primary{background:var(--accent);color:#12101C;border-color:transparent}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.ghost{background:none;border-color:var(--line-2);color:var(--muted)}
+.btn.ghost:hover{color:var(--txt)}
+.btn.danger{background:rgba(255,77,94,.14);color:var(--spent);border-color:rgba(255,77,94,.35)}
+.btn.sm{padding:6px 11px;font-size:12px;border-radius:8px}
+
+.pill{
+  display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;
+  font-size:11.5px;font-weight:600;border:1px solid var(--line-2);color:var(--muted);
+}
+.pill.live{color:var(--live);border-color:rgba(61,220,151,.35);background:rgba(61,220,151,.1)}
+.pill.warn{color:var(--free);border-color:rgba(255,210,63,.35);background:rgba(255,210,63,.1)}
+.pill.bad{color:var(--spent);border-color:rgba(255,77,94,.35);background:rgba(255,77,94,.1)}
+.pill.info{color:var(--admin);border-color:rgba(76,201,240,.35);background:rgba(76,201,240,.1)}
+.pill.brandish{color:var(--brand);border-color:rgba(124,92,255,.4);background:rgba(124,92,255,.12)}
+.dot{width:6px;height:6px;border-radius:50%;background:currentColor}
+.pulse{animation:pulse 1.8s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.28}}
+
+.stat{background:var(--ink-800);border:1px solid var(--line);border-radius:var(--r);padding:15px 16px}
+.stat .k{font-family:var(--mono);font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:var(--faint)}
+.stat .v{font-family:var(--display);font-weight:800;font-size:26px;letter-spacing:-.03em;margin-top:6px;line-height:1}
+.stat .d{font-size:11.5px;color:var(--muted);margin-top:5px}
+.stat .v small{font-size:13px;color:var(--muted);font-weight:600}
+
+table{width:100%;border-collapse:collapse}
+th{
+  text-align:left;font-family:var(--mono);font-size:10px;letter-spacing:.13em;text-transform:uppercase;
+  color:var(--faint);font-weight:400;padding:0 12px 10px;border-bottom:1px solid var(--line);
+}
+td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:13px;vertical-align:middle}
+tr:last-child td{border-bottom:0}
+tbody tr:hover{background:rgba(255,255,255,.02)}
+.num{font-family:var(--mono);font-size:12.5px}
+
+.field{display:flex;flex-direction:column;gap:7px}
+.field label{font-size:12px;font-weight:600;color:var(--muted)}
+.input{
+  background:var(--ink-900);border:1px solid var(--line-2);border-radius:10px;padding:11px 13px;
+  color:var(--txt);font:inherit;width:100%;
+}
+.input::placeholder{color:var(--faint)}
+.input:focus{border-color:var(--accent);outline:none}
+.hint{font-size:11.5px;color:var(--faint)}
+
+.avatar{
+  width:30px;height:30px;border-radius:9px;display:grid;place-items:center;flex:0 0 30px;
+  font-family:var(--display);font-weight:800;font-size:12px;color:#0E0C16;
+}
+
+/* ---------- Signature: the voucher chip ---------- */
+.voucher{
+  position:relative;display:inline-flex;align-items:center;gap:10px;
+  padding:8px 15px;border-radius:9px;background:var(--ink-900);
+  border:1.5px dashed rgba(61,220,151,.55);color:var(--live);
+  font-family:var(--mono);font-weight:700;font-size:13px;letter-spacing:.14em;
+}
+.voucher::before,.voucher::after{
+  content:"";position:absolute;top:50%;width:9px;height:9px;border-radius:50%;
+  background:var(--ink-800);transform:translateY(-50%);
+}
+.voucher::before{left:-5px}
+.voucher::after{right:-5px}
+.voucher.used{border-color:rgba(255,77,94,.5);color:var(--spent);text-decoration:line-through;opacity:.75}
+.voucher .tag{
+  font-family:var(--body);font-size:10px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--faint);font-weight:600;
+}
+</style>
+</head>
+<body>
+
+<header class="chrome">
+  <div class="logo">
+    <svg width="30" height="30" viewBox="0 0 48 48" aria-hidden="true">
+      <path d="M13 21v4a11 11 0 0 0 22 0V13" fill="none" stroke="#7C5CFF" stroke-width="7" stroke-linecap="round"/>
+      <circle cx="24" cy="10" r="5" fill="#FFD23F"/>
+    </svg>
+    <span class="wordmark">freeb<span class="dotless">&#x131;</span>z</span>
+  </div>
+
+  <div class="routes" role="tablist" aria-label="App routes">
+    <button class="route-tab" data-route="viewer" role="tab" aria-selected="true"><span class="bulb"></span>Viewers</button>
+    <button class="route-tab" data-route="brands" role="tab" aria-selected="false"><span class="bulb"></span>Brands</button>
+    <button class="route-tab" data-route="admin"  role="tab" aria-selected="false"><span class="bulb"></span>Admin</button>
+  </div>
+
+  <div class="spacer"></div>
+  <span class="stamp" id="urlbar">freebiz.app / watch</span>
+</header>
+
+<div class="app" id="app" data-route="viewer">
+  <aside class="side">
+    <p class="side-label" id="sideLabel">Viewer</p>
+
+    <nav class="nav on" data-nav="viewer">
+      <button class="nav-item" data-goto="v-watch" aria-current="true"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M8 21h8M12 18v3"/></svg>Billboard</button>
+      <button class="nav-item" data-goto="v-promote"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><path d="M12 3v13M8 7l4-4 4 4"/></svg>Promote &amp; earn<span class="tail">2</span></button>
+      <button class="nav-item" data-goto="v-freebies"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="8" width="18" height="12" rx="2"/><path d="M3 12h18M12 8v12M12 8s-1-4-4-4-2 4 4 4zM12 8s1-4 4-4 2 4-4 4z"/></svg>My freebies<span class="tail">2</span></button>
+      <button class="nav-item" data-goto="v-wallet"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="6" width="18" height="13" rx="3"/><path d="M16 12.5h2"/></svg>Wallet</button>
+      <button class="nav-item" data-goto="v-market"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 8h16l-1.5 11h-13z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>Marketplace</button>
+      <button class="nav-item" data-goto="v-profile"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/></svg>Profile &amp; referrals</button>
+    </nav>
+
+    <nav class="nav" data-nav="brands">
+      <button class="nav-item" data-goto="b-dash" aria-current="true"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>Dashboard</button>
+      <button class="nav-item" data-goto="b-new"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>New campaign</button>
+      <button class="nav-item" data-goto="b-contest"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 6H4v1a4 4 0 0 0 3 3.8M17 6h3v1a4 4 0 0 1-3 3.8M9 20h6M12 14v6"/></svg>Promotion contests</button>
+      <button class="nav-item" data-goto="b-analytics"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Audience<span class="tail">PRO</span></button>
+      <button class="nav-item" data-goto="b-billing"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>Plan &amp; billing</button>
+    </nav>
+
+    <nav class="nav" data-nav="admin">
+      <button class="nav-item" data-goto="a-monitor" aria-current="true"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z"/><circle cx="12" cy="12" r="2.6"/></svg>Live monitor<span class="tail">3</span></button>
+      <button class="nav-item" data-goto="a-prizes"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="8" width="18" height="12" rx="2"/><path d="M3 12h18M12 8v12"/></svg>Freebie inventory</button>
+      <button class="nav-item" data-goto="a-payouts"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8"/><path d="M12 8v8M9.5 10h4a1.8 1.8 0 0 1 0 3.6h-3a1.8 1.8 0 0 0 0 3.6h4"/></svg>Payout desk<span class="tail">3</span></button>
+      <button class="nav-item" data-goto="a-permissions"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>Roles &amp; permissions</button>
+      <button class="nav-item" data-goto="a-contest"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 6H4v1a4 4 0 0 0 3 3.8M17 6h3v1a4 4 0 0 1-3 3.8M9 20h6M12 14v6"/></svg>Contests<span class="tail">2</span></button>
+      <button class="nav-item" data-goto="a-fraud"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17h.01"/></svg>Abuse signals</button>
+    </nav>
+
+    <div class="side-foot">
+      <p id="sideNote">Nothing a viewer wins ever expires. Codes are first-come, first-served — anywhere in the world.</p>
+    </div>
+  </aside>
+
+  <main class="stage" id="stage">
+
+<!-- ==================== VIEWER · BILLBOARD ==================== -->
+<section class="screen on" data-screen="v-watch">
+  <div class="phead">
+    <div>
+      <p class="crumb">Viewers / Billboard</p>
+      <h1>Everybody is watching the same board</h1>
+      <p class="sub">One billboard. Ads roll non-stop. Freebie codes appear on the frame — first person to apply one takes it.</p>
+    </div>
+    <div class="right">
+      <span class="pill live"><span class="dot pulse"></span>3,418 watching</span>
+      <span class="pill warn">1 cash + 1 airtime left today</span>
+    </div>
+  </div>
+
+  <div class="split">
+    <div class="stack">
+      <!-- The board -->
+      <div class="board">
+        <div class="strip strip-top"><div class="track"><span>Don't blink. &nbsp;·&nbsp; Free money moves fast. &nbsp;·&nbsp; Somebody is about to be lucky. &nbsp;·&nbsp; Keep your eyes here. &nbsp;·&nbsp; Don't blink. &nbsp;·&nbsp; Free money moves fast. &nbsp;·&nbsp; Somebody is about to be lucky. &nbsp;·&nbsp; Keep your eyes here. &nbsp;·&nbsp;</span></div></div>
+
+        <div class="board-body">
+          <div class="strip strip-left"><div class="track vtrack"><span>Watch · Catch · Cash out · Watch · Catch · Cash out ·</span></div></div>
+
+          <div class="screenface">
+            <div class="face-top">
+              <span class="pill brandish"><span class="dot"></span>Premium</span>
+              <span class="playing">Now playing — <b>Kilimanjaro Foods</b> · "Small chops, big love"</span>
+              <span class="clock num">0:38 / 1:00</span>
+            </div>
+
+            <div class="playbtn" aria-hidden="true">
+              <svg width="34" height="34" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13l11-6.5z"/></svg>
+            </div>
+
+            <div class="face-bottom">
+              <div class="pinned">
+                <span class="pin-label">Cash code · live now</span>
+                <span class="voucher">FB-9K4T-77 <span class="tag">₦2,000</span></span>
+              </div>
+              <div class="progress"><i style="width:63%"></i></div>
+            </div>
+          </div>
+
+          <div class="strip strip-right"><div class="track vtrack"><span>Airtime drops all day · MTN · Glo · Airtel · 9mobile ·</span></div></div>
+        </div>
+
+        <div class="strip strip-bot"><div class="track"><span>Next freebie in a few ads &nbsp;·&nbsp; Codes are single-use &nbsp;·&nbsp; Nothing you win ever expires &nbsp;·&nbsp; Next freebie in a few ads &nbsp;·&nbsp; Codes are single-use &nbsp;·&nbsp; Nothing you win ever expires &nbsp;·&nbsp;</span></div></div>
+      </div>
+
+      <!-- Apply bar -->
+      <div class="card applybar">
+        <div class="field" style="flex:1">
+          <label for="codein">Apply a code</label>
+          <input class="input" id="codein" placeholder="Type the code on the board — e.g. FB-9K4T-77">
+        </div>
+        <button class="btn primary" style="margin-top:24px">Apply code</button>
+      </div>
+      <p class="hint" style="margin:-4px 2px 0">Applying returns a <b>secret code</b> only you can see. Cash secret codes credit your wallet. Airtime secret codes reveal the recharge PIN.</p>
+
+      <div class="grid g4">
+        <div class="stat"><div class="k">Codes today</div><div class="v">142</div><div class="d">63 cash · 79 airtime</div></div>
+        <div class="stat"><div class="k">Still unclaimed</div><div class="v" style="color:var(--live)">6</div><div class="d">Refreshed every hour</div></div>
+        <div class="stat"><div class="k">Ads in rotation</div><div class="v">37</div><div class="d">Premium shows 2&times;</div></div>
+        <div class="stat"><div class="k">Your streak</div><div class="v">9<small> days</small></div><div class="d">Keep showing up</div></div>
+      </div>
+    </div>
+
+    <div class="stack">
+      <div class="card">
+        <h3>Recent catches</h3>
+        <p class="note">Live feed — every claim on the board.</p>
+        <ul class="feed">
+          <li><span class="avatar" style="background:var(--free)">B</span><div><b>Bimpe A.</b> took <span style="color:var(--live)">₦1,000 cash</span><i>11 seconds ago</i></div></li>
+          <li><span class="avatar" style="background:var(--brand);color:#fff">T</span><div><b>Tunde O.</b> took <span style="color:var(--live)">₦500 MTN airtime</span><i>1 minute ago</i></div></li>
+          <li><span class="avatar" style="background:var(--live)">K</span><div><b>Kwame M.</b> took <span style="color:var(--live)">₦200 Airtel airtime</span><i>4 minutes ago</i></div></li>
+          <li><span class="avatar" style="background:var(--admin)">N</span><div><b>Ngozi E.</b> took <span style="color:var(--live)">₦2,500 cash</span><i>9 minutes ago</i></div></li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h3>Codes you've seen</h3>
+        <p class="note">Green is still open. Red is gone.</p>
+        <div class="row" style="flex-wrap:wrap;gap:9px;margin-top:12px">
+          <span class="voucher">FB-9K4T-77</span>
+          <span class="voucher used">FB-2XQ1-08</span>
+          <span class="voucher used">FB-7MMD-31</span>
+          <span class="voucher used">FB-0PL5-64</span>
+        </div>
+      </div>
+
+      <div class="card" style="border-color:rgba(255,210,63,.3);background:linear-gradient(150deg,rgba(255,210,63,.1),transparent 60%),var(--ink-800)">
+        <h3>You're watching as a guest</h3>
+        <p class="note" style="margin-top:5px">You can see everything. To take a code, you need an account — it takes about 30 seconds.</p>
+        <button class="btn primary" style="margin-top:13px">Create account</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== VIEWER · MY FREEBIES ==================== -->
+<section class="screen" data-screen="v-freebies">
+  <div class="phead">
+    <div>
+      <p class="crumb">Viewers / My freebies</p>
+      <h1>Everything you've caught</h1>
+      <p class="sub">Nothing here expires. Reveal an airtime PIN whenever you're ready to recharge.</p>
+    </div>
+    <div class="right"><span class="pill live"><span class="dot"></span>2 ready to reveal</span></div>
+  </div>
+
+  <div class="grid g3" style="margin-bottom:18px">
+    <div class="stat"><div class="k">Caught all time</div><div class="v">14</div><div class="d">Since March</div></div>
+    <div class="stat"><div class="k">Cash won</div><div class="v">&#8358;7,300</div><div class="d">Sitting in your wallet</div></div>
+    <div class="stat"><div class="k">Airtime won</div><div class="v">&#8358;2,900</div><div class="d">Across 4 networks</div></div>
+  </div>
+
+  <div class="card" style="padding:6px 4px">
+    <table>
+      <thead><tr><th>Freebie</th><th>Public code</th><th>Your secret code</th><th>Caught</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+        <tr>
+          <td><b>&#8358;500 Airtime</b><div class="hint">MTN Nigeria</div></td>
+          <td class="num" style="color:var(--spent)">FB-2XQ1-08</td>
+          <td class="num">SK-88F2-QQ01</td>
+          <td class="hint">Today, 14:02</td>
+          <td><span class="pill warn"><span class="dot"></span>Not revealed</span></td>
+          <td style="text-align:right"><button class="btn sm primary">Reveal PIN</button></td>
+        </tr>
+        <tr>
+          <td><b>&#8358;2,000 Cash</b><div class="hint">Credited to wallet</div></td>
+          <td class="num" style="color:var(--spent)">FB-7MMD-31</td>
+          <td class="num">SK-4T7L-M22B</td>
+          <td class="hint">Yesterday, 19:40</td>
+          <td><span class="pill live"><span class="dot"></span>In wallet</span></td>
+          <td style="text-align:right"><button class="btn sm ghost">View entry</button></td>
+        </tr>
+        <tr>
+          <td><b>&#8358;200 Airtime</b><div class="hint">Airtel Nigeria</div></td>
+          <td class="num" style="color:var(--spent)">FB-0PL5-64</td>
+          <td class="num">SK-9WQ0-3ZKD</td>
+          <td class="hint">18 Aug, 08:15</td>
+          <td><span class="pill live"><span class="dot"></span>Revealed</span></td>
+          <td style="text-align:right"><button class="btn sm ghost">Show again</button></td>
+        </tr>
+        <tr>
+          <td><b>20% off Jumia</b><div class="hint">Kilimanjaro Foods promo</div></td>
+          <td class="num" style="color:var(--spent)">FB-5RN8-12</td>
+          <td class="num">SK-1DD4-8XPQ</td>
+          <td class="hint">14 Aug, 21:33</td>
+          <td><span class="pill live"><span class="dot"></span>Revealed</span></td>
+          <td style="text-align:right"><button class="btn sm ghost">Show again</button></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card reveal-card">
+    <div>
+      <p class="crumb">Revealed PIN</p>
+      <div class="pin num">&#8358;500 Airtime · MTN Nigeria · 7734 1873 2839 020</div>
+      <p class="hint" style="margin-top:9px">Dial *555*PIN# to load it. This PIN belongs to you and will not expire.</p>
+    </div>
+    <button class="btn ghost">Copy PIN</button>
+  </div>
+</section>
+
+<!-- ==================== VIEWER · WALLET ==================== -->
+<section class="screen" data-screen="v-wallet">
+  <div class="phead">
+    <div>
+      <p class="crumb">Viewers / Wallet</p>
+      <h1>Your wallet</h1>
+      <p class="sub">Spend any amount in the marketplace. Cash out on Fridays once you pass the threshold.</p>
+    </div>
+    <div class="right"><button class="btn ghost">Request cash-out</button><button class="btn primary">Spend in marketplace</button></div>
+  </div>
+
+  <div class="split">
+    <div class="stack">
+      <div class="card balance">
+        <div>
+          <p class="crumb">Available balance</p>
+          <div class="big num">&#8358;7,300<span>.00</span></div>
+          <p class="hint" style="margin-top:8px">Cash-out opens at <b>&#8358;10,000</b>. You're &#8358;2,700 away.</p>
+          <div class="progress" style="margin-top:12px"><i style="width:73%;background:var(--free)"></i></div>
+        </div>
+        <div class="payday">
+          <p class="crumb" style="margin:0">Payout day</p>
+          <b>Every Friday</b>
+          <p class="hint">Admin pays out manually against your secret code.</p>
+        </div>
+      </div>
+
+      <div class="card" style="padding:6px 4px">
+        <table>
+          <thead><tr><th>Entry</th><th>Source</th><th>Date</th><th style="text-align:right">Amount</th></tr></thead>
+          <tbody>
+            <tr><td><b>Cash code applied</b></td><td class="num">FB-7MMD-31</td><td class="hint">24 Aug</td><td class="num" style="text-align:right;color:var(--live)">+&#8358;2,000</td></tr>
+            <tr><td><b>Referral bonus</b></td><td class="hint">Chidi joined with your link</td><td class="hint">22 Aug</td><td class="num" style="text-align:right;color:var(--live)">+&#8358;300</td></tr>
+            <tr><td><b>Marketplace order</b></td><td class="hint">Airtime top-up voucher</td><td class="hint">20 Aug</td><td class="num" style="text-align:right;color:var(--spent)">&minus;&#8358;500</td></tr>
+            <tr><td><b>Cash code applied</b></td><td class="num">FB-8JJ2-45</td><td class="hint">18 Aug</td><td class="num" style="text-align:right;color:var(--live)">+&#8358;1,500</td></tr>
+            <tr><td><b>Cash-out paid</b></td><td class="hint">Secret code SK-0092-LLD1</td><td class="hint">15 Aug</td><td class="num" style="text-align:right;color:var(--spent)">&minus;&#8358;10,000</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="stack">
+      <div class="card">
+        <h3>How cash-out works</h3>
+        <ol class="steps">
+          <li><b>Request it.</b> Your balance is held and you get a secret code.</li>
+          <li><b>Send the code to the team.</b> WhatsApp or in-app chat, whichever you prefer.</li>
+          <li><b>Get paid on Friday.</b> Bank transfer, then your wallet is debited.</li>
+        </ol>
+      </div>
+      <div class="card">
+        <h3>Today's limits</h3>
+        <div class="limit"><span>Cash codes</span><b>1 of 1 used</b></div>
+        <div class="limit"><span>Airtime codes</span><b>0 of 1 used</b></div>
+        <div class="limit"><span>This device</span><b>1 of 3 claims</b></div>
+        <p class="hint" style="margin-top:11px">Limits reset at midnight, West Africa Time.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== VIEWER · MARKETPLACE ==================== -->
+<section class="screen" data-screen="v-market">
+  <div class="phead">
+    <div>
+      <p class="crumb">Viewers / Marketplace</p>
+      <h1>Spend it on something</h1>
+      <p class="sub">No minimum. Your wallet works from the first naira.</p>
+    </div>
+    <div class="right"><span class="pill warn">Balance &#8358;7,300</span></div>
+  </div>
+  <div class="grid g3">
+    <div class="card shop"><div class="shop-art" style="background:linear-gradient(135deg,#FFD23F,#FF9B3F)"></div><h3>Airtime top-up</h3><p class="note">Any network, any amount.</p><div class="row" style="margin-top:13px"><b class="num">from &#8358;100</b><button class="btn sm primary" style="margin-left:auto">Buy</button></div></div>
+    <div class="card shop"><div class="shop-art" style="background:linear-gradient(135deg,#7C5CFF,#4CC9F0)"></div><h3>Data bundles</h3><p class="note">1GB to 10GB, delivered instantly.</p><div class="row" style="margin-top:13px"><b class="num">from &#8358;350</b><button class="btn sm primary" style="margin-left:auto">Buy</button></div></div>
+    <div class="card shop"><div class="shop-art" style="background:linear-gradient(135deg,#3DDC97,#7C5CFF)"></div><h3>Brand vouchers</h3><p class="note">Discounts from advertisers on the board.</p><div class="row" style="margin-top:13px"><b class="num">from &#8358;0</b><button class="btn sm primary" style="margin-left:auto">Browse</button></div></div>
+  </div>
+</section>
+
+<!-- ==================== VIEWER · PROFILE ==================== -->
+<section class="screen" data-screen="v-profile">
+  <div class="phead">
+    <div>
+      <p class="crumb">Viewers / Profile</p>
+      <h1>Profile &amp; referrals</h1>
+      <p class="sub">Your details help brands understand who is watching. They never see your name.</p>
+    </div>
+  </div>
+  <div class="split">
+    <div class="card">
+      <h3>Your details</h3>
+      <p class="note">Used for audience reporting only, always aggregated.</p>
+      <div class="grid g2" style="margin-top:16px">
+        <div class="field"><label>Display name</label><input class="input" value="Bimpe A."></div>
+        <div class="field"><label>Phone</label><input class="input" value="+234 803 000 0000"></div>
+        <div class="field"><label>Country</label><input class="input" value="Nigeria"></div>
+        <div class="field"><label>Age band</label><input class="input" value="25–34"></div>
+        <div class="field"><label>Gender</label><input class="input" value="Female"></div>
+        <div class="field"><label>Bank for payouts</label><input class="input" value="GTBank · 0123456789"></div>
+      </div>
+      <button class="btn primary" style="margin-top:16px">Save changes</button>
+    </div>
+    <div class="stack">
+      <div class="card">
+        <h3>Invite people</h3>
+        <p class="note">&#8358;300 when a friend joins and catches their first freebie.</p>
+        <div class="voucher" style="margin-top:13px;border-style:solid;border-color:var(--line-2);color:var(--txt)">freebiz.app/j/BIMPE9</div>
+        <div class="row" style="margin-top:13px"><button class="btn sm ghost">Copy link</button><button class="btn sm ghost">Share to WhatsApp</button></div>
+      </div>
+      <div class="card">
+        <h3>Referrals</h3>
+        <div class="limit"><span>Joined</span><b>6 people</b></div>
+        <div class="limit"><span>Earned</span><b class="num">&#8358;1,500</b></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== BRANDS · DASHBOARD ==================== -->
+<section class="screen" data-screen="b-dash">
+  <div class="phead">
+    <div>
+      <p class="crumb">Brands / Dashboard</p>
+      <h1>Kilimanjaro Foods</h1>
+      <p class="sub">Sixty seconds of attention, bought by the day. Here's how your ads are doing.</p>
+    </div>
+    <div class="right"><span class="pill brandish"><span class="dot"></span>Premium plan</span><button class="btn primary" data-goto="b-new">New campaign</button></div>
+  </div>
+
+  <div class="grid g4" style="margin-bottom:18px">
+    <div class="stat"><div class="k">Plays today</div><div class="v">18,402</div><div class="d">Premium slots show 2&times;</div></div>
+    <div class="stat"><div class="k">Watched to the end</div><div class="v">71<small>%</small></div><div class="d">Board average is 64%</div></div>
+    <div class="stat"><div class="k">Spend today</div><div class="v">&#8358;42k</div><div class="d">&#8358;1.18m this month</div></div>
+    <div class="stat"><div class="k">In review</div><div class="v" style="color:var(--free)">1</div><div class="d">Usually cleared in an hour</div></div>
+  </div>
+
+  <div class="card" style="padding:6px 4px;margin-bottom:18px">
+    <table>
+      <thead><tr><th>Campaign</th><th>Video</th><th>Slot</th><th>Schedule</th><th>Plays</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+        <tr>
+          <td><b>Small chops, big love</b><div class="hint">Created 21 Aug</div></td>
+          <td class="hint num">0:58</td>
+          <td><span class="pill brandish">Premium</span></td>
+          <td class="hint">All day · until 31 Aug</td>
+          <td class="num">18,402</td>
+          <td><span class="pill live"><span class="dot pulse"></span>On the board</span></td>
+          <td style="text-align:right"><button class="btn sm ghost">Pause</button></td>
+        </tr>
+        <tr>
+          <td><b>Jollof Fridays</b><div class="hint">Created 24 Aug</div></td>
+          <td class="hint num">0:44</td>
+          <td><span class="pill">Basic</span></td>
+          <td class="hint">Fridays only</td>
+          <td class="num">—</td>
+          <td><span class="pill warn"><span class="dot"></span>In review</span></td>
+          <td style="text-align:right"><button class="btn sm ghost">Edit</button></td>
+        </tr>
+        <tr>
+          <td><b>Meat pie season</b><div class="hint">Created 12 Aug</div></td>
+          <td class="hint num">1:00</td>
+          <td><span class="pill">Basic</span></td>
+          <td class="hint">Ended 20 Aug</td>
+          <td class="num">96,110</td>
+          <td><span class="pill"><span class="dot"></span>Finished</span></td>
+          <td style="text-align:right"><button class="btn sm ghost">Duplicate</button></td>
+        </tr>
+        <tr>
+          <td><b>Late night cravings</b><div class="hint">Created 08 Aug</div></td>
+          <td class="hint num">0:31</td>
+          <td><span class="pill">Basic</span></td>
+          <td class="hint">—</td>
+          <td class="num">—</td>
+          <td><span class="pill bad"><span class="dot"></span>Sent back</span></td>
+          <td style="text-align:right"><button class="btn sm ghost">Read note</button></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card" style="border-color:rgba(255,77,94,.3)">
+    <div class="row" style="align-items:flex-start;gap:14px">
+      <span class="pill bad" style="margin-top:2px"><span class="dot"></span>Sent back</span>
+      <div>
+        <h3>Late night cravings</h3>
+        <p class="note" style="margin-top:5px">Reviewer note — the closing frame implies a cash prize we don't run. Remove the "win ₦50,000" card and resubmit; everything else is fine.</p>
+        <div class="row" style="margin-top:12px"><button class="btn sm primary">Upload new cut</button><button class="btn sm ghost">Reply to reviewer</button></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== BRANDS · NEW CAMPAIGN ==================== -->
+<section class="screen" data-screen="b-new">
+  <div class="phead">
+    <div>
+      <p class="crumb">Brands / New campaign</p>
+      <h1>Put an ad on the board</h1>
+      <p class="sub">One video, sixty seconds or less. No questions, no quiz — the board does the rest.</p>
+    </div>
+    <div class="right"><button class="btn ghost">Save draft</button><button class="btn primary">Send for review</button></div>
+  </div>
+
+  <div class="split">
+    <div class="stack">
+      <div class="card">
+        <div class="stepline"><span class="stepno">1</span><h3>Your video</h3></div>
+        <div class="drop">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 16V4M8 8l4-4 4 4"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>
+          <b>Drop an MP4 here</b>
+          <span class="hint">Up to 60 seconds · 1080p or better · 200MB max · sound on by default</span>
+          <button class="btn sm ghost" style="margin-top:12px">Choose file</button>
+        </div>
+        <div class="uploaded">
+          <div class="thumb"></div>
+          <div>
+            <b>jollof-fridays-final.mp4</b>
+            <div class="hint num">0:44 · 1920×1080 · 38.2 MB</div>
+          </div>
+          <span class="pill live" style="margin-left:auto"><span class="dot"></span>Length OK</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="stepline"><span class="stepno">2</span><h3>Name and details</h3></div>
+        <div class="grid g2" style="margin-top:14px">
+          <div class="field"><label>Campaign name</label><input class="input" value="Jollof Fridays"></div>
+          <div class="field"><label>Landing link (optional)</label><input class="input" placeholder="https://"></div>
+        </div>
+        <div class="field" style="margin-top:14px"><label>What is this ad about?</label><textarea class="input" rows="3">Weekend jollof deal for Lagos and Abuja stores. Runs Fridays only.</textarea><span class="hint">Reviewers read this. Being specific gets you cleared faster.</span></div>
+      </div>
+
+      <div class="card">
+        <div class="stepline"><span class="stepno">3</span><h3>Slot and schedule</h3></div>
+        <div class="tiers">
+          <label class="tier"><input type="radio" name="tier"><div><b>Basic</b><span class="hint">Standard rotation. One play per cycle.</span></div><b class="num">&#8358;18,000/day</b></label>
+          <label class="tier on"><input type="radio" name="tier" checked><div><b>Premium</b><span class="hint">Shows twice as often, plus audience reporting.</span></div><b class="num">&#8358;42,000/day</b></label>
+        </div>
+        <div class="grid g3" style="margin-top:16px">
+          <div class="field"><label>Starts</label><input class="input" value="29 Aug 2026"></div>
+          <div class="field"><label>Ends</label><input class="input" value="26 Sep 2026"></div>
+          <div class="field"><label>Days</label><input class="input" value="Fridays only"></div>
+        </div>
+        <p class="hint" style="margin-top:12px">The board is global — everyone everywhere sees every ad. There is no location targeting.</p>
+      </div>
+    </div>
+
+    <div class="stack">
+      <div class="card">
+        <h3>Preview</h3>
+        <p class="note">How it sits on the board.</p>
+        <div class="mini-board">
+          <div class="mini-strip"><span>Don't blink · free money moves fast ·</span></div>
+          <div class="mini-face"><span class="playing">Jollof Fridays</span></div>
+          <div class="mini-strip"><span>codes are single-use · nothing expires ·</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>What happens next</h3>
+        <ol class="steps">
+          <li><b>Review.</b> An admin watches the full cut against the content rules.</li>
+          <li><b>Cleared or sent back.</b> You get a note either way, usually within an hour.</li>
+          <li><b>On the board.</b> It joins the rotation at your start time.</li>
+        </ol>
+      </div>
+      <div class="card">
+        <h3>Cost estimate</h3>
+        <div class="limit"><span>Premium · 5 Fridays</span><b class="num">&#8358;210,000</b></div>
+        <div class="limit"><span>VAT (7.5%)</span><b class="num">&#8358;15,750</b></div>
+        <div class="limit total"><span>Total</span><b class="num">&#8358;225,750</b></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== BRANDS · AUDIENCE ==================== -->
+<section class="screen" data-screen="b-analytics">
+  <div class="phead">
+    <div>
+      <p class="crumb">Brands / Audience</p>
+      <h1>Who watched you</h1>
+      <p class="sub">Aggregated from viewer profiles. Premium plans only. No individual viewer is ever identified.</p>
+    </div>
+    <div class="right"><span class="pill brandish">Premium</span><button class="btn ghost">Export CSV</button></div>
+  </div>
+
+  <div class="grid g4" style="margin-bottom:18px">
+    <div class="stat"><div class="k">Plays</div><div class="v">96,110</div><div class="d">Last 30 days</div></div>
+    <div class="stat"><div class="k">Unique viewers</div><div class="v">21,447</div><div class="d">4.5 plays each</div></div>
+    <div class="stat"><div class="k">Full watches</div><div class="v">71<small>%</small></div><div class="d">Board average 64%</div></div>
+    <div class="stat"><div class="k">Cost per full watch</div><div class="v">&#8358;3.1</div><div class="d">Down from &#8358;4.0</div></div>
+  </div>
+
+  <div class="split">
+    <div class="card">
+      <h3>Where they watched from</h3>
+      <p class="note">Top countries by plays.</p>
+      <div class="bars">
+        <div class="bar"><span>Nigeria</span><i style="width:78%"></i><b class="num">74,900</b></div>
+        <div class="bar"><span>Ghana</span><i style="width:24%"></i><b class="num">9,120</b></div>
+        <div class="bar"><span>Kenya</span><i style="width:17%"></i><b class="num">5,640</b></div>
+        <div class="bar"><span>United Kingdom</span><i style="width:9%"></i><b class="num">3,310</b></div>
+        <div class="bar"><span>South Africa</span><i style="width:7%"></i><b class="num">2,140</b></div>
+      </div>
+    </div>
+    <div class="stack">
+      <div class="card">
+        <h3>Age</h3>
+        <div class="bars compact">
+          <div class="bar"><span>18–24</span><i style="width:52%"></i><b class="num">31%</b></div>
+          <div class="bar"><span>25–34</span><i style="width:74%"></i><b class="num">44%</b></div>
+          <div class="bar"><span>35–44</span><i style="width:29%"></i><b class="num">17%</b></div>
+          <div class="bar"><span>45+</span><i style="width:13%"></i><b class="num">8%</b></div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Gender</h3>
+        <div class="bars compact">
+          <div class="bar"><span>Women</span><i style="width:63%"></i><b class="num">57%</b></div>
+          <div class="bar"><span>Men</span><i style="width:45%"></i><b class="num">41%</b></div>
+          <div class="bar"><span>Not stated</span><i style="width:4%"></i><b class="num">2%</b></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== BRANDS · BILLING ==================== -->
+<section class="screen" data-screen="b-billing">
+  <div class="phead">
+    <div>
+      <p class="crumb">Brands / Plan &amp; billing</p>
+      <h1>Plan &amp; billing</h1>
+      <p class="sub">Two plans. The difference is how often you show and whether you get audience reporting.</p>
+    </div>
+  </div>
+  <div class="grid g2" style="margin-bottom:18px">
+    <div class="card plan">
+      <h3>Basic</h3>
+      <div class="price num">&#8358;18,000<span>/day</span></div>
+      <ul class="ticks">
+        <li>One play per rotation cycle</li>
+        <li>Video up to 60 seconds</li>
+        <li>Plays and completion rate</li>
+        <li class="off">No audience breakdown</li>
+      </ul>
+      <button class="btn ghost" style="width:100%;justify-content:center;margin-top:16px">Switch to Basic</button>
+    </div>
+    <div class="card plan current">
+      <span class="pill brandish" style="position:absolute;top:18px;right:18px">Current</span>
+      <h3>Premium</h3>
+      <div class="price num">&#8358;42,000<span>/day</span></div>
+      <ul class="ticks">
+        <li>Shows twice as often as Basic</li>
+        <li>Video up to 60 seconds</li>
+        <li>Plays and completion rate</li>
+        <li>Audience by country, age and gender</li>
+      </ul>
+      <button class="btn primary" style="width:100%;justify-content:center;margin-top:16px">Manage plan</button>
+    </div>
+  </div>
+  <div class="card" style="padding:6px 4px">
+    <table>
+      <thead><tr><th>Invoice</th><th>Period</th><th>Method</th><th>Status</th><th style="text-align:right">Amount</th></tr></thead>
+      <tbody>
+        <tr><td class="num">INV-2026-0841</td><td class="hint">1–24 Aug 2026</td><td class="hint">Paystack · card ending 4417</td><td><span class="pill live"><span class="dot"></span>Paid</span></td><td class="num" style="text-align:right">&#8358;1,008,000</td></tr>
+        <tr><td class="num">INV-2026-0790</td><td class="hint">Jul 2026</td><td class="hint">Bank transfer</td><td><span class="pill live"><span class="dot"></span>Paid</span></td><td class="num" style="text-align:right">&#8358;1,302,000</td></tr>
+        <tr><td class="num">INV-2026-0733</td><td class="hint">Jun 2026</td><td class="hint">Paystack · card ending 4417</td><td><span class="pill live"><span class="dot"></span>Paid</span></td><td class="num" style="text-align:right">&#8358;540,000</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ==================== ADMIN · LIVE MONITOR ==================== -->
+<section class="screen" data-screen="a-monitor">
+  <div class="phead">
+    <div>
+      <p class="crumb">Admin / Live monitor</p>
+      <h1>Live monitor</h1>
+      <p class="sub">Ads go live the moment a brand publishes them. Your job is to watch what's running and pull down anything that breaks the standards.</p>
+    </div>
+    <div class="right"><span class="pill bad"><span class="dot pulse"></span>3 flagged</span><span class="pill live"><span class="dot"></span>37 running</span></div>
+  </div>
+
+  <div class="grid g4" style="margin-bottom:18px">
+    <div class="stat"><div class="k">Live on the board</div><div class="v">37</div><div class="d">From 19 brands</div></div>
+    <div class="stat"><div class="k">Flagged for a look</div><div class="v" style="color:var(--spent)">3</div><div class="d">2 auto, 1 viewer report</div></div>
+    <div class="stat"><div class="k">Taken down today</div><div class="v">1</div><div class="d">Refunded automatically</div></div>
+    <div class="stat"><div class="k">Brands on a strike</div><div class="v">2</div><div class="d">Third strike suspends</div></div>
+  </div>
+
+  <div class="review">
+    <div class="queue">
+      <p class="side-label" style="padding:0 0 10px">Now running</p>
+      <button class="qitem on"><b>Loan in 5 minutes</b><span>QuickKash · 0:30 · live 4h</span><i class="pill bad">Flagged &times;12</i></button>
+      <button class="qitem"><b>Bet with us</b><span>OddsPlus · 0:41 · live 2h</span><i class="pill bad">Flagged &times;5</i></button>
+      <button class="qitem"><b>Miracle slim tea</b><span>PureLeaf · 0:38 · live 26m</span><i class="pill bad">Auto-flag</i></button>
+      <button class="qitem"><b>Small chops, big love</b><span>Kilimanjaro · 0:58 · live 3d</span><i class="pill live">Clean</i></button>
+      <button class="qitem"><b>Jollof Fridays</b><span>Kilimanjaro · 0:44 · live 1h</span><i class="pill live">Clean</i></button>
+      <button class="qitem"><b>Get 3GB free</b><span>Netcom Data · 0:59 · live 6h</span><i class="pill live">Clean</i></button>
+      <button class="qitem"><b>Back to school</b><span>Pencil &amp; Co · 0:52 · live 1d</span><i class="pill live">Clean</i></button>
+    </div>
+
+    <div class="stack">
+      <div class="card" style="border-color:rgba(255,77,94,.3)">
+        <div class="row" style="margin-bottom:14px">
+          <div><h3>Loan in 5 minutes</h3><p class="note">QuickKash · Basic slot · published 24 Aug, 12:40 · 6,204 plays so far</p></div>
+          <span class="pill bad" style="margin-left:auto"><span class="dot pulse"></span>Live right now</span>
+        </div>
+        <div class="reviewface">
+          <div class="playbtn small"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13l11-6.5z"/></svg></div>
+          <span class="clock num">0:30</span>
+        </div>
+        <div class="flags">
+          <div class="flag"><span class="pill bad"><span class="dot"></span>12 viewer reports</span><p>Most say the same thing — the ad promises "no interest, ever" and the landing page charges 15% a month.</p></div>
+          <div class="flag"><span class="pill warn"><span class="dot"></span>Auto-flag</span><p>Matched the lending-terms rule: an interest claim with no APR stated on screen.</p></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Take it down</h3>
+        <p class="note">The brand is told immediately and the remaining days are refunded. Say what broke, in their words.</p>
+        <div class="checks">
+          <label class="check"><input type="checkbox" checked><span>Misleading claim — the ad contradicts the brand's own terms</span></label>
+          <label class="check"><input type="checkbox"><span>Prize or reward Freebiz does not actually give</span></label>
+          <label class="check"><input type="checkbox"><span>Gambling, lending or health claim without required disclosure</span></label>
+          <label class="check"><input type="checkbox"><span>Sexual, violent, or aimed at children</span></label>
+          <label class="check"><input type="checkbox"><span>Technical — unusable audio or picture, or over 60 seconds</span></label>
+        </div>
+        <div class="field" style="margin-top:16px"><label>Note to the brand</label><textarea class="input" rows="2">Your ad states "no interest, ever" but your loan terms list 15% monthly. Remove the claim or state the real rate on screen, then republish.</textarea></div>
+        <div class="row" style="margin-top:14px;flex-wrap:wrap">
+          <button class="btn danger">Take down &amp; refund</button>
+          <button class="btn ghost">Warn, leave running</button>
+          <button class="btn ghost">Dismiss reports</button>
+          <button class="btn ghost" style="margin-left:auto">Suspend brand</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>What gets flagged automatically</h3>
+        <ol class="steps">
+          <li><b>Viewer reports.</b> Three on one ad in an hour bumps it to the top of this list.</li>
+          <li><b>Category rules.</b> Lending, betting and health ads are scanned for missing disclosures.</li>
+          <li><b>Technical checks.</b> Length, resolution and silent audio are caught at upload, before publish.</li>
+          <li><b>Repeat offenders.</b> Every ad from a brand on a strike is flagged for a look on publish.</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ==================== ADMIN · FREEBIE INVENTORY ==================== -->
+<section class="screen" data-screen="a-prizes">
+  <div class="phead">
+    <div>
+      <p class="crumb">Admin / Freebie inventory</p>
+      <h1>Freebie inventory</h1>
+      <p class="sub">Load the PINs and cash prizes, then spread them across the day. The board drops them between ads.</p>
+    </div>
+    <div class="right"><button class="btn ghost">Import PINs</button><button class="btn primary">Schedule a drop</button></div>
+  </div>
+
+  <div class="grid g4" style="margin-bottom:18px">
+    <div class="stat"><div class="k">Airtime PINs in stock</div><div class="v">1,208</div><div class="d">Across 4 networks</div></div>
+    <div class="stat"><div class="k">Cash budget today</div><div class="v">&#8358;180k</div><div class="d">&#8358;112k already dropped</div></div>
+    <div class="stat"><div class="k">Live on the board</div><div class="v" style="color:var(--live)">6</div><div class="d">Unclaimed right now</div></div>
+    <div class="stat"><div class="k">Returned to stock</div><div class="v">23</div><div class="d">Unclaimed after 1 hour</div></div>
+  </div>
+
+  <div class="card" style="margin-bottom:18px">
+    <div class="row"><div><h3>Today's distribution</h3><p class="note">Drops are spread across the day so the board never feels empty.</p></div><span class="pill info" style="margin-left:auto">06:00 – 23:00</span></div>
+    <div class="daybar">
+      <i style="left:4%"></i><i style="left:11%"></i><i style="left:19%" class="cash"></i><i style="left:26%"></i>
+      <i style="left:33%"></i><i style="left:41%" class="cash"></i><i style="left:48%"></i><i style="left:55%"></i>
+      <i style="left:62%" class="cash"></i><i style="left:68%"></i><i style="left:74%"></i><i style="left:81%" class="cash"></i>
+      <i style="left:88%"></i><i style="left:95%"></i>
+    </div>
+    <div class="row" style="margin-top:12px;gap:16px"><span class="pill live"><span class="dot"></span>Airtime drop</span><span class="pill warn"><span class="dot"></span>Cash drop</span><span class="hint" style="margin-left:auto">14 drops scheduled · next at 17:40</span></div>
+  </div>
+
+  <div class="card" style="padding:6px 4px">
+    <table>
+      <thead><tr><th>Public code</th><th>Freebie</th><th>Drops at</th><th>Applied by</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+        <tr><td class="num" style="color:var(--live)">FB-9K4T-77</td><td><b>&#8358;2,000 Cash</b></td><td class="hint">16:20</td><td class="hint">—</td><td><span class="pill live"><span class="dot pulse"></span>Live, unclaimed</span></td><td style="text-align:right"><button class="btn sm ghost">Pull down</button></td></tr>
+        <tr><td class="num" style="color:var(--spent)">FB-2XQ1-08</td><td><b>&#8358;500 Airtime</b><div class="hint">MTN</div></td><td class="hint">14:02</td><td class="hint">Bimpe A. · Lagos, NG</td><td><span class="pill"><span class="dot"></span>Claimed</span></td><td style="text-align:right"><button class="btn sm ghost">View</button></td></tr>
+        <tr><td class="num" style="color:var(--spent)">FB-7MMD-31</td><td><b>&#8358;2,000 Cash</b></td><td class="hint">Yesterday 19:40</td><td class="hint">Bimpe A. · Lagos, NG</td><td><span class="pill info"><span class="dot"></span>In wallet</span></td><td style="text-align:right"><button class="btn sm ghost">View</button></td></tr>
+        <tr><td class="num">FB-4QW9-02</td><td><b>&#8358;200 Airtime</b><div class="hint">Glo</div></td><td class="hint">17:40</td><td class="hint">—</td><td><span class="pill warn"><span class="dot"></span>Scheduled</span></td><td style="text-align:right"><button class="btn sm ghost">Edit</button></td></tr>
+        <tr><td class="num">FB-1ZZ7-56</td><td><b>&#8358;100 Airtime</b><div class="hint">Airtel</div></td><td class="hint">12:15</td><td class="hint">Nobody applied</td><td><span class="pill"><span class="dot"></span>Back in stock</span></td><td style="text-align:right"><button class="btn sm ghost">Reissue</button></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ==================== ADMIN · PAYOUT DESK ==================== -->
+<section class="screen" data-screen="a-payouts">
+  <div class="phead">
+    <div>
+      <p class="crumb">Admin / Payout desk</p>
+      <h1>Payout desk</h1>
+      <p class="sub">Winners bring a secret code. Match it here, pay them, then mark it settled. Fridays only.</p>
+    </div>
+    <div class="right"><span class="pill warn"><span class="dot"></span>3 to pay · &#8358;34,000</span></div>
+  </div>
+
+  <div class="split">
+    <div class="card" style="padding:6px 4px">
+      <table>
+        <thead><tr><th>Secret code</th><th>Viewer</th><th>Requested</th><th style="text-align:right">Amount</th><th></th></tr></thead>
+        <tbody>
+          <tr><td class="num">SK-4T7L-M22B</td><td><b>Bimpe A.</b><div class="hint">GTBank · 0123456789</div></td><td class="hint">24 Aug</td><td class="num" style="text-align:right">&#8358;12,000</td><td style="text-align:right"><button class="btn sm primary">Mark paid</button></td></tr>
+          <tr><td class="num">SK-90XR-5PQ7</td><td><b>Tunde O.</b><div class="hint">Kuda · 2233445566</div></td><td class="hint">23 Aug</td><td class="num" style="text-align:right">&#8358;10,000</td><td style="text-align:right"><button class="btn sm primary">Mark paid</button></td></tr>
+          <tr><td class="num">SK-77BC-1KL0</td><td><b>Ngozi E.</b><div class="hint">Access · 9988776655</div></td><td class="hint">22 Aug</td><td class="num" style="text-align:right">&#8358;12,000</td><td style="text-align:right"><button class="btn sm primary">Mark paid</button></td></tr>
+          <tr><td class="num" style="opacity:.55">SK-0092-LLD1</td><td><b>Kwame M.</b><div class="hint">Paid 15 Aug</div></td><td class="hint">14 Aug</td><td class="num" style="text-align:right;opacity:.55">&#8358;10,000</td><td style="text-align:right"><span class="pill live"><span class="dot"></span>Settled</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="stack">
+      <div class="card">
+        <h3>Verify a code</h3>
+        <p class="note">Paste what the viewer sent you.</p>
+        <input class="input" placeholder="SK-XXXX-XXXX" style="margin-top:12px;font-family:var(--mono)">
+        <button class="btn primary" style="margin-top:11px;width:100%;justify-content:center">Check code</button>
+        <div class="verify ok">
+          <span class="pill live"><span class="dot"></span>Valid</span>
+          <p><b>Bimpe A.</b> · &#8358;12,000 · requested 24 Aug · not yet paid</p>
+        </div>
+      </div>
+      <div class="card">
+        <h3>This week</h3>
+        <div class="limit"><span>Requests</span><b>3</b></div>
+        <div class="limit"><span>Owed</span><b class="num">&#8358;34,000</b></div>
+        <div class="limit"><span>Paid last Friday</span><b class="num">&#8358;62,000</b></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== ADMIN · ROLES & PERMISSIONS ==================== -->
+<section class="screen" data-screen="a-permissions">
+  <div class="phead">
+    <div>
+      <p class="crumb">Admin / Roles &amp; permissions</p>
+      <h1>Roles &amp; permissions</h1>
+      <p class="sub">Who can clear an ad, who can load prizes, who can pay money out. Change it here.</p>
+    </div>
+    <div class="right"><button class="btn primary">Invite a teammate</button></div>
+  </div>
+
+  <div class="card" style="padding:6px 4px;margin-bottom:18px">
+    <table>
+      <thead><tr><th>Person</th><th>Role</th><th>Review ads</th><th>Load prizes</th><th>Pay out</th><th>Manage people</th><th></th></tr></thead>
+      <tbody>
+        <tr>
+          <td><div class="row"><span class="avatar" style="background:var(--admin)">I</span><div><b>Isaac</b><div class="hint">isaac@freebiz.app</div></div></div></td>
+          <td><span class="pill info">Owner</span></td>
+          <td><span class="tick on">&#10003;</span></td><td><span class="tick on">&#10003;</span></td><td><span class="tick on">&#10003;</span></td><td><span class="tick on">&#10003;</span></td>
+          <td style="text-align:right"><button class="btn sm ghost" disabled style="opacity:.4">Locked</button></td>
+        </tr>
+        <tr>
+          <td><div class="row"><span class="avatar" style="background:var(--free)">A</span><div><b>Amaka</b><div class="hint">amaka@freebiz.app</div></div></div></td>
+          <td><span class="pill">Reviewer</span></td>
+          <td><span class="tick on">&#10003;</span></td><td><span class="tick">&mdash;</span></td><td><span class="tick">&mdash;</span></td><td><span class="tick">&mdash;</span></td>
+          <td style="text-align:right"><button class="btn sm ghost">Change</button></td>
+        </tr>
+        <tr>
+          <td><div class="row"><span class="avatar" style="background:var(--live)">S</span><div><b>Seyi</b><div class="hint">seyi@freebiz.app</div></div></div></td>
+          <td><span class="pill">Prize desk</span></td>
+          <td><span class="tick">&mdash;</span></td><td><span class="tick on">&#10003;</span></td><td><span class="tick on">&#10003;</span></td><td><span class="tick">&mdash;</span></td>
+          <td style="text-align:right"><button class="btn sm ghost">Change</button></td>
+        </tr>
+        <tr>
+          <td><div class="row"><span class="avatar" style="background:var(--brand);color:#fff">D</span><div><b>Deji</b><div class="hint">deji@freebiz.app</div></div></div></td>
+          <td><span class="pill warn">Invited</span></td>
+          <td><span class="tick">&mdash;</span></td><td><span class="tick">&mdash;</span></td><td><span class="tick">&mdash;</span></td><td><span class="tick">&mdash;</span></td>
+          <td style="text-align:right"><button class="btn sm ghost">Resend invite</button></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="grid g2">
+    <div class="card">
+      <h3>Brand accounts</h3>
+      <p class="note">A brand can't upload until you let them in.</p>
+      <div class="approve"><div><b>Netcom Data</b><div class="hint">RC 1839221 · applied 23 Aug</div></div><div class="row"><button class="btn sm primary">Approve</button><button class="btn sm danger">Decline</button></div></div>
+      <div class="approve"><div><b>OddsPlus</b><div class="hint">Betting · applied 22 Aug</div></div><div class="row"><button class="btn sm ghost">Review docs</button><button class="btn sm danger">Decline</button></div></div>
+      <div class="approve"><div><b>Pencil &amp; Co</b><div class="hint">RC 7712004 · approved 20 Aug</div></div><span class="pill live"><span class="dot"></span>Active</span></div>
+    </div>
+    <div class="card">
+      <h3>What each role can do</h3>
+      <ol class="steps">
+        <li><b>Owner.</b> Everything, including changing these roles.</li>
+        <li><b>Reviewer.</b> Clears or sends back ads. Cannot touch money.</li>
+        <li><b>Prize desk.</b> Loads PINs, schedules drops, settles payouts.</li>
+        <li><b>Read only.</b> Sees dashboards, changes nothing.</li>
+      </ol>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== ADMIN · ABUSE SIGNALS ==================== -->
+<section class="screen" data-screen="a-fraud">
+  <div class="phead">
+    <div>
+      <p class="crumb">Admin / Abuse signals</p>
+      <h1>Abuse signals</h1>
+      <p class="sub">Accounts pushing against the daily caps. Freebiz is fastest-fingers, not fastest-scripts.</p>
+    </div>
+    <div class="right"><span class="pill bad"><span class="dot pulse"></span>2 need a decision</span></div>
+  </div>
+
+  <div class="grid g4" style="margin-bottom:18px">
+    <div class="stat"><div class="k">Devices at the cap</div><div class="v">31</div><div class="d">3 claims per device per day</div></div>
+    <div class="stat"><div class="k">IPs over the cap</div><div class="v" style="color:var(--spent)">4</div><div class="d">Auto-throttled</div></div>
+    <div class="stat"><div class="k">Suspected scripts</div><div class="v">2</div><div class="d">Sub-second apply times</div></div>
+    <div class="stat"><div class="k">Blocked accounts</div><div class="v">18</div><div class="d">All time</div></div>
+  </div>
+
+  <div class="card" style="padding:6px 4px">
+    <table>
+      <thead><tr><th>Account</th><th>Signal</th><th>Detail</th><th>Last seen</th><th></th></tr></thead>
+      <tbody>
+        <tr><td><b>@fastfinger01</b><div class="hint">Joined 21 Aug</div></td><td><span class="pill bad"><span class="dot"></span>Likely script</span></td><td class="hint">Applied 9 codes with a 0.4s median reaction</td><td class="hint">6 minutes ago</td><td style="text-align:right"><div class="row" style="justify-content:flex-end"><button class="btn sm danger">Block</button><button class="btn sm ghost">Clear</button></div></td></tr>
+        <tr><td><b>@ade_wins</b><div class="hint">Joined 04 Jul</div></td><td><span class="pill bad"><span class="dot"></span>Shared device</span></td><td class="hint">7 accounts on one device fingerprint</td><td class="hint">40 minutes ago</td><td style="text-align:right"><div class="row" style="justify-content:flex-end"><button class="btn sm danger">Block</button><button class="btn sm ghost">Clear</button></div></td></tr>
+        <tr><td><b>@zainab.k</b><div class="hint">Joined 12 Jun</div></td><td><span class="pill warn"><span class="dot"></span>At device cap</span></td><td class="hint">3 of 3 claims used, normal timing</td><td class="hint">2 hours ago</td><td style="text-align:right"><span class="pill">Watching</span></td></tr>
+        <tr><td><b>@bigboy_ng</b><div class="hint">Joined 30 Jul</div></td><td><span class="pill"><span class="dot"></span>Blocked</span></td><td class="hint">Reissued the same secret code twice</td><td class="hint">19 Aug</td><td style="text-align:right"><button class="btn sm ghost">Unblock</button></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ==================== VIEWER · PROMOTE & EARN (PHASE 2) ==================== -->
+<section class="screen" data-screen="v-promote">
+  <div class="phead">
+    <div>
+      <p class="crumb">Viewers / Promote &amp; earn <span class="pill info" style="margin-left:8px">Phase 2</span></p>
+      <h1>Share a campaign. Get the most likes. Take the pot.</h1>
+      <p class="sub">Pick a campaign, grab your link, post it wherever your people are. Every person who follows your link and likes it on Freebiz counts for you.</p>
+    </div>
+    <div class="right"><span class="pill warn">2 contests running</span></div>
+  </div>
+
+  <div class="split">
+    <div class="stack">
+      <div class="card contest live">
+        <div class="row" style="align-items:flex-start;gap:16px;flex-wrap:wrap">
+          <div class="contest-art" style="background:linear-gradient(135deg,#FFD23F,#FF6B6B)"></div>
+          <div style="flex:1;min-width:200px">
+            <div class="row" style="gap:9px"><span class="pill live"><span class="dot pulse"></span>Live</span><span class="pill">Ends in 3d 14h</span></div>
+            <h3 style="margin-top:9px">Jollof Fridays</h3>
+            <p class="note">Kilimanjaro Foods · image campaign</p>
+          </div>
+          <div class="pot">
+            <span class="pot-k">Prize pot</span>
+            <b class="num">&#8358;150,000</b>
+            <span class="hint">Winner takes all</span>
+          </div>
+        </div>
+
+        <div class="sharebox">
+          <div>
+            <p class="crumb" style="margin:0 0 7px">Your link for this campaign</p>
+            <div class="voucher" style="border-style:solid;border-color:var(--line-2);color:var(--txt);letter-spacing:.04em">freebiz.app/c/jollof-fridays?p=BIMPE9</div>
+          </div>
+          <div class="row" style="gap:8px;flex-wrap:wrap">
+            <button class="btn sm primary">Copy link</button>
+            <button class="btn sm ghost">WhatsApp</button>
+            <button class="btn sm ghost">X</button>
+            <button class="btn sm ghost">Instagram</button>
+            <button class="btn sm ghost">Facebook</button>
+          </div>
+        </div>
+
+        <div class="myrank">
+          <div><span class="rank-k">Your likes</span><b class="num rank-v">312</b></div>
+          <div><span class="rank-k">Your position</span><b class="num rank-v">4th</b></div>
+          <div><span class="rank-k">Behind first by</span><b class="num rank-v" style="color:var(--free)">509</b></div>
+          <div style="flex:1;min-width:160px"><span class="rank-k">Progress to first</span><div class="progress" style="margin-top:9px"><i style="width:38%;background:var(--free)"></i></div></div>
+        </div>
+      </div>
+
+      <div class="card contest">
+        <div class="row" style="align-items:flex-start;gap:16px;flex-wrap:wrap">
+          <div class="contest-art" style="background:linear-gradient(135deg,#7C5CFF,#4CC9F0)"></div>
+          <div style="flex:1;min-width:200px">
+            <div class="row" style="gap:9px"><span class="pill live"><span class="dot pulse"></span>Live</span><span class="pill">Ends in 9d</span></div>
+            <h3 style="margin-top:9px">Get 3GB free</h3>
+            <p class="note">Netcom Data · video campaign · 0:22</p>
+          </div>
+          <div class="pot"><span class="pot-k">Prize pot</span><b class="num">&#8358;80,000</b><span class="hint">Winner takes all</span></div>
+        </div>
+        <div class="row" style="margin-top:16px"><button class="btn primary">Get my link</button><span class="hint" style="margin-left:auto">You haven't started this one</span></div>
+      </div>
+
+      <div class="card" style="padding:6px 4px">
+        <table>
+          <thead><tr><th>#</th><th>Promoter</th><th>Likes</th><th>Sources</th><th>Standing</th></tr></thead>
+          <tbody>
+            <tr><td class="num">1</td><td><div class="row"><span class="avatar" style="background:var(--free)">T</span><b>Tunde O.</b></div></td><td class="num" style="color:var(--free)">821</td><td class="hint">WhatsApp, X</td><td><span class="pill warn">Leading</span></td></tr>
+            <tr><td class="num">2</td><td><div class="row"><span class="avatar" style="background:var(--live)">C</span><b>Chidi N.</b></div></td><td class="num">640</td><td class="hint">Instagram</td><td><span class="pill">Close</span></td></tr>
+            <tr><td class="num">3</td><td><div class="row"><span class="avatar" style="background:var(--admin)">A</span><b>Amaka U.</b></div></td><td class="num">455</td><td class="hint">Facebook, WhatsApp</td><td><span class="pill">In it</span></td></tr>
+            <tr style="background:rgba(255,210,63,.06)"><td class="num">4</td><td><div class="row"><span class="avatar" style="background:var(--brand);color:#fff">B</span><b>You</b></div></td><td class="num">312</td><td class="hint">WhatsApp</td><td><span class="pill">In it</span></td></tr>
+            <tr><td class="num">5</td><td><div class="row"><span class="avatar" style="background:var(--spent)">K</span><b>Kwame M.</b></div></td><td class="num">190</td><td class="hint">X</td><td><span class="pill">In it</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="stack">
+      <div class="card">
+        <h3>What people see</h3>
+        <p class="note">Your link opens this page on freebiz.app.</p>
+        <div class="landing">
+          <div class="landing-art" style="background:linear-gradient(135deg,#FFD23F,#FF6B6B)"></div>
+          <div class="landing-body">
+            <b>Jollof Fridays</b>
+            <span class="hint">Shared by Bimpe A.</span>
+            <button class="btn primary" style="width:100%;justify-content:center;margin-top:12px">&#9825;&nbsp; Like this campaign</button>
+            <p class="hint" style="margin-top:10px">One like per person. Sign in with a phone number so it counts.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>How the contest works</h3>
+        <ol class="steps">
+          <li><b>Grab your link.</b> It's unique to you and to this campaign.</li>
+          <li><b>Post it anywhere.</b> WhatsApp status, X, Instagram bio, group chats.</li>
+          <li><b>They like it here.</b> The like only counts on the Freebiz page, and only once per person.</li>
+          <li><b>Most likes wins the pot.</b> Paid to the winner's wallet when the clock runs out.</li>
+        </ol>
+      </div>
+
+      <div class="card">
+        <h3>Rules</h3>
+        <div class="limit"><span>Likes per person</span><b>1</b></div>
+        <div class="limit"><span>New accounts</span><b>Count after 24h</b></div>
+        <div class="limit"><span>Ties</span><b>Earlier lead wins</b></div>
+        <div class="limit"><span>Bought likes</span><b style="color:var(--spent)">Disqualified</b></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== BRANDS · PROMOTION CONTESTS (PHASE 2) ==================== -->
+<section class="screen" data-screen="b-contest">
+  <div class="phead">
+    <div>
+      <p class="crumb">Brands / Promotion contests <span class="pill info" style="margin-left:8px">Phase 2</span></p>
+      <h1>Let viewers carry your campaign</h1>
+      <p class="sub">Post an image or a video, put up a prize pot, and viewers compete to send you the most traffic. You pay one prize; you get hundreds of people posting.</p>
+    </div>
+    <div class="right"><button class="btn primary">Start a contest</button></div>
+  </div>
+
+  <div class="grid g4" style="margin-bottom:18px">
+    <div class="stat"><div class="k">Promoters</div><div class="v">248</div><div class="d">Sharing your link right now</div></div>
+    <div class="stat"><div class="k">Link clicks</div><div class="v">31,904</div><div class="d">From 6 platforms</div></div>
+    <div class="stat"><div class="k">Likes</div><div class="v">4,182</div><div class="d">Verified, one per person</div></div>
+    <div class="stat"><div class="k">Cost per like</div><div class="v">&#8358;36</div><div class="d">Pot &#8358;150k ÷ likes</div></div>
+  </div>
+
+  <div class="split">
+    <div class="stack">
+      <div class="card">
+        <div class="stepline"><span class="stepno">1</span><h3>What are they sharing?</h3></div>
+        <div class="grid g2" style="margin-top:14px">
+          <label class="tier on"><input type="radio" name="ctype" checked><div><b>An image</b><span class="hint">Poster, product shot, offer card</span></div></label>
+          <label class="tier"><input type="radio" name="ctype"><div><b>A video</b><span class="hint">Up to 60 seconds, same as the board</span></div></label>
+        </div>
+        <div class="uploaded" style="margin-top:14px">
+          <div class="thumb"></div>
+          <div><b>jollof-fridays-poster.jpg</b><div class="hint num">1080×1350 · 840 KB</div></div>
+          <span class="pill live" style="margin-left:auto"><span class="dot"></span>Ready</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="stepline"><span class="stepno">2</span><h3>The pot and the clock</h3></div>
+        <div class="grid g3" style="margin-top:14px">
+          <div class="field"><label>Prize pot</label><input class="input" value="&#8358;150,000"></div>
+          <div class="field"><label>Runs for</label><input class="input" value="7 days"></div>
+          <div class="field"><label>Winners</label><input class="input" value="Top 1"></div>
+        </div>
+        <p class="hint" style="margin-top:12px">The pot is held by Freebiz for the length of the contest and paid straight into the winner's wallet at the end. You are not charged per click or per like.</p>
+      </div>
+
+      <div class="card">
+        <div class="stepline"><span class="stepno">3</span><h3>What a like means</h3></div>
+        <div class="checks">
+          <label class="check"><input type="checkbox" checked><span>Signed-in Freebiz account, one like per person</span></label>
+          <label class="check"><input type="checkbox" checked><span>Accounts less than 24 hours old don't count</span></label>
+          <label class="check"><input type="checkbox"><span>Also require the visitor to watch the video to the end</span></label>
+          <label class="check"><input type="checkbox"><span>Also require a follow of your Freebiz brand page</span></label>
+        </div>
+        <div class="row" style="margin-top:18px"><button class="btn primary">Publish contest</button><button class="btn ghost">Save draft</button></div>
+      </div>
+    </div>
+
+    <div class="stack">
+      <div class="card">
+        <h3>Your live contest</h3>
+        <div class="row" style="gap:9px;margin-top:10px"><span class="pill live"><span class="dot pulse"></span>Day 4 of 7</span><span class="pill warn">Pot held</span></div>
+        <div class="bars" style="margin-top:18px">
+          <div class="bar"><span>WhatsApp</span><i style="width:82%"></i><b class="num">2,410</b></div>
+          <div class="bar"><span>X</span><i style="width:41%"></i><b class="num">790</b></div>
+          <div class="bar"><span>Instagram</span><i style="width:33%"></i><b class="num">602</b></div>
+          <div class="bar"><span>Facebook</span><i style="width:18%"></i><b class="num">280</b></div>
+          <div class="bar"><span>Direct</span><i style="width:7%"></i><b class="num">100</b></div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Top promoters</h3>
+        <ul class="feed">
+          <li><span class="avatar" style="background:var(--free)">T</span><div><b>Tunde O.</b> — 821 likes<i>WhatsApp and X</i></div></li>
+          <li><span class="avatar" style="background:var(--live)">C</span><div><b>Chidi N.</b> — 640 likes<i>Instagram</i></div></li>
+          <li><span class="avatar" style="background:var(--admin)">A</span><div><b>Amaka U.</b> — 455 likes<i>Facebook and WhatsApp</i></div></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== ADMIN · CONTESTS (PHASE 2) ==================== -->
+<section class="screen" data-screen="a-contest">
+  <div class="phead">
+    <div>
+      <p class="crumb">Admin / Contests <span class="pill info" style="margin-left:8px">Phase 2</span></p>
+      <h1>Contests</h1>
+      <p class="sub">Pots are held here until a contest ends. Your job is to make sure the likes are real before the money moves.</p>
+    </div>
+    <div class="right"><span class="pill warn"><span class="dot"></span>2 ready to settle</span><span class="pill info">&#8358;230,000 held</span></div>
+  </div>
+
+  <div class="grid g4" style="margin-bottom:18px">
+    <div class="stat"><div class="k">Contests running</div><div class="v">6</div><div class="d">From 5 brands</div></div>
+    <div class="stat"><div class="k">Pots held</div><div class="v">&#8358;230k</div><div class="d">Released on settlement</div></div>
+    <div class="stat"><div class="k">Likes voided</div><div class="v" style="color:var(--spent)">1,204</div><div class="d">Fresh accounts and repeats</div></div>
+    <div class="stat"><div class="k">Promoters flagged</div><div class="v">3</div><div class="d">Awaiting your call</div></div>
+  </div>
+
+  <div class="card" style="padding:6px 4px;margin-bottom:18px">
+    <table>
+      <thead><tr><th>Contest</th><th>Brand</th><th>Pot</th><th>Ends</th><th>Leader</th><th>Integrity</th><th></th></tr></thead>
+      <tbody>
+        <tr><td><b>Jollof Fridays</b><div class="hint">Image · 248 promoters</div></td><td class="hint">Kilimanjaro Foods</td><td class="num">&#8358;150,000</td><td class="hint">In 3d 14h</td><td class="hint">Tunde O. · 821</td><td><span class="pill live"><span class="dot"></span>Clean</span></td><td style="text-align:right"><button class="btn sm ghost">Open</button></td></tr>
+        <tr><td><b>Get 3GB free</b><div class="hint">Video · 96 promoters</div></td><td class="hint">Netcom Data</td><td class="num">&#8358;80,000</td><td class="hint">In 9d</td><td class="hint">Zainab K. · 340</td><td><span class="pill bad"><span class="dot pulse"></span>Suspect likes</span></td><td style="text-align:right"><button class="btn sm ghost">Open</button></td></tr>
+        <tr><td><b>Back to school</b><div class="hint">Image · 61 promoters</div></td><td class="hint">Pencil &amp; Co</td><td class="num">&#8358;50,000</td><td class="hint">Ended 24 Aug</td><td class="hint">Chidi N. · 512</td><td><span class="pill live"><span class="dot"></span>Clean</span></td><td style="text-align:right"><button class="btn sm primary">Settle &amp; pay</button></td></tr>
+        <tr><td><b>New flavour drop</b><div class="hint">Video · 28 promoters</div></td><td class="hint">Fizzy Ltd</td><td class="num">&#8358;30,000</td><td class="hint">Ended 23 Aug</td><td class="hint">Ade B. · 118</td><td><span class="pill warn"><span class="dot"></span>Needs a look</span></td><td style="text-align:right"><button class="btn sm primary">Settle &amp; pay</button></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="grid g2">
+    <div class="card" style="border-color:rgba(255,77,94,.3)">
+      <h3>Suspect likes — Get 3GB free</h3>
+      <p class="note">Zainab K. moved from 40 to 340 likes in eleven minutes.</p>
+      <div class="flags" style="margin-top:14px">
+        <div class="flag"><span class="pill bad"><span class="dot"></span>Fresh accounts</span><p>214 of the 300 likes came from accounts created the same hour, all on four device fingerprints.</p></div>
+        <div class="flag"><span class="pill warn"><span class="dot"></span>One referrer</span><p>Every one of them arrived from the same shortened link, not from a social platform.</p></div>
+      </div>
+      <div class="row" style="margin-top:16px;flex-wrap:wrap"><button class="btn danger">Void the likes</button><button class="btn danger">Disqualify promoter</button><button class="btn ghost">Looks fine</button></div>
+    </div>
+    <div class="card">
+      <h3>Settle a contest</h3>
+      <p class="note">Recount, then release the pot into the winner's wallet.</p>
+      <div class="limit"><span>Back to school · Pencil &amp; Co</span><b class="num">&#8358;50,000</b></div>
+      <div class="limit"><span>Winner</span><b>Chidi N. · 512 likes</b></div>
+      <div class="limit"><span>Likes voided in recount</span><b class="num">18</b></div>
+      <div class="limit total"><span>Paid to wallet</span><b class="num">&#8358;50,000</b></div>
+      <div class="row" style="margin-top:16px"><button class="btn primary">Release the pot</button><button class="btn ghost">Recount again</button></div>
+    </div>
+  </div>
+</section>
+
+  </main>
+</div>
+
+<style>
+/* ============================================================
+   COMPONENT CSS — billboard, feeds, forms, review, admin
+   ============================================================ */
+
+/* --- The billboard (signature) --- */
+.board{background:var(--ink-800);border:1px solid var(--line);border-radius:var(--r-lg);padding:9px;box-shadow:var(--shadow)}
+.board-body{display:flex;gap:8px;margin:8px 0}
+.strip{background:var(--ink-900);border-radius:8px;overflow:hidden;position:relative}
+.strip-top,.strip-bot{height:26px}
+.strip-left,.strip-right{width:26px;flex:0 0 26px}
+.track{
+  position:absolute;white-space:nowrap;font-family:var(--mono);font-size:10.5px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--free);opacity:.75;top:50%;transform:translateY(-50%);
+  animation:slide 26s linear infinite;
+}
+@keyframes slide{from{left:0}to{left:-50%}}
+.vtrack{writing-mode:vertical-rl;top:0;left:50%;transform:translateX(-50%);animation:vslide 24s linear infinite}
+@keyframes vslide{from{top:100%}to{top:-100%}}
+
+.screenface{
+  flex:1;aspect-ratio:16/8.4;border-radius:12px;position:relative;display:flex;flex-direction:column;
+  background:radial-gradient(120% 90% at 50% 12%,#3B2C6B,#191430 62%,#0E0C16);
+  border:1px solid var(--line);overflow:hidden;
+}
+.face-top{display:flex;align-items:center;gap:12px;padding:13px 15px}
+.playing{font-size:12.5px;color:var(--muted)}
+.playing b{color:var(--txt)}
+.face-top .clock{margin-left:auto;color:var(--faint);font-size:11.5px}
+.playbtn{
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:66px;height:66px;border-radius:50%;
+  background:rgba(255,255,255,.1);border:1px solid var(--line-2);display:grid;place-items:center;color:#fff;
+  backdrop-filter:blur(4px);
+}
+.playbtn.small{position:static;transform:none;width:50px;height:50px}
+.face-bottom{margin-top:auto;padding:15px}
+.pinned{display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap}
+.pin-label{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--free)}
+.voucher .tag{color:var(--faint)}
+.progress{height:4px;border-radius:99px;background:rgba(255,255,255,.12);overflow:hidden}
+.progress i{display:block;height:100%;background:var(--live);border-radius:99px}
+
+.applybar{display:flex;gap:14px;align-items:flex-start}
+
+/* --- Feed / lists --- */
+.feed{list-style:none;margin:14px 0 0;padding:0;display:flex;flex-direction:column;gap:12px}
+.feed li{display:flex;gap:11px;align-items:center;font-size:13px}
+.feed i{display:block;font-style:normal;font-size:11px;color:var(--faint);margin-top:1px}
+.steps{margin:12px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:9px;font-size:12.8px;color:var(--muted)}
+.steps b{color:var(--txt)}
+.steps::marker{color:var(--accent)}
+.limit{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px dashed var(--line);font-size:13px;color:var(--muted)}
+.limit:last-of-type{border-bottom:0}
+.limit b{color:var(--txt)}
+.limit.total{border-top:1px solid var(--line-2);border-bottom:0;margin-top:4px;padding-top:12px}
+.limit.total b{font-size:16px;color:var(--accent)}
+
+/* --- Viewer specifics --- */
+.reveal-card{margin-top:16px;display:flex;align-items:center;gap:20px;background:linear-gradient(120deg,rgba(61,220,151,.12),transparent 55%),var(--ink-800);border-color:rgba(61,220,151,.32)}
+.reveal-card .pin{font-size:19px;font-weight:700;letter-spacing:.06em;color:var(--live);margin-top:4px}
+.reveal-card .btn{margin-left:auto;flex:0 0 auto}
+.balance{display:flex;gap:26px;align-items:flex-start}
+.balance .big{font-family:var(--display);font-weight:800;font-size:44px;letter-spacing:-.04em;line-height:1;margin-top:6px}
+.balance .big span{font-size:20px;color:var(--faint)}
+.balance>div:first-child{flex:1}
+.payday{border-left:1px solid var(--line);padding-left:22px;min-width:190px}
+.payday b{display:block;font-size:16px;margin:6px 0 5px}
+.shop-art{height:96px;border-radius:12px;margin-bottom:14px}
+
+/* --- Brand specifics --- */
+.stepline{display:flex;align-items:center;gap:11px}
+.stepno{
+  width:24px;height:24px;border-radius:8px;background:var(--accent-soft);color:var(--accent);
+  display:grid;place-items:center;font-family:var(--mono);font-size:11px;font-weight:700;flex:0 0 24px;
+}
+.drop{
+  margin-top:14px;border:1.5px dashed var(--line-2);border-radius:var(--r);padding:26px;text-align:center;
+  display:flex;flex-direction:column;align-items:center;gap:7px;color:var(--muted);
+}
+.drop b{color:var(--txt);font-size:14px}
+.drop svg{color:var(--accent)}
+.uploaded{display:flex;align-items:center;gap:13px;margin-top:14px;padding:12px;border:1px solid var(--line);border-radius:var(--r);background:var(--ink-900)}
+.thumb{width:64px;height:38px;border-radius:7px;flex:0 0 64px;background:linear-gradient(135deg,#FFD23F,#FF6B6B)}
+.tiers{display:flex;flex-direction:column;gap:10px;margin-top:14px}
+.tier{display:flex;align-items:center;gap:13px;padding:14px;border:1px solid var(--line);border-radius:var(--r);cursor:pointer;background:var(--ink-900)}
+.tier.on{border-color:var(--accent);background:var(--accent-soft)}
+.tier b{display:block;font-size:14px}
+.tier .hint{display:block;margin-top:2px}
+.tier>b:last-child{margin-left:auto;font-size:14px;white-space:nowrap}
+.tier input{accent-color:var(--accent);width:16px;height:16px}
+.mini-board{margin-top:13px;border:1px solid var(--line);border-radius:12px;padding:6px;background:var(--ink-900)}
+.mini-strip{height:16px;border-radius:5px;background:var(--ink-700);display:flex;align-items:center;overflow:hidden;padding:0 6px}
+.mini-strip span{font-family:var(--mono);font-size:8px;letter-spacing:.12em;text-transform:uppercase;color:var(--free);white-space:nowrap}
+.mini-face{height:104px;margin:6px 0;border-radius:9px;background:radial-gradient(120% 90% at 50% 15%,#3B2C6B,#191430 65%);display:grid;place-items:center}
+.bars{display:flex;flex-direction:column;gap:13px;margin-top:16px}
+.bars.compact{gap:10px;margin-top:12px}
+.bar{display:grid;grid-template-columns:110px 1fr 62px;align-items:center;gap:12px;font-size:12.5px;color:var(--muted)}
+.bar i{display:block;height:9px;border-radius:99px;background:linear-gradient(90deg,var(--brand),var(--admin));min-width:6px}
+.bar b{text-align:right;color:var(--txt)}
+.plan{position:relative}
+.plan.current{border-color:var(--brand);background:linear-gradient(160deg,rgba(124,92,255,.11),transparent 55%),var(--ink-800)}
+.price{font-family:var(--display);font-weight:800;font-size:32px;letter-spacing:-.03em;margin:8px 0 16px}
+.price span{font-size:14px;color:var(--faint);font-family:var(--body);font-weight:500}
+.ticks{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px;font-size:13px;color:var(--muted)}
+.ticks li::before{content:"✓";color:var(--live);margin-right:9px;font-weight:700}
+.ticks li.off{opacity:.5}
+.ticks li.off::before{content:"—";color:var(--faint)}
+
+/* --- Admin specifics --- */
+.review{display:grid;grid-template-columns:270px 1fr;gap:16px;align-items:start}
+.queue{background:var(--ink-800);border:1px solid var(--line);border-radius:var(--r-lg);padding:16px 14px;display:flex;flex-direction:column;gap:5px}
+.qitem{display:flex;flex-direction:column;align-items:flex-start;gap:3px;padding:11px;border-radius:11px;text-align:left;transition:.15s}
+.qitem:hover{background:rgba(255,255,255,.04)}
+.qitem.on{background:var(--accent-soft);box-shadow:inset 2px 0 0 var(--accent)}
+.qitem b{font-size:13px}
+.qitem span{font-size:11.5px;color:var(--faint)}
+.qitem i{margin-top:5px;font-style:normal}
+.reviewface{
+  height:220px;border-radius:12px;background:radial-gradient(120% 90% at 50% 20%,#2C2350,#141126 70%);
+  border:1px solid var(--line);display:flex;align-items:center;justify-content:center;position:relative;
+}
+.reviewface .clock{position:absolute;bottom:12px;right:14px;color:var(--muted);font-size:11.5px}
+.checks{display:flex;flex-direction:column;gap:11px;margin-top:14px}
+.check{display:flex;align-items:flex-start;gap:11px;font-size:13px;color:var(--muted);cursor:pointer}
+.check input{accent-color:var(--live);width:16px;height:16px;margin-top:1px}
+.check input:checked+span{color:var(--txt)}
+.daybar{position:relative;height:52px;margin-top:18px;border-radius:12px;background:var(--ink-900);border:1px solid var(--line)}
+.daybar i{position:absolute;top:50%;transform:translate(-50%,-50%);width:11px;height:11px;border-radius:50%;background:var(--live);box-shadow:0 0 0 5px rgba(61,220,151,.14)}
+.daybar i.cash{background:var(--free);box-shadow:0 0 0 5px rgba(255,210,63,.14)}
+.tick{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:7px;background:rgba(255,255,255,.05);color:var(--faint);font-size:12px}
+.tick.on{background:rgba(61,220,151,.14);color:var(--live)}
+.approve{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px dashed var(--line)}
+.approve:last-child{border-bottom:0}
+.verify{margin-top:14px;padding:13px;border-radius:var(--r);border:1px solid rgba(61,220,151,.3);background:rgba(61,220,151,.07)}
+.verify p{margin:9px 0 0;font-size:12.5px;color:var(--muted)}
+.verify b{color:var(--txt)}
+
+
+/* --- Live monitor flags --- */
+.flags{display:flex;flex-direction:column;gap:12px;margin-top:16px}
+.flag{padding:13px 15px;border-radius:var(--r);background:var(--ink-900);border:1px solid var(--line)}
+.flag p{margin:9px 0 0;font-size:12.5px;color:var(--muted)}
+
+/* --- Phase 2: contests --- */
+.contest.live{border-color:rgba(255,210,63,.3);background:linear-gradient(150deg,rgba(255,210,63,.07),transparent 55%),var(--ink-800)}
+.contest-art{width:88px;height:88px;border-radius:14px;flex:0 0 88px}
+.pot{text-align:right;min-width:130px}
+.pot-k{font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);display:block}
+.pot b{display:block;font-family:var(--display);font-size:26px;letter-spacing:-.03em;margin:5px 0 3px;color:var(--free)}
+.sharebox{margin-top:18px;padding:15px;border-radius:var(--r);background:var(--ink-900);border:1px solid var(--line);
+  display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.myrank{display:flex;gap:26px;margin-top:16px;padding-top:16px;border-top:1px dashed var(--line);flex-wrap:wrap}
+.rank-k{font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);display:block}
+.rank-v{display:block;font-size:20px;font-weight:700;margin-top:5px}
+.landing{margin-top:14px;border:1px solid var(--line);border-radius:16px;overflow:hidden;background:var(--ink-900)}
+.landing-art{height:120px}
+.landing-body{padding:15px}
+.landing-body b{display:block;font-size:15px;font-family:var(--display);letter-spacing:-.02em}
+
+/* --- Route theming --- */
+#app[data-route="brands"]{--accent:var(--brand);--accent-soft:rgba(124,92,255,.15)}
+#app[data-route="admin"]{--accent:var(--admin);--accent-soft:rgba(76,201,240,.14)}
+#app[data-route="brands"] .btn.primary,#app[data-route="admin"] .btn.primary{color:#0E0C16}
+
+/* --- Responsive --- */
+@media (max-width:1080px){
+  .split,.review{grid-template-columns:1fr}
+  .g4{grid-template-columns:repeat(2,1fr)}
+}
+@media (max-width:760px){
+  .app{grid-template-columns:1fr}
+  .side{border-right:0;border-bottom:1px solid var(--line)}
+  .nav.on{flex-direction:row;overflow-x:auto;gap:6px}
+  .nav-item{white-space:nowrap}
+  .side-foot,.side-label{display:none}
+  .stage{padding:20px 16px 60px}
+  .g2,.g3,.g4{grid-template-columns:1fr}
+  .balance{flex-direction:column;gap:18px}
+  .payday{border-left:0;border-top:1px solid var(--line);padding:16px 0 0}
+  .applybar{flex-direction:column}
+  .applybar .btn{margin-top:0!important;width:100%;justify-content:center}
+  .strip-left,.strip-right{display:none}
+  .chrome{flex-wrap:wrap;gap:12px}
+  .stamp{display:none}
+}
+</style>
+
+<script>
+(function(){
+  var app=document.getElementById('app'),
+      stage=document.getElementById('stage'),
+      urlbar=document.getElementById('urlbar'),
+      sideLabel=document.getElementById('sideLabel'),
+      sideNote=document.getElementById('sideNote');
+
+  var first={viewer:'v-watch',brands:'b-dash',admin:'a-monitor'};
+  var labels={viewer:'Viewer',brands:'Brand',admin:'Admin'};
+  var notes={
+    viewer:"Nothing a viewer wins ever expires. Codes are first-come, first-served — anywhere in the world.",
+    brands:"One video, sixty seconds. Every ad is reviewed by a person before it reaches the board.",
+    admin:"Ads go live without approval. Everything you take down, load or pay out is written to an audit log with your name on it."
+  };
+  var paths={
+    'v-watch':'watch','v-promote':'promote','v-freebies':'freebies','v-wallet':'wallet','v-market':'marketplace','v-profile':'profile',
+    'b-dash':'brands','b-contest':'brands/contests','b-new':'brands/campaigns/new','b-analytics':'brands/audience','b-billing':'brands/billing',
+    'a-monitor':'admin/monitor','a-contest':'admin/contests','a-prizes':'admin/freebies','a-payouts':'admin/payouts',
+    'a-permissions':'admin/roles','a-fraud':'admin/abuse'
+  };
+
+  function show(id){
+    stage.querySelectorAll('.screen').forEach(function(s){s.classList.toggle('on',s.dataset.screen===id)});
+    document.querySelectorAll('.nav-item').forEach(function(n){
+      if(n.dataset.goto===id){n.setAttribute('aria-current','true')}else{n.removeAttribute('aria-current')}
+    });
+    urlbar.textContent='freebiz.app / '+(paths[id]||'');
+    stage.scrollIntoView({block:'start',behavior:'smooth'});
+  }
+
+  document.querySelectorAll('.route-tab').forEach(function(t){
+    t.addEventListener('click',function(){
+      var r=t.dataset.route;
+      app.dataset.route=r;
+      document.querySelectorAll('.route-tab').forEach(function(x){x.setAttribute('aria-selected',String(x===t))});
+      document.querySelectorAll('.nav').forEach(function(n){n.classList.toggle('on',n.dataset.nav===r)});
+      sideLabel.textContent=labels[r]; sideNote.textContent=notes[r];
+      show(first[r]);
+    });
+  });
+
+  document.addEventListener('click',function(e){
+    var el=e.target.closest('[data-goto]');
+    if(el) show(el.dataset.goto);
+    var q=e.target.closest('.qitem');
+    if(q){document.querySelectorAll('.qitem').forEach(function(x){x.classList.remove('on')});q.classList.add('on')}
+    var tier=e.target.closest('.tier');
+    if(tier){document.querySelectorAll('.tier').forEach(function(x){x.classList.remove('on')});tier.classList.add('on')}
+  });
+})();
+</script>
+</body>
+</html>
