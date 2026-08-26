@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Freebiz — Mark Concepts</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink-900:#0E0C16;--ink-800:#14111F;--ink-700:#1C1830;
+  --line:rgba(255,255,255,.09);--line-2:rgba(255,255,255,.16);
+  --txt:#EFECF7;--muted:#9C96B8;--faint:#6E688A;
+  --free:#FFD23F;--brand:#7C5CFF;--live:#3DDC97;--spent:#FF4D5E;--admin:#4CC9F0;
+  --display:'Bricolage Grotesque','Inter Tight',system-ui,sans-serif;
+  --body:'Inter Tight',system-ui,sans-serif;--mono:'JetBrains Mono',ui-monospace,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(1000px 560px at 82% -6%,rgba(124,92,255,.15),transparent 60%),var(--ink-900);
+  color:var(--txt);font-family:var(--body);font-size:14px;line-height:1.55;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1080px;margin:0 auto;padding:52px 28px 100px}
+h1,h2,h3{font-family:var(--display);font-weight:800;letter-spacing:-.03em;margin:0}
+h1{font-size:42px;line-height:1.05}h2{font-size:22px}h3{font-size:16px}
+p{margin:0}
+.eyebrow{font-family:var(--mono);font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--faint)}
+.lede{color:var(--muted);font-size:16px;max-width:64ch;margin-top:14px}
+.note{color:var(--muted);font-size:13px;margin-top:8px}
+.concept{margin-top:28px;background:var(--ink-800);border:1px solid var(--line);border-radius:24px;overflow:hidden}
+.concept.pick{border-color:rgba(61,220,151,.4);box-shadow:0 0 0 1px rgba(61,220,151,.12)}
+.chead{display:flex;align-items:center;gap:14px;padding:20px 24px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.chead .no{font-family:var(--mono);font-size:11px;color:var(--faint);letter-spacing:.14em}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:4px 11px;border-radius:999px;font-size:11.5px;font-weight:600;
+  border:1px solid var(--line-2);color:var(--muted)}
+.pill.rec{color:var(--live);border-color:rgba(61,220,151,.4);background:rgba(61,220,151,.1)}
+.cbody{display:grid;grid-template-columns:250px 1fr;gap:0}
+.canvas{display:grid;place-items:center;padding:36px 20px;background:
+  linear-gradient(45deg,rgba(255,255,255,.02) 25%,transparent 25%,transparent 75%,rgba(255,255,255,.02) 75%) 0 0/16px 16px,
+  linear-gradient(45deg,rgba(255,255,255,.02) 25%,transparent 25%,transparent 75%,rgba(255,255,255,.02) 75%) 8px 8px/16px 16px,
+  var(--ink-900);
+  border-right:1px solid var(--line)}
+.cinfo{padding:24px}
+.sizes{display:flex;align-items:flex-end;gap:18px;margin-top:18px;padding-top:18px;border-top:1px dashed var(--line)}
+.sizes .cap{font-family:var(--mono);font-size:9px;color:var(--faint);display:block;text-align:center;margin-top:6px}
+.lockup{display:flex;align-items:center;gap:12px;margin-top:18px;padding:16px 18px;border-radius:14px;background:var(--ink-700)}
+.wordmark{font-family:var(--display);font-weight:800;letter-spacing:-.045em;line-height:1;font-size:26px;padding-bottom:2px}
+.dotless{position:relative}
+.dotless::after{content:"";position:absolute;left:50%;top:-.30em;transform:translateX(-50%);
+  width:.22em;height:.22em;border-radius:50%;background:var(--free)}
+.tests{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap}
+.tests div{width:54px;height:54px;border-radius:14px;display:grid;place-items:center}
+.t-light{background:#F3F1F7}.t-violet{background:var(--brand)}.t-ink{background:#000}.t-yellow{background:var(--free)}
+ul.why{margin:14px 0 0;padding-left:18px;color:var(--muted);font-size:13px;display:flex;flex-direction:column;gap:7px}
+ul.why b{color:var(--txt)}
+ul.why::marker{color:var(--brand)}
+@media(max-width:820px){.cbody{grid-template-columns:1fr}.canvas{border-right:0;border-bottom:1px solid var(--line)}h1{font-size:32px}}
+</style>
+</head>
+<body><div class="wrap">
+
+<p class="eyebrow">Freebiz · mark concepts · round two</p>
+<h1 style="margin-top:16px">Five marks, no letterforms</h1>
+<p class="lede">The first attempt put a white letter inside a violet rounded square, which is the single most occupied shape in social media. These five drop the letter entirely and build the mark out of what the product actually does: something valuable falls off a screen and somebody catches it. The wordmark stays as it was — lowercase, with the freebie as the dot on the <b>i</b>.</p>
+
+<!-- ============ 01 THE CATCH ============ -->
+<div class="concept pick">
+  <div class="chead">
+    <span class="no">01</span><h2>The Catch</h2>
+    <span class="pill rec">Recommended</span>
+    <span class="pill" style="margin-left:auto">Open form · no container</span>
+  </div>
+  <div class="cbody">
+    <div class="canvas">
+      <svg width="132" height="132" viewBox="0 0 48 48">
+        <path d="M13 21v4a11 11 0 0 0 22 0V13" fill="none" stroke="#7C5CFF" stroke-width="7" stroke-linecap="round"/>
+        <circle cx="24" cy="10" r="5" fill="#FFD23F"/>
+      </svg>
+    </div>
+    <div class="cinfo">
+      <h3>An open hand under a falling coin</h3>
+      <p class="note">A hook that opens upward, catching a yellow disc mid-drop. The right arm runs taller than the left, so the shape leans and feels like it's moving rather than sitting still. It is not enclosed in anything — which is precisely why it can't be mistaken for an app-store squircle.</p>
+      <ul class="why">
+        <li><b>It says the verb.</b> Freebiz is a catching game, and this is the only concept where the mark shows the act rather than the object.</li>
+        <li><b>Two elements, two colours.</b> Violet is the platform, yellow is the freebie. The same rule as the wordmark's dot, so the logo teaches the colour system.</li>
+        <li><b>Animatable.</b> The disc can drop into the cup on app launch and on every win — one asset, one motion, used everywhere.</li>
+      </ul>
+      <div class="lockup">
+        <svg width="32" height="32" viewBox="0 0 48 48"><path d="M13 21v4a11 11 0 0 0 22 0V13" fill="none" stroke="#7C5CFF" stroke-width="7" stroke-linecap="round"/><circle cx="24" cy="10" r="5" fill="#FFD23F"/></svg>
+        <span class="wordmark">freeb<span class="dotless">&#x131;</span>z</span>
+      </div>
+      <div class="sizes">
+        <div><svg width="48" height="48" viewBox="0 0 48 48"><path d="M13 21v4a11 11 0 0 0 22 0V13" fill="none" stroke="#7C5CFF" stroke-width="7" stroke-linecap="round"/><circle cx="24" cy="10" r="5" fill="#FFD23F"/></svg><span class="cap">48</span></div>
+        <div><svg width="28" height="28" viewBox="0 0 48 48"><path d="M13 21v4a11 11 0 0 0 22 0V13" fill="none" stroke="#7C5CFF" stroke-width="7" stroke-linecap="round"/><circle cx="24" cy="10" r="5" fill="#FFD23F"/></svg><span class="cap">28</span></div>
+        <div><svg width="16" height="16" viewBox="0 0 48 48"><path d="M13 21v4a11 11 0 0 0 22 0V13" fill="none" stroke="#7C5CFF" stroke-width="7" stroke-linecap="round"/><circle cx="24" cy="10" r="5" fill="#FFD23F"/></svg><span class="cap">16</span></div>
+      </div>
+      <div class="tests">
+        <div class="t-light"><svg width="30" height="30" viewBox="0 0 48 48"><path d="M13 21v4a11 11 0 0 0 22 0V13" fill="none" stroke="#7C5CFF" stroke-width="7" stroke-linecap="round"/><circle cx="24" cy="10" r="5" fill="#12101C"/></svg></div>
+        <div class="t-violet"><svg width="30" height="30" viewBox="0 0 48 48"><path d="M13 21v4a11 11 0 0 0 22 0V13" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round"/><circle cx="24" cy="10" r="5" fill="#FFD23F"/></svg></div>
+        <div class="t-ink"><svg width="30" height="30" viewBox="0 0 48 48"><path d="M13 21v4a11 11 0 0 0 22 0V13" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round"/><circle cx="24" cy="10" r="5" fill="#FFD23F"/></svg></div>
+        <div class="t-yellow"><svg width="30" height="30" viewBox="0 0 48 48"><path d="M13 21v4a11 11 0 0 0 22 0V13" fill="none" stroke="#12101C" stroke-width="7" stroke-linecap="round"/><circle cx="24" cy="10" r="5" fill="#12101C"/></svg></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 02 THE DROP ============ -->
+<div class="concept">
+  <div class="chead"><span class="no">02</span><h2>The Drop</h2><span class="pill" style="margin-left:auto">Landscape · screen-shaped</span></div>
+  <div class="cbody">
+    <div class="canvas">
+      <svg width="150" height="132" viewBox="0 0 56 48">
+        <rect x="4" y="13" width="40" height="26" rx="6" fill="none" stroke="#7C5CFF" stroke-width="5"/>
+        <circle cx="45" cy="11" r="6" fill="#FFD23F"/>
+      </svg>
+    </div>
+    <div class="cinfo">
+      <h3>The board, with something falling off the corner</h3>
+      <p class="note">A 16:9 outline — the billboard itself — and a yellow disc breaking away from the top-right corner, half in and half out. The mark is wider than it is tall, so it can never be confused with the square social icons it sits beside on a phone home screen.</p>
+      <ul class="why">
+        <li><b>Literal and instantly legible.</b> People understand "screen" before they understand any abstraction.</li>
+        <li><b>The corner break is the memorable bit.</b> The disc crossing the frame edge is what makes it a logo instead of a rectangle.</li>
+        <li><b>Trade-off:</b> outlined rectangles are common in media brands, so it is the safest and least distinctive of the five.</li>
+      </ul>
+      <div class="lockup">
+        <svg width="38" height="33" viewBox="0 0 56 48"><rect x="4" y="13" width="40" height="26" rx="6" fill="none" stroke="#7C5CFF" stroke-width="5"/><circle cx="45" cy="11" r="6" fill="#FFD23F"/></svg>
+        <span class="wordmark">freeb<span class="dotless">&#x131;</span>z</span>
+      </div>
+      <div class="sizes">
+        <div><svg width="56" height="48" viewBox="0 0 56 48"><rect x="4" y="13" width="40" height="26" rx="6" fill="none" stroke="#7C5CFF" stroke-width="5"/><circle cx="45" cy="11" r="6" fill="#FFD23F"/></svg><span class="cap">48</span></div>
+        <div><svg width="33" height="28" viewBox="0 0 56 48"><rect x="4" y="13" width="40" height="26" rx="6" fill="none" stroke="#7C5CFF" stroke-width="5"/><circle cx="45" cy="11" r="6" fill="#FFD23F"/></svg><span class="cap">28</span></div>
+        <div><svg width="19" height="16" viewBox="0 0 56 48"><rect x="4" y="13" width="40" height="26" rx="6" fill="none" stroke="#7C5CFF" stroke-width="5"/><circle cx="45" cy="11" r="6" fill="#FFD23F"/></svg><span class="cap">16</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 03 THE TEAR ============ -->
+<div class="concept">
+  <div class="chead"><span class="no">03</span><h2>The Tear</h2><span class="pill" style="margin-left:auto">Ticket · perforation</span></div>
+  <div class="cbody">
+    <div class="canvas">
+      <svg width="168" height="120" viewBox="0 0 70 50">
+        <defs><mask id="tear">
+          <rect x="4" y="13" width="62" height="24" rx="7" fill="#fff"/>
+          <circle cx="35" cy="13" r="5" fill="#000"/><circle cx="35" cy="37" r="5" fill="#000"/>
+        </mask></defs>
+        <rect x="4" y="13" width="62" height="24" rx="7" fill="#7C5CFF" mask="url(#tear)"/>
+        <line x1="35" y1="21" x2="35" y2="29" stroke="#0E0C16" stroke-width="2.4" stroke-linecap="round" stroke-dasharray="0.1 4.5"/>
+        <circle cx="53" cy="25" r="5" fill="#FFD23F"/>
+      </svg>
+    </div>
+    <div class="cinfo">
+      <h3>One ticket, torn between two people</h3>
+      <p class="note">A single ticket bitten at the top and bottom, with a dotted tear line down the middle: the brand keeps one half, the viewer keeps the other. The yellow disc sits on the viewer's side. It is the only concept that shows the <i>deal</i> — attention going one way, a freebie coming back the other.</p>
+      <ul class="why">
+        <li><b>Nigerian shorthand.</b> Perforated stubs and scratch panels are the everyday material of recharge cards and raffle books.</li>
+        <li><b>Strong horizontally.</b> Excellent on a header, a banner, or the side of a flier.</li>
+        <li><b>Trade-off:</b> the dotted tear closes up below about 24px — you'd ship a simplified two-block version for the favicon.</li>
+      </ul>
+      <div class="lockup">
+        <svg width="46" height="33" viewBox="0 0 70 50"><defs><mask id="tear2"><rect x="4" y="13" width="62" height="24" rx="7" fill="#fff"/><circle cx="35" cy="13" r="5" fill="#000"/><circle cx="35" cy="37" r="5" fill="#000"/></mask></defs><rect x="4" y="13" width="62" height="24" rx="7" fill="#7C5CFF" mask="url(#tear2)"/><line x1="35" y1="21" x2="35" y2="29" stroke="#1C1830" stroke-width="2.4" stroke-linecap="round" stroke-dasharray="0.1 4.5"/><circle cx="53" cy="25" r="5" fill="#FFD23F"/></svg>
+        <span class="wordmark">freeb<span class="dotless">&#x131;</span>z</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 04 THE TICKER ============ -->
+<div class="concept">
+  <div class="chead"><span class="no">04</span><h2>The Ticker</h2><span class="pill" style="margin-left:auto">Derived from the z</span></div>
+  <div class="cbody">
+    <div class="canvas">
+      <svg width="132" height="132" viewBox="0 0 48 48">
+        <path d="M14 33h20" fill="none" stroke="#7C5CFF" stroke-width="7" stroke-linecap="round"/>
+        <path d="M34 15L14 33" fill="none" stroke="#7C5CFF" stroke-width="7" stroke-linecap="round"/>
+        <path d="M14 15h20" fill="none" stroke="#FFD23F" stroke-width="7" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div class="cinfo">
+      <h3>The strips that carry the codes</h3>
+      <p class="note">Three strokes, built from the last letter of the name. The top strip is yellow because that is where the freebie codes live on the real board; the diagonal is the drop, and the bottom bar is the apply field catching it. It reads as a <b>z</b>, as a lightning bolt, and as a ticker — all three are on-brief.</p>
+      <ul class="why">
+        <li><b>Ties the mark to the interface.</b> The billboard's perimeter strips are the product's most distinctive UI element, and this is that element compressed into a glyph.</li>
+        <li><b>Excellent at tiny sizes.</b> Three heavy strokes with round caps survive a 16px favicon better than any other option here.</li>
+        <li><b>Trade-off:</b> a bold z can read as a generic "zap" energy mark unless the yellow-over-violet split is preserved exactly.</li>
+      </ul>
+      <div class="lockup">
+        <svg width="32" height="32" viewBox="0 0 48 48"><path d="M14 33h20" fill="none" stroke="#7C5CFF" stroke-width="7" stroke-linecap="round"/><path d="M34 15L14 33" fill="none" stroke="#7C5CFF" stroke-width="7" stroke-linecap="round"/><path d="M14 15h20" fill="none" stroke="#FFD23F" stroke-width="7" stroke-linecap="round"/></svg>
+        <span class="wordmark">freeb<span class="dotless">&#x131;</span>z</span>
+      </div>
+      <div class="sizes">
+        <div><svg width="48" height="48" viewBox="0 0 48 48"><path d="M14 33h20" fill="none" stroke="#7C5CFF" stroke-width="7" stroke-linecap="round"/><path d="M34 15L14 33" fill="none" stroke="#7C5CFF" stroke-width="7" stroke-linecap="round"/><path d="M14 15h20" fill="none" stroke="#FFD23F" stroke-width="7" stroke-linecap="round"/></svg><span class="cap">48</span></div>
+        <div><svg width="28" height="28" viewBox="0 0 48 48"><path d="M14 33h20" fill="none" stroke="#7C5CFF" stroke-width="7" stroke-linecap="round"/><path d="M34 15L14 33" fill="none" stroke="#7C5CFF" stroke-width="7" stroke-linecap="round"/><path d="M14 15h20" fill="none" stroke="#FFD23F" stroke-width="7" stroke-linecap="round"/></svg><span class="cap">28</span></div>
+        <div><svg width="16" height="16" viewBox="0 0 48 48"><path d="M14 33h20" fill="none" stroke="#7C5CFF" stroke-width="7" stroke-linecap="round"/><path d="M34 15L14 33" fill="none" stroke="#7C5CFF" stroke-width="7" stroke-linecap="round"/><path d="M14 15h20" fill="none" stroke="#FFD23F" stroke-width="7" stroke-linecap="round"/></svg><span class="cap">16</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 05 THE SPLIT ============ -->
+<div class="concept">
+  <div class="chead"><span class="no">05</span><h2>The Split</h2><span class="pill" style="margin-left:auto">Circular · two halves</span></div>
+  <div class="cbody">
+    <div class="canvas">
+      <svg width="132" height="132" viewBox="0 0 48 48">
+        <defs><clipPath id="lhs"><polygon points="0,0 30,0 18,48 0,48"/></clipPath>
+              <clipPath id="rhs"><polygon points="34,0 48,0 48,48 22,48"/></clipPath></defs>
+        <circle cx="24" cy="24" r="18" fill="#7C5CFF" clip-path="url(#lhs)"/>
+        <circle cx="24" cy="24" r="18" fill="#FFD23F" clip-path="url(#rhs)"/>
+      </svg>
+    </div>
+    <div class="cinfo">
+      <h3>Split down the middle, shared</h3>
+      <p class="note">A disc cut by a diagonal gap into a violet half and a yellow half — the platform's side and the viewer's side of the same coin, pulled slightly apart. No outline, no container, no letter. It is the simplest mark here and the one that will still be recognisable when it is three millimetres tall on a sticker.</p>
+      <ul class="why">
+        <li><b>Pure geometry.</b> Nothing to render wrong, nothing to age, no typeface dependency.</li>
+        <li><b>The gap does the work.</b> The negative diagonal is what makes it read as "shared" rather than as a pie chart.</li>
+        <li><b>Trade-off:</b> the most abstract of the five. It needs the wordmark beside it for a while before it can stand alone.</li>
+      </ul>
+      <div class="lockup">
+        <svg width="32" height="32" viewBox="0 0 48 48"><defs><clipPath id="lhs2"><polygon points="0,0 30,0 18,48 0,48"/></clipPath><clipPath id="rhs2"><polygon points="34,0 48,0 48,48 22,48"/></clipPath></defs><circle cx="24" cy="24" r="18" fill="#7C5CFF" clip-path="url(#lhs2)"/><circle cx="24" cy="24" r="18" fill="#FFD23F" clip-path="url(#rhs2)"/></svg>
+        <span class="wordmark">freeb<span class="dotless">&#x131;</span>z</span>
+      </div>
+      <div class="sizes">
+        <div><svg width="48" height="48" viewBox="0 0 48 48"><defs><clipPath id="lhs3"><polygon points="0,0 30,0 18,48 0,48"/></clipPath><clipPath id="rhs3"><polygon points="34,0 48,0 48,48 22,48"/></clipPath></defs><circle cx="24" cy="24" r="18" fill="#7C5CFF" clip-path="url(#lhs3)"/><circle cx="24" cy="24" r="18" fill="#FFD23F" clip-path="url(#rhs3)"/></svg><span class="cap">48</span></div>
+        <div><svg width="28" height="28" viewBox="0 0 48 48"><defs><clipPath id="lhs4"><polygon points="0,0 30,0 18,48 0,48"/></clipPath><clipPath id="rhs4"><polygon points="34,0 48,0 48,48 22,48"/></clipPath></defs><circle cx="24" cy="24" r="18" fill="#7C5CFF" clip-path="url(#lhs4)"/><circle cx="24" cy="24" r="18" fill="#FFD23F" clip-path="url(#rhs4)"/></svg><span class="cap">28</span></div>
+        <div><svg width="16" height="16" viewBox="0 0 48 48"><defs><clipPath id="lhs5"><polygon points="0,0 30,0 18,48 0,48"/></clipPath><clipPath id="rhs5"><polygon points="34,0 48,0 48,48 22,48"/></clipPath></defs><circle cx="24" cy="24" r="18" fill="#7C5CFF" clip-path="url(#lhs5)"/><circle cx="24" cy="24" r="18" fill="#FFD23F" clip-path="url(#rhs5)"/></svg><span class="cap">16</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div style="margin-top:34px;padding:22px 24px;border:1px solid rgba(61,220,151,.3);border-radius:22px;background:rgba(61,220,151,.06)">
+  <h3>Which one to ship</h3>
+  <p class="note"><b>The Catch (01)</b> — it names the verb, it carries the colour rule, it animates for free, and no major platform owns an open upward hook. <b>The Ticker (04)</b> is the strongest backup and the best pure favicon. Everything else in the mockups already works with any of the five: the mark is a single SVG swap.</p>
+</div>
+
+</div></body></html>

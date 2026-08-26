@@ -115,6 +115,12 @@ export function Header() {
                   Marketplace
                 </Link>
               </>
+            ) : isMounted && userType === "admin" ? (
+              <Link
+                href={routes.ADMIN.CAMPAIGNS}
+                className="text-white hover:text-secondary font-medium transition-colors">
+                Campaigns
+              </Link>
             ) : (
               <>
                 <Link
@@ -287,13 +293,6 @@ export function Header() {
                     onClick={closeMobileMenu}>
                     Claims
                   </Link>
-                  {/* <Link
-                    href={routes.USER.BADGES}
-                    className="block text-white hover:text-secondary hover:bg-white/5 py-3 px-2 rounded-md transition-colors"
-                    onClick={closeMobileMenu}
-                  >
-                    Badges
-                  </Link> */}
                   <Link
                     href={routes.USER.PROFILE}
                     className="block text-white hover:text-secondary hover:bg-white/5 py-3 px-2 rounded-md transition-colors"
@@ -353,6 +352,23 @@ export function Header() {
                       </button>
                     </div>
                   )}
+                </>
+              ) : isMounted && userType === "admin" ? (
+                <>
+                  <Link
+                    href={routes.ADMIN.CAMPAIGNS}
+                    className="block text-white hover:text-secondary hover:bg-white/5 py-3 px-2 rounded-md transition-colors"
+                    onClick={closeMobileMenu}>
+                    Campaigns
+                  </Link>
+                  <div className="border-t border-white/10 pt-4 space-y-2">
+                    <button
+                      onClick={handleLogout}
+                      className="flex items-center text-red-400 hover:text-red-300 hover:bg-red-500/10 py-3 px-2 rounded-md transition-colors w-full">
+                      <LogOut className="h-4 w-4 mr-2" />
+                      Logout
+                    </button>
+                  </div>
                 </>
               ) : (
                 <>

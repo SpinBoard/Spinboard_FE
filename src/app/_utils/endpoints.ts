@@ -18,8 +18,9 @@ export const ENDPOINTS = {
   REFERRALS_MY_STATS: (month?: string) =>
     month ? `/referrals/my-stats?month=${month}` : `/referrals/my-stats`,
 
-  // Authenticated user profile (includes referral analytics)
-  USER_ME: "/user/me",
+  // Cached session user (auth required, works for any role) — used to build
+  // the admin session, since there's no role-specific GET /profile/admin.
+  USER_ME: "/me",
 
   // User settings
   SETTINGS: "/settings",

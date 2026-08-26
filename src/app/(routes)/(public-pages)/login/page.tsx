@@ -51,7 +51,13 @@ function LoginForm() {
 
   useEffect(() => {
     if (user) {
-      router.push(user.userType === "gamer" ? routes.USER.DASHBOARD : routes.BRAND.DASHBOARD);
+      router.push(
+        user.userType === "gamer"
+          ? routes.USER.DASHBOARD
+          : user.userType === "admin"
+            ? routes.ADMIN.CAMPAIGNS
+            : routes.BRAND.DASHBOARD
+      );
     }
   }, [user, router]);
 
@@ -73,7 +79,12 @@ function LoginForm() {
       setUser(userData);
       toast.success("Success", { description: "Login successful!" });
       router.push(
-        returnTo || (dashboardRoute === "gamer" ? routes.USER.DASHBOARD : routes.BRAND.DASHBOARD)
+        returnTo ||
+          (dashboardRoute === "gamer"
+            ? routes.USER.DASHBOARD
+            : dashboardRoute === "admin"
+              ? routes.ADMIN.CAMPAIGNS
+              : routes.BRAND.DASHBOARD)
       );
     },
   });
