@@ -1,34 +1,24 @@
 'use client'
 
 import { useState } from 'react'
-import { MainLayout } from '@/components/layout/main-layout'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import { Card } from '@/components/ui/freebiz-card'
+import { Field } from '@/components/ui/freebiz-field'
+import { Input } from '@/components/ui/freebiz-input'
+import { Button } from '@/components/ui/freebiz-button'
+import { Pill } from '@/components/ui/freebiz-pill'
+import { Avatar } from '@/components/ui/freebiz-avatar'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import {
-  User,
   Camera,
   Save,
-  ArrowLeft,
   Edit,
-  CheckCircle,
   Upload,
-  Loader2
+  Loader2,
+  User
 } from 'lucide-react'
-import Link from 'next/link'
-import { routes } from '@/app/_utils/routes'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { GamerProfileData, GamerSex } from '@/types'
-import axios from 'axios'
-import { endpointUrl } from '@/app/_utils/helper'
+import { ViewerProfileData, ViewerSex } from '@/types'
+import { api } from '@/lib/api'
+import { apiErrorMessage } from '@/app/_utils/helper'
 import { ENDPOINTS } from '@/app/_utils/endpoints'
 import { useAtomValue, useSetAtom } from 'jotai'
 import { userAtom } from '@/atom/user'
@@ -37,33 +27,40 @@ import { PageError } from '@/components/ui/page-error'
 import Image from 'next/image'
 import { toast } from 'sonner'
 
+const initials = (firstName: string, lastName: string) =>
+  `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase()
+
+// design/freebiz-mockup.html data-screen="v-profile", "Your details" card
+// only — DECISIONS.md originally kept referrals on their own route, since
+// removed entirely 2026-08-29 (feature cut on both frontend and backend).
+// The mockup's "Bank for payouts" field is still dropped — bank details
+// live on /user/wallet, not here. "Phone" IS now real (§2 Revamp 6,
+// settable via PUT /profile/viewer, display/contact only, never used for
+// auth) and is restored as an editable field alongside the rest.
 export default function ProfilePage() {
   const user = useAtomValue(userAtom)
   const setUser = useSetAtom(userAtom);
   const queryClient = useQueryClient()
-  
+
   // Form states
   const [isEditing, setIsEditing] = useState(false)
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [username, setUsername] = useState('')
   const [age, setAge] = useState('')
-  const [sex, setSex] = useState<GamerSex | ''>('')
+  const [sex, setSex] = useState<ViewerSex | ''>('')
   const [country, setCountry] = useState('')
   const [state, setState] = useState('')
   const [city, setCity] = useState('')
+  const [phone, setPhone] = useState('')
   const [avatarPreview, setAvatarPreview] = useState<string>('')
   const [isSaving, setIsSaving] = useState(false)
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false)
 
   // Fetch user profile data
-  const { data: profileData, error: profileError, isLoading: loadingProfile } = useQuery<GamerProfileData>({
+  const { data: profileData, error: profileError, isLoading: loadingProfile } = useQuery<ViewerProfileData>({
     queryKey: ["profile"],
-    queryFn: () => axios.get(endpointUrl(`${ENDPOINTS.GAMER_PROFILE}`), {
-      headers: {
-        Authorization: `Bearer ${user?.accessToken}`,
-      },
-    }).then((res) => {
+    queryFn: () => api.get(ENDPOINTS.VIEWER_PROFILE).then((res) => {
       const profile = res.data.profile
       // Initialize form data when profile loads
       setFirstName(profile.firstName || '')
@@ -74,6 +71,7 @@ export default function ProfilePage() {
       setCountry(profile.country || '')
       setState(profile.state || '')
       setCity(profile.city || '')
+      setPhone(profile.phone || '')
       setAvatarPreview(profile.avatar || '')
       return profile
     }),
@@ -87,20 +85,17 @@ export default function ProfilePage() {
       lastName: string;
       username: string;
       age?: number;
-      sex?: GamerSex;
+      sex?: ViewerSex;
       country?: string;
       state?: string;
       city?: string;
+      phone?: string;
       avatar?: string;
     }) => {
-      return axios.put(endpointUrl(ENDPOINTS.UPDATE_PROFILE), profileData, {
-        headers: {
-          Authorization: `Bearer ${user?.accessToken}`,
-        },
-      });
+      return api.put(ENDPOINTS.UPDATE_PROFILE, profileData);
     },
-    onSuccess: (response: any) => {
-      const profileData: GamerProfileData = response.data.profile
+    onSuccess: (response) => {
+      const profileData: ViewerProfileData = response.data.profile
       queryClient.invalidateQueries({ queryKey: ["profile"] });
       setIsEditing(false);
       toast.success("Profile updated successfully!");
@@ -118,9 +113,9 @@ export default function ProfilePage() {
         });
       }
     },
-    onError: (error: any) => {
+    onError: (error) => {
       console.error('Failed to update profile:', error);
-      toast.error(error.response?.data?.message || "Failed to update profile. Please try again.");
+      toast.error(apiErrorMessage(error, "Failed to update profile. Please try again."));
     },
   })
 
@@ -129,19 +124,16 @@ export default function ProfilePage() {
     mutationFn: async (file: File) => {
       const formData = new FormData();
       formData.append('avatar', file);
-      
-      return axios.put(endpointUrl(ENDPOINTS.UPDATE_PROFILE), formData, {
-        headers: {
-          Authorization: `Bearer ${user?.accessToken}`,
-          'Content-Type': 'multipart/form-data',
-        },
+
+      return api.put(ENDPOINTS.UPDATE_PROFILE, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
       });
     },
-    onSuccess: (response: any) => {
-      const profileData: GamerProfileData = response.data.profile
+    onSuccess: (response) => {
+      const profileData: ViewerProfileData = response.data.profile
       queryClient.invalidateQueries({ queryKey: ["profile"] });
       toast.success("Profile picture updated successfully!");
-      
+
       // Update user atom with new avatar
       if (user) {
         setUser({
@@ -151,9 +143,9 @@ export default function ProfilePage() {
       }
       setIsUploadingAvatar(false);
     },
-    onError: (error: any) => {
+    onError: (error) => {
       console.error('Failed to upload avatar:', error);
-      toast.error(error.response?.data?.message || "Failed to upload profile picture. Please try again.");
+      toast.error(apiErrorMessage(error, "Failed to upload profile picture. Please try again."));
       setIsUploadingAvatar(false);
     },
   })
@@ -184,14 +176,14 @@ export default function ProfilePage() {
       setIsUploadingAvatar(true)
       uploadAvatarMutation.mutate(file)
     }
-    
+
     // Clear the input so the same file can be selected again if needed
     event.target.value = ''
   }
 
   const handleSave = async () => {
     setIsSaving(true)
-    
+
     try {
       // Prepare profile data for submission (excluding avatar)
       const profileUpdateData: {
@@ -199,10 +191,11 @@ export default function ProfilePage() {
         lastName: string;
         username: string;
         age?: number;
-        sex?: GamerSex;
+        sex?: ViewerSex;
         country?: string;
         state?: string;
         city?: string;
+        phone?: string;
       } = {
         firstName: firstName.trim(),
         lastName: lastName.trim(),
@@ -221,6 +214,7 @@ export default function ProfilePage() {
       if (country.trim()) profileUpdateData.country = country.trim();
       if (state.trim()) profileUpdateData.state = state.trim();
       if (city.trim()) profileUpdateData.city = city.trim();
+      if (phone.trim()) profileUpdateData.phone = phone.trim();
 
       await updateProfileMutation.mutateAsync(profileUpdateData);
     } catch (error) {
@@ -241,17 +235,18 @@ export default function ProfilePage() {
       setCountry(profileData.country || '')
       setState(profileData.state || '')
       setCity(profileData.city || '')
+      setPhone(profileData.phone || '')
     }
     setIsEditing(false)
   }
 
   if (loadingProfile) {
-    return <PageLoader message="Loading profile..." />
+    return <PageLoader withLayout={false} message="Loading profile..." />
   }
 
   if (profileError) {
     return (
-      <PageError 
+      <PageError withLayout={false}
         title="Failed to Load Profile"
         message="Unable to load your profile data. Please check your connection and try again."
       />
@@ -259,369 +254,209 @@ export default function ProfilePage() {
   }
 
   return (
-    <MainLayout>
-      <div className="space-y-8">
-        {/* Page Header */}
-        <div className="flex items-center gap-4">
-          <Link href={routes.USER.DASHBOARD}>
-            <Button variant="outline" size="icon" className="border-white/20 text-white/70 hover:bg-white/90">
-              <ArrowLeft className="h-4 w-4" />
+    <div className="space-y-4">
+      <div>
+        <p
+          style={{
+            fontFamily: "var(--mono)",
+            fontSize: 10.5,
+            letterSpacing: "0.1em",
+            textTransform: "uppercase",
+            color: "var(--faint)",
+          }}>
+          Viewers / Profile
+        </p>
+        <h1
+          className="mt-1"
+          style={{ fontFamily: "var(--display)", fontWeight: 800, fontSize: 27, letterSpacing: "-0.02em", color: "var(--txt)" }}>
+          Your profile
+        </h1>
+        <p className="mt-1" style={{ color: "var(--muted)", fontSize: 13.5 }}>
+          Your details help brands understand who is watching. They never see your name.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_2fr] gap-4 items-start">
+        <Card>
+          <h3 style={{ fontFamily: "var(--display)", fontSize: 15, color: "var(--txt)" }}>Profile picture</h3>
+          <div className="mt-3 flex flex-col items-center">
+            <div className="relative group w-28 h-28">
+              <div className="w-28 h-28 rounded-full overflow-hidden flex items-center justify-center" style={{ background: "var(--ink-900)", border: "3px solid var(--line-2)" }}>
+                {avatarPreview ? (
+                  <Image
+                    src={avatarPreview}
+                    alt="Profile"
+                    width={112}
+                    height={112}
+                    unoptimized
+                    className="w-full h-full object-cover"
+                  />
+                ) : firstName || lastName ? (
+                  <Avatar initials={initials(firstName, lastName)} style={{ width: "100%", height: "100%", fontSize: 28 }} />
+                ) : (
+                  <User className="h-12 w-12" style={{ color: "var(--faint)" }} />
+                )}
+              </div>
+              <label className="absolute inset-0 flex items-center justify-center rounded-full cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity" style={{ background: "rgba(0,0,0,.6)" }}>
+                <Camera className="h-6 w-6" style={{ color: "var(--txt)" }} />
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleAvatarChange}
+                  className="hidden"
+                  disabled={isUploadingAvatar}
+                />
+              </label>
+            </div>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleAvatarChange}
+              className="hidden"
+              id="avatar-file-input"
+              disabled={isUploadingAvatar}
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              className="w-full justify-center mt-4"
+              onClick={() => document.getElementById('avatar-file-input')?.click()}
+              disabled={isUploadingAvatar}
+            >
+              {isUploadingAvatar ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Uploading...
+                </>
+              ) : (
+                <>
+                  <Upload className="h-4 w-4" />
+                  Upload new photo
+                </>
+              )}
             </Button>
-          </Link>
-          <div>
-            <h1 className="text-3xl font-bold text-white font-fredoka">
-              Profile Settings
-            </h1>
-            <p className="text-white/70">
-              Update your personal information and avatar
+          </div>
+
+          <div className="mt-4 pt-4 space-y-2" style={{ borderTop: "1px solid var(--line)" }}>
+            <Pill tone={profileData?.isVerified ? "live" : "warn"} dot>
+              {profileData?.isVerified ? "Verified" : "Unverified"}
+            </Pill>
+            <Pill tone={profileData?.profileComplete ? "live" : "warn"} dot>
+              {profileData?.profileComplete ? "Profile complete" : "Profile incomplete"}
+            </Pill>
+            <p className="fb-hint">
+              {profileData?.profileComplete
+                ? "Your profile is complete — you can claim freebie codes on the board."
+                : "Add your age, sex, country, state and city to unlock claiming freebie codes."}
             </p>
           </div>
-        </div>
+        </Card>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Avatar Section */}
-          <Card className="bg-card/50 backdrop-blur-sm border-white/10">
-            <CardHeader>
-              <CardTitle className="text-white font-fredoka text-lg flex items-center gap-2">
-                <Camera className="h-5 w-5 text-secondary" />
-                Profile Picture
-              </CardTitle>
-              <CardDescription className="text-white/70">
-                Upload a new avatar or keep your current one
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex flex-col items-center">
-                <div className="relative group">
-                  <div className="w-32 h-32 rounded-full overflow-hidden bg-white/90 border-4 border-white/20 flex items-center justify-center">
-                    {avatarPreview ? (
-                      <Image
-                        src={avatarPreview}
-                        alt="Profile"
-                        width={128}
-                        height={128}
-                        unoptimized
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <User className="h-16 w-16 text-white/60" />
-                    )}
-                  </div>
-                  <label className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-full cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Camera className="h-8 w-8 text-white" />
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleAvatarChange}
-                      className="hidden"
-                      disabled={isUploadingAvatar}
-                    />
-                  </label>
-                </div>
-                <div className="mt-4 w-full">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleAvatarChange}
-                    className="hidden"
-                    id="avatar-file-input"
-                    disabled={isUploadingAvatar}
-                  />
-                  <Button 
-                    type="button"
-                    variant="outline" 
-                    className="w-full border-white/20 text-white/70 hover:bg-white/90"
-                    onClick={() => document.getElementById('avatar-file-input')?.click()}
-                    disabled={isUploadingAvatar}
-                  >
-                    {isUploadingAvatar ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin text-white/70" />
-                        Uploading...
-                      </>
-                    ) : (
-                      <>
-                        <Upload className="h-4 w-4 mr-2" />
-                        Upload New Photo
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Profile Information */}
-          <div className="lg:col-span-2">
-            <Card className="bg-card/50 backdrop-blur-sm border-white/10">
-              <CardHeader>
-                <div className="flex items-center justify-between flex-wrap gap-2">
-                  <div>
-                    <CardTitle className="text-white font-fredoka text-lg flex items-center gap-2">
-                      <User className="h-5 w-5 text-secondary" />
-                      Personal Information
-                    </CardTitle>
-                    <CardDescription className="text-white/70">
-                      Update your name and username
-                    </CardDescription>
-                  </div>
-                  {!isEditing && (
-                    <Button 
-                      onClick={() => setIsEditing(true)}
-                      variant="outline" 
-                      className="border-white/20 text-white/70 hover:bg-white/90"
-                    >
-                      <Edit className="h-4 w-4 mr-2" />
-                      Edit Profile
-                    </Button>
-                  )}
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* First Name */}
-                  <div className="space-y-2">
-                    <Label htmlFor="firstName" className="text-white font-medium">
-                      First Name
-                    </Label>
-                    <Input
-                      id="firstName"
-                      type="text"
-                      value={firstName}
-                      onChange={(e) => setFirstName(e.target.value)}
-                      disabled={!isEditing}
-                      className="bg-white/5 border-white/20 text-white focus:ring-secondary focus:border-secondary placeholder:text-white/40 disabled:opacity-50"
-                      placeholder="Enter your first name"
-                    />
-                  </div>
-
-                  {/* Last Name */}
-                  <div className="space-y-2">
-                    <Label htmlFor="lastName" className="text-white font-medium">
-                      Last Name
-                    </Label>
-                    <Input
-                      id="lastName"
-                      type="text"
-                      value={lastName}
-                      onChange={(e) => setLastName(e.target.value)}
-                      disabled={!isEditing}
-                      className="bg-white/5 border-white/20 text-white focus:ring-secondary focus:border-secondary placeholder:text-white/40 disabled:opacity-50"
-                      placeholder="Enter your last name"
-                    />
-                  </div>
-                </div>
-
-                {/* Username */}
-                <div className="space-y-2">
-                  <Label htmlFor="username" className="text-white font-medium">
-                    Username
-                  </Label>
-                  <Input
-                    id="username"
-                    type="text"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    disabled={!isEditing}
-                    className="bg-white/5 border-white/20 text-white focus:ring-secondary focus:border-secondary placeholder:text-white/40 disabled:opacity-50"
-                    placeholder="Choose a unique username"
-                  />
-                </div>
-
-                {/* Age & Sex */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="age" className="text-white font-medium">
-                      Age
-                    </Label>
-                    <Input
-                      id="age"
-                      type="number"
-                      value={age}
-                      onChange={(e) => setAge(e.target.value)}
-                      disabled={!isEditing}
-                      className="bg-white/5 border-white/20 text-white focus:ring-secondary focus:border-secondary placeholder:text-white/40 disabled:opacity-50"
-                      placeholder="Your age"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="sex" className="text-white font-medium">
-                      Sex
-                    </Label>
-                    <Select
-                      value={sex}
-                      onValueChange={(value) => setSex(value as GamerSex)}
-                      disabled={!isEditing}
-                    >
-                      <SelectTrigger
-                        id="sex"
-                        className="bg-white/5 border-white/20 text-white disabled:opacity-50"
-                      >
-                        <SelectValue placeholder="Select" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="man">Man</SelectItem>
-                        <SelectItem value="woman">Woman</SelectItem>
-                        <SelectItem value="prefer_not_to_say">Prefer not to say</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                {/* Location */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="country" className="text-white font-medium">
-                      Country
-                    </Label>
-                    <Input
-                      id="country"
-                      type="text"
-                      value={country}
-                      onChange={(e) => setCountry(e.target.value)}
-                      disabled={!isEditing}
-                      className="bg-white/5 border-white/20 text-white focus:ring-secondary focus:border-secondary placeholder:text-white/40 disabled:opacity-50"
-                      placeholder="Country"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="state" className="text-white font-medium">
-                      State
-                    </Label>
-                    <Input
-                      id="state"
-                      type="text"
-                      value={state}
-                      onChange={(e) => setState(e.target.value)}
-                      disabled={!isEditing}
-                      className="bg-white/5 border-white/20 text-white focus:ring-secondary focus:border-secondary placeholder:text-white/40 disabled:opacity-50"
-                      placeholder="State"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="city" className="text-white font-medium">
-                      City
-                    </Label>
-                    <Input
-                      id="city"
-                      type="text"
-                      value={city}
-                      onChange={(e) => setCity(e.target.value)}
-                      disabled={!isEditing}
-                      className="bg-white/5 border-white/20 text-white focus:ring-secondary focus:border-secondary placeholder:text-white/40 disabled:opacity-50"
-                      placeholder="City"
-                    />
-                  </div>
-                </div>
-
-                {/* Email (Read-only) */}
-                <div className="space-y-2">
-                  <Label htmlFor="email" className="text-white font-medium">
-                    Email Address
-                  </Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={profileData?.email || ''}
-                    disabled
-                    className="bg-white/5 border-white/20 text-white/60 focus:ring-secondary focus:border-secondary cursor-not-allowed"
-                  />
-                  <p className="text-xs text-white/50">
-                    Email address cannot be changed. Contact support if you need to update it.
-                  </p>
-                </div>
-
-                {/* Action Buttons */}
-                {isEditing && (
-                  <div className="flex gap-3 pt-4 border-t border-white/10">
-                    <Button
-                      onClick={handleSave}
-                      disabled={isSaving || updateProfileMutation.isPending}
-                      className="bg-secondary hover:bg-secondary/80 text-secondary-foreground font-fredoka"
-                    >
-                      {(isSaving || updateProfileMutation.isPending) ? (
-                        <>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin text-secondary-foreground" />
-                          Updating...
-                        </>
-                      ) : (
-                        <>
-                          <Save className="h-4 w-4 mr-2" />
-                          Save Changes
-                        </>
-                      )}
-                    </Button>
-                    <Button
-                      onClick={handleCancel}
-                      variant="outline"
-                      disabled={isSaving || updateProfileMutation.isPending}
-                      className="border-white/20 text-white/70 hover:bg-white/90"
-                    >
-                      Cancel
-                    </Button>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+        <Card>
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div>
+              <h3 style={{ fontFamily: "var(--display)", fontSize: 15, color: "var(--txt)" }}>Your details</h3>
+              <p className="fb-hint">Used for audience reporting only, always aggregated.</p>
+            </div>
+            {!isEditing && (
+              <Button type="button" variant="ghost" size="sm" onClick={() => setIsEditing(true)}>
+                <Edit className="h-3.5 w-3.5" />
+                Edit
+              </Button>
+            )}
           </div>
-        </div>
 
-        {/* Account Stats */}
-        <Card className="bg-card/50 backdrop-blur-sm border-white/10">
-          <CardHeader>
-            <CardTitle className="text-white font-fredoka text-lg flex items-center gap-2">
-              <CheckCircle className="h-5 w-5 text-green-400" />
-              Account Information
-            </CardTitle>
-            <CardDescription className="text-white/70">
-              Your account statistics and status
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className={`p-4 rounded-lg border ${
-              profileData?.isVerified
-                ? 'bg-green-500/10 border-green-500/20'
-                : 'bg-yellow-500/10 border-yellow-500/20'
-            }`}>
-              <div className={`flex items-center gap-2 ${
-                profileData?.isVerified ? 'text-green-400' : 'text-yellow-400'
-              }`}>
-                <CheckCircle className="h-5 w-5" />
-                <span className="font-semibold">
-                  Account Status: {profileData?.isVerified ? 'Verified' : 'Unverified'}
-                </span>
-              </div>
-              <p className="text-white/70 text-sm mt-1">
-                {profileData?.isVerified
-                  ? 'Your account is verified and you can participate in all campaigns.'
-                  : 'Your account is not yet verified. Some features may be limited.'
-                }
-              </p>
-            </div>
+          <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Field label="First name">
+              <Input
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                disabled={!isEditing}
+                placeholder="Enter your first name"
+              />
+            </Field>
+            <Field label="Last name">
+              <Input
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                disabled={!isEditing}
+                placeholder="Enter your last name"
+              />
+            </Field>
+            <Field label="Username" className="sm:col-span-2">
+              <Input
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                disabled={!isEditing}
+                placeholder="Choose a unique username"
+              />
+            </Field>
+            <Field label="Age">
+              <Input
+                type="number"
+                value={age}
+                onChange={(e) => setAge(e.target.value)}
+                disabled={!isEditing}
+                placeholder="Your age"
+              />
+            </Field>
+            <Field label="Sex">
+              <select
+                className="fb-input"
+                value={sex}
+                onChange={(e) => setSex(e.target.value as ViewerSex)}
+                disabled={!isEditing}
+              >
+                <option value="" disabled>Select</option>
+                <option value="man">Man</option>
+                <option value="woman">Woman</option>
+                <option value="prefer_not_to_say">Prefer not to say</option>
+              </select>
+            </Field>
+            <Field label="Country">
+              <Input value={country} onChange={(e) => setCountry(e.target.value)} disabled={!isEditing} placeholder="Country" />
+            </Field>
+            <Field label="State">
+              <Input value={state} onChange={(e) => setState(e.target.value)} disabled={!isEditing} placeholder="State" />
+            </Field>
+            <Field label="City">
+              <Input value={city} onChange={(e) => setCity(e.target.value)} disabled={!isEditing} placeholder="City" />
+            </Field>
+            <Field label="Phone">
+              <Input value={phone} onChange={(e) => setPhone(e.target.value)} disabled={!isEditing} placeholder="Phone number" />
+            </Field>
+            <Field label="Email" className="sm:col-span-2" hint="Contact support if you need to update it.">
+              <Input value={profileData?.email || ''} disabled />
+            </Field>
+          </div>
 
-            <div className={`p-4 rounded-lg border ${
-              profileData?.profileComplete
-                ? 'bg-green-500/10 border-green-500/20'
-                : 'bg-yellow-500/10 border-yellow-500/20'
-            }`}>
-              <div className={`flex items-center gap-2 ${
-                profileData?.profileComplete ? 'text-green-400' : 'text-yellow-400'
-              }`}>
-                <CheckCircle className="h-5 w-5" />
-                <span className="font-semibold">
-                  Profile {profileData?.profileComplete ? 'Complete' : 'Incomplete'}
-                </span>
-              </div>
-              <p className="text-white/70 text-sm mt-1">
-                {profileData?.profileComplete
-                  ? 'Your profile is complete — you can watch ads and spin.'
-                  : 'Add your age, sex, country, state and city above to unlock ads and spin.'
-                }
-              </p>
+          {isEditing && (
+            <div className="flex gap-2 mt-4 pt-4" style={{ borderTop: "1px solid var(--line)" }}>
+              <Button
+                type="button"
+                variant="primary"
+                onClick={handleSave}
+                disabled={isSaving || updateProfileMutation.isPending}
+              >
+                {(isSaving || updateProfileMutation.isPending) ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Save className="h-4 w-4" />
+                )}
+                Save changes
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={handleCancel}
+                disabled={isSaving || updateProfileMutation.isPending}
+              >
+                Cancel
+              </Button>
             </div>
-          </CardContent>
+          )}
         </Card>
       </div>
-    </MainLayout>
+    </div>
   )
 }

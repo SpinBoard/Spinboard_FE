@@ -10,18 +10,12 @@ import { isAxiosError } from "axios";
 import { useMutation } from "@tanstack/react-query";
 import { Loader2, Sparkles, X } from "lucide-react";
 import { toast } from "sonner";
-import { MainLayout } from "@/components/layout/main-layout";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
+import { Card } from "@/components/ui/freebiz-card";
+import { Field } from "@/components/ui/freebiz-field";
+import { Input } from "@/components/ui/freebiz-input";
+import { Button } from "@/components/ui/freebiz-button";
+import { Pill } from "@/components/ui/freebiz-pill";
+import { Progress } from "@/components/ui/freebiz-progress";
 import { api } from "@/lib/api";
 import { ENDPOINTS } from "@/app/_utils/endpoints";
 import { routes } from "@/app/_utils/routes";
@@ -37,6 +31,11 @@ const brandProfileCompletionSchema = z.object({
 
 type BrandProfileCompletionValues = z.infer<typeof brandProfileCompletionSchema>;
 
+// RESTYLE (design/DECISIONS.md #21) — onboarding flow, kept exactly as-is
+// per the standing rule for these screens: same fields, same validation,
+// same submit behaviour. Centered on the ink background like the auth
+// screens (#26-30), since this is the same kind of "first thing a brand
+// sees before they can do anything" flow.
 function BrandProfileCompleteForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -104,152 +103,84 @@ function BrandProfileCompleteForm() {
     );
   };
 
+  const errors = form.formState.errors;
+  const categories = form.watch("businessCategories");
+
   return (
-    <MainLayout maxWidth="md">
-      <div className="space-y-6">
-        <div className="text-center space-y-2">
-          <Sparkles className="h-8 w-8 text-primary mx-auto" />
-          <h1 className="font-sora text-2xl font-bold text-foreground">
+    <div className="min-h-screen flex items-center justify-center p-4" style={{ background: "var(--ink-900)" }}>
+      <Card className="w-full max-w-md">
+        <div className="text-center">
+          <Sparkles className="h-7 w-7 mx-auto" style={{ color: "var(--accent)" }} />
+          <h1 className="mt-2" style={{ fontFamily: "var(--display)", fontWeight: 800, fontSize: 21, color: "var(--txt)" }}>
             Complete your brand profile
           </h1>
-          <p className="text-sm text-muted-foreground">
-            Required before you can create an ad campaign.
-          </p>
+          <p className="mt-1 fb-hint">Required before you can create an ad campaign.</p>
         </div>
 
-        <div className="space-y-1">
-          <div className="h-2 rounded-full bg-white/10 overflow-hidden">
-            <div
-              className="h-full bg-primary transition-all duration-300"
-              style={{ width: `${(fieldsDone / 5) * 100}%` }}
-              data-testid="brand-profile-progress-bar"
-            />
-          </div>
-          <p className="text-xs text-muted-foreground text-right" data-testid="brand-profile-progress-label">
+        <div className="mt-4 space-y-1">
+          <Progress value={(fieldsDone / 5) * 100} data-testid="brand-profile-progress-bar" />
+          <p className="fb-hint text-right" data-testid="brand-profile-progress-label">
             {fieldsDone} of 5 fields complete
           </p>
         </div>
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="companyName"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Company name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Company name" {...field} />
-                  </FormControl>
-                  <FormMessage className="text-destructive text-xs" />
-                </FormItem>
-              )}
-            />
+        <form onSubmit={form.handleSubmit(onSubmit)} className="mt-4 space-y-3">
+          <Field label="Company name" htmlFor="companyName">
+            <Input id="companyName" placeholder="Company name" {...form.register("companyName")} />
+            {errors.companyName && <span className="fb-hint" style={{ color: "var(--spent)" }}>{errors.companyName.message}</span>}
+          </Field>
 
-            <FormField
-              control={form.control}
-              name="businessCategories"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Business categories</FormLabel>
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder="e.g. Fashion, Tech"
-                      value={categoryDraft}
-                      onChange={(e) => setCategoryDraft(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          addCategory();
-                        }
-                      }}
-                    />
-                    <Button type="button" variant="outline" onClick={addCategory}>
-                      Add
-                    </Button>
-                  </div>
-                  {field.value.length > 0 && (
-                    <div className="flex flex-wrap gap-2 pt-1">
-                      {field.value.map((category) => (
-                        <Badge
-                          key={category}
-                          variant="secondary"
-                          className="flex items-center gap-1">
-                          {category}
-                          <button
-                            type="button"
-                            onClick={() => removeCategory(category)}
-                            aria-label={`Remove ${category}`}>
-                            <X className="h-3 w-3" />
-                          </button>
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
-                  <FormMessage className="text-destructive text-xs" />
-                </FormItem>
-              )}
-            />
+          <Field label="Business categories">
+            <div className="flex gap-2">
+              <Input
+                placeholder="e.g. Fashion, Tech"
+                value={categoryDraft}
+                onChange={(e) => setCategoryDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    addCategory();
+                  }
+                }}
+              />
+              <Button type="button" variant="ghost" onClick={addCategory}>Add</Button>
+            </div>
+            {categories.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-1">
+                {categories.map((category) => (
+                  <Pill key={category}>
+                    {category}
+                    <button type="button" onClick={() => removeCategory(category)} aria-label={`Remove ${category}`}>
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Pill>
+                ))}
+              </div>
+            )}
+            {errors.businessCategories && <span className="fb-hint" style={{ color: "var(--spent)" }}>{errors.businessCategories.message}</span>}
+          </Field>
 
-            <FormField
-              control={form.control}
-              name="country"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Country</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Country" {...field} />
-                  </FormControl>
-                  <FormMessage className="text-destructive text-xs" />
-                </FormItem>
-              )}
-            />
+          <Field label="Country" htmlFor="country">
+            <Input id="country" placeholder="Country" {...form.register("country")} />
+            {errors.country && <span className="fb-hint" style={{ color: "var(--spent)" }}>{errors.country.message}</span>}
+          </Field>
 
-            <FormField
-              control={form.control}
-              name="state"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>State</FormLabel>
-                  <FormControl>
-                    <Input placeholder="State" {...field} />
-                  </FormControl>
-                  <FormMessage className="text-destructive text-xs" />
-                </FormItem>
-              )}
-            />
+          <Field label="State" htmlFor="state">
+            <Input id="state" placeholder="State" {...form.register("state")} />
+            {errors.state && <span className="fb-hint" style={{ color: "var(--spent)" }}>{errors.state.message}</span>}
+          </Field>
 
-            <FormField
-              control={form.control}
-              name="city"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>City</FormLabel>
-                  <FormControl>
-                    <Input placeholder="City" {...field} />
-                  </FormControl>
-                  <FormMessage className="text-destructive text-xs" />
-                </FormItem>
-              )}
-            />
+          <Field label="City" htmlFor="city">
+            <Input id="city" placeholder="City" {...form.register("city")} />
+            {errors.city && <span className="fb-hint" style={{ color: "var(--spent)" }}>{errors.city.message}</span>}
+          </Field>
 
-            <Button
-              type="submit"
-              disabled={mutation.isPending}
-              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">
-              {mutation.isPending ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                "Save & continue"
-              )}
-            </Button>
-          </form>
-        </Form>
-      </div>
-    </MainLayout>
+          <Button type="submit" variant="primary" className="w-full justify-center" disabled={mutation.isPending}>
+            {mutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save & continue"}
+          </Button>
+        </form>
+      </Card>
+    </div>
   );
 }
 

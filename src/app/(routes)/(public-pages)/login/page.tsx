@@ -6,15 +6,11 @@ import { Suspense, useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { GradientButton } from "@/components/ui/gradient-button";
-import { Input } from "@/components/ui/input";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormMessage,
-} from "@/components/ui/form";
+import { Card } from "@/components/ui/freebiz-card";
+import { Field } from "@/components/ui/freebiz-field";
+import { Input } from "@/components/ui/freebiz-input";
+import { Button } from "@/components/ui/freebiz-button";
+import { LogoMark, Wordmark } from "@/components/shell/logo-mark";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
@@ -25,8 +21,6 @@ import { fetchUserDataForSession } from "@/app/_utils/auth-session";
 import { useSetAtom, useAtomValue } from "jotai/react";
 import { userAtom } from "@/atom/user";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Header } from "@/components/layout/header";
-import { Footer } from "@/components/layout/footer";
 import GoogleAuthBtn from "@/components/auth/google-auth";
 
 type LoginPayload = {
@@ -41,6 +35,12 @@ const loginSchema = z.object({
 
 type LoginValues = z.infer<typeof loginSchema>;
 
+// RESTYLE (design/DECISIONS.md #26-30) — "Center a Card on the ink
+// background, one Field stack, one primary Button, the wordmark above.
+// That's the whole design." The full site Header/Footer and the
+// decorative blurred background blobs are dropped in favour of that
+// minimal treatment; all auth logic (schema, mutation, redirect handling,
+// Google auth) is unchanged.
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -49,11 +49,15 @@ function LoginForm() {
   const user = useAtomValue(userAtom);
   const [showPassword, setShowPassword] = useState(false);
 
+  // Viewers land on the billboard, not /user/dashboard — DECISIONS.md #6
+  // parks that route ("the board is the viewer's home... remove from
+  // nav") but the redirect targets sending every viewer there first were
+  // never updated to match until now (2026-09-03).
   useEffect(() => {
     if (user) {
       router.push(
-        user.userType === "gamer"
-          ? routes.USER.DASHBOARD
+        user.userType === "viewer"
+          ? routes.WATCH
           : user.userType === "admin"
             ? routes.ADMIN.CAMPAIGNS
             : routes.BRAND.DASHBOARD
@@ -65,6 +69,7 @@ function LoginForm() {
     resolver: zodResolver(loginSchema),
     defaultValues: { email: "", password: "" },
   });
+  const errors = form.formState.errors;
 
   const loginMutation = useMutation({
     mutationFn: (payload: LoginPayload) => api.post(ENDPOINTS.LOGIN, payload),
@@ -80,8 +85,8 @@ function LoginForm() {
       toast.success("Success", { description: "Login successful!" });
       router.push(
         returnTo ||
-          (dashboardRoute === "gamer"
-            ? routes.USER.DASHBOARD
+          (dashboardRoute === "viewer"
+            ? routes.WATCH
             : dashboardRoute === "admin"
               ? routes.ADMIN.CAMPAIGNS
               : routes.BRAND.DASHBOARD)
@@ -92,106 +97,74 @@ function LoginForm() {
   const onSubmit = (values: LoginValues) => loginMutation.mutate(values);
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <Header />
-      <div className="flex-1 bg-background flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden pt-32">
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute w-96 h-96 bg-primary opacity-20 rounded-full filter blur-[80px] -top-24 -right-24" />
-          <div className="absolute w-72 h-72 bg-secondary opacity-20 rounded-full filter blur-[80px] -bottom-12 -left-12" />
-        </div>
+    <div className="min-h-screen flex items-center justify-center p-4" style={{ background: "var(--ink-900)" }}>
+      <div className="w-full max-w-sm">
+        <Link href={routes.HOME} className="flex items-center justify-center gap-2 mb-6">
+          <LogoMark />
+          <Wordmark />
+        </Link>
 
-        <div className="w-full max-w-sm relative z-10">
-          <div className="bg-card/60 border border-border rounded-2xl p-8 backdrop-blur-sm">
-            <h1 className="text-2xl font-bold text-foreground text-center mb-1 font-sora">
-              Welcome back
-            </h1>
-            <p className="text-muted-foreground text-center text-sm mb-6">Sign in to continue</p>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormControl>
-                        <Input placeholder="Email address" type="email" {...field} />
-                      </FormControl>
-                      <FormMessage className="text-destructive text-xs" />
-                    </FormItem>
-                  )}
+        <Card>
+          <h1 className="text-center" style={{ fontFamily: "var(--display)", fontWeight: 800, fontSize: 21, color: "var(--txt)" }}>
+            Welcome back
+          </h1>
+          <p className="text-center fb-hint mt-1">Sign in to continue</p>
+
+          <form onSubmit={form.handleSubmit(onSubmit)} className="mt-5 space-y-3">
+            <Field label="Email address" htmlFor="email">
+              <Input id="email" type="email" placeholder="you@example.com" {...form.register("email")} />
+              {errors.email && <span className="fb-hint" style={{ color: "var(--spent)" }}>{errors.email.message}</span>}
+            </Field>
+
+            <Field label="Password" htmlFor="password">
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Password"
+                  style={{ paddingRight: 40 }}
+                  {...form.register("password")}
                 />
+                <button
+                  type="button"
+                  className="absolute right-3 top-1/2 -translate-y-1/2"
+                  style={{ color: "var(--faint)" }}
+                  onClick={() => setShowPassword(!showPassword)}>
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+              {errors.password && <span className="fb-hint" style={{ color: "var(--spent)" }}>{errors.password.message}</span>}
+            </Field>
 
-                <FormField
-                  control={form.control}
-                  name="password"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormControl>
-                        <div className="relative">
-                          <Input
-                            placeholder="Password"
-                            type={showPassword ? "text" : "password"}
-                            className="pr-12"
-                            {...field}
-                          />
-                          <button
-                            type="button"
-                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                            onClick={() => setShowPassword(!showPassword)}>
-                            {showPassword ? (
-                              <EyeOff className="h-4 w-4" />
-                            ) : (
-                              <Eye className="h-4 w-4" />
-                            )}
-                          </button>
-                        </div>
-                      </FormControl>
-                      <FormMessage className="text-destructive text-xs" />
-                    </FormItem>
-                  )}
-                />
-
-                <div className="flex justify-end -mt-2 mb-4">
-                  <Link href={routes.FORGOT_PASSWORD} className="text-secondary text-sm hover:underline">
-                    Forgot password?
-                  </Link>
-                </div>
-
-                <GradientButton
-                  type="submit"
-                  disabled={loginMutation.isPending}
-                  variant="secondary"
-                  className="w-full p-5 text-base border-0">
-                  {loginMutation.isPending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Signing in...
-                    </>
-                  ) : (
-                    "Sign In"
-                  )}
-                </GradientButton>
-              </form>
-            </Form>
-
-            <div className="flex items-center gap-4 my-6">
-              <div className="flex-1 h-px bg-border" />
-              <span className="text-muted-foreground text-sm">or</span>
-              <div className="flex-1 h-px bg-border" />
+            <div className="flex justify-end">
+              <Link href={routes.FORGOT_PASSWORD} style={{ color: "var(--accent)", fontSize: 12.5 }}>
+                Forgot password?
+              </Link>
             </div>
 
-            <GoogleAuthBtn returnTo={returnTo} />
+            <Button type="submit" variant="primary" className="w-full justify-center" disabled={loginMutation.isPending}>
+              {loginMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Sign in"}
+            </Button>
+          </form>
 
-            <p className="text-center text-muted-foreground text-sm mt-6">
-              Don&apos;t have an account?{" "}
-              <Link href={routes.REGISTER} className="text-secondary font-semibold hover:underline">
-                Sign Up
-              </Link>
-            </p>
+          <div className="flex items-center gap-3 my-5">
+            <div className="flex-1 h-px" style={{ background: "var(--line)" }} />
+            <span className="fb-hint">or</span>
+            <div className="flex-1 h-px" style={{ background: "var(--line)" }} />
           </div>
-        </div>
+
+          <GoogleAuthBtn returnTo={returnTo} />
+
+          <p className="text-center fb-hint mt-5">
+            Don&apos;t have an account?{" "}
+            <Link
+              href={returnTo ? `${routes.REGISTER}?returnTo=${encodeURIComponent(returnTo)}` : routes.REGISTER}
+              style={{ color: "var(--accent)", fontWeight: 600 }}>
+              Sign up
+            </Link>
+          </p>
+        </Card>
       </div>
-      <Footer />
     </div>
   );
 }

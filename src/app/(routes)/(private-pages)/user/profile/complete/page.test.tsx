@@ -16,7 +16,7 @@ const loggedInUser = {
   id: "user1",
   fullName: "Test User",
   email: "user@test.com",
-  userType: "gamer" as const,
+  userType: "viewer" as const,
   isVerified: true,
   profileComplete: false,
   createdAt: "2026-01-01",
@@ -52,7 +52,7 @@ function renderPage() {
   );
 }
 
-describe("ProfileCompletePage (gamer)", () => {
+describe("ProfileCompletePage (viewer)", () => {
   beforeEach(() => {
     pushMock.mockClear();
     axiosPut.mockReset();
@@ -101,7 +101,7 @@ describe("ProfileCompletePage (gamer)", () => {
 
     await waitFor(() => expect(axiosPut).toHaveBeenCalled());
     expect(axiosPut).toHaveBeenCalledWith(
-      expect.stringContaining("/profile/gamer"),
+      expect.stringContaining("/profile/viewer"),
       expect.objectContaining({
         age: 25,
         sex: "prefer_not_to_say",

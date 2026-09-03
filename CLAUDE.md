@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Pazzell is a continuous video billboard: brand ads play back-to-back with no gate, no quiz, and
+Freebiz is a continuous video billboard: brand ads play back-to-back with no gate, no quiz, and
 nothing to unlock. A perimeter strip around the board scrolls promotional text and occasionally
 shows a pinned, static **freebie code** (cash or airtime). The first authenticated viewer to type
 that code into an Apply box wins it — winning issues a private secret code, and applying that
@@ -13,8 +13,10 @@ recharge PIN. Nothing a viewer wins ever expires. Cash only leaves the platform 
 weekly admin payout run — there is no self-serve withdrawal.
 
 Three account types:
-- **Viewers** (`userType: "gamer"` in the API and in this codebase — a naming leftover from an
-  earlier product, not a hint that there's a game here) — watch the billboard, catch freebie
+
+- **Viewers** (`userType: "viewer"` in the API and in this codebase — this was `"gamer"` until
+  the backend's role enum, DB field, and routes were renamed to match; if you see `"gamer"`
+  anywhere it's stale, not a hint that there's a game here) — watch the billboard, catch freebie
   codes, refer friends, browse the marketplace.
 - **Brands** — upload a video, buy a slot (Basic or Premium tier), and get flat-rate,
   time-boxed placement in the ad rotation. **Ads go live immediately on payment — there is no
@@ -152,17 +154,18 @@ actually wired into the app. Don't reach for the one in `components/providers/`.
 ## Architecture Patterns
 
 ### Authentication Flow
+
 1. Viewer logs in via `/login`, registers via `/register`, or verifies via `/verify-otp` (email
    activation code) — Google OAuth is also available (`components/auth/google-auth.tsx`).
 2. The backend returns `{ accessToken, refreshToken, user: { role } }`. `fetchUserDataForSession`
-   (`src/app/_utils/auth-session.ts`) then fetches the role-specific profile (`GET /profile/gamer`,
+   (`src/app/_utils/auth-session.ts`) then fetches the role-specific profile (`GET /profile/viewer`,
    `GET /profile/brand`, or — for admin, which has no role-specific profile endpoint —
    `GET /me`) and assembles the `UserData` the app stores.
 3. `UserData` (including `accessToken`) is written to the Jotai `userAtom`, which persists it to
    `localStorage` under the key `"user"`.
 4. The Axios request interceptor in `src/lib/api.ts` reads that stored user on every request and
    attaches `Authorization: Bearer <accessToken>`.
-5. On a `401` where a session *was* stored (i.e. a token just went stale), the response
+5. On a `401` where a session _was_ stored (i.e. a token just went stale), the response
    interceptor clears the stored user and hard-redirects to `/login`. A `401` on a call that was
    always unauthenticated (e.g. claiming a freebie code while logged out) does not trigger this —
    callers handle that inline instead.
@@ -170,6 +173,7 @@ actually wired into the app. Don't reach for the one in `components/providers/`.
    group and redirects based on `allowedUserTypes` vs. the stored `userType`.
 
 ### API Communication
+
 - Every backend call goes through the Axios instance in `src/lib/api.ts`.
 - Every path is a constant in `src/app/_utils/endpoints.ts` — never hardcode a URL.
 - Most data fetching goes through a TanStack Query hook in `src/hooks/`, but a number of page
@@ -182,6 +186,7 @@ actually wired into the app. Don't reach for the one in `components/providers/`.
   session cookie stick. This rewrite is a no-op in production builds.
 
 ### Route Organization
+
 - App Router route groups: `(private-pages)` (wrapped in `ProtectedRoute`) and `(public-pages)`
   (no auth required — this includes `/watch`, the billboard itself, since watching never requires
   login; only claiming a freebie code does).
@@ -193,6 +198,7 @@ actually wired into the app. Don't reach for the one in `components/providers/`.
   is the structure as it exists in code today.)
 
 ### Component Patterns
+
 - shadcn/ui primitives in `src/components/ui/`; feature components organized by domain
   (`billboard/`, `watch/`, `brand/`, `marketplace/`, etc.) alongside `src/hooks/` for their data
   fetching.
@@ -201,17 +207,20 @@ actually wired into the app. Don't reach for the one in `components/providers/`.
 ## Important Conventions
 
 ### TypeScript Types
+
 - All API request/response types live in `src/types/index.ts`, imported via the `@/types` alias.
 - Key interfaces: `UserData` (the stored session), `AdCampaign`, `BillboardQueueSlot`,
   `StripFeedItem`, `Claim`, `WalletBalanceResponse`, `MarketplaceProduct`.
 
 ### State Management
+
 - Global session: Jotai `userAtom` from `src/atom/user.ts`.
 - Server state: TanStack Query — a hook in `src/hooks/` where one exists, otherwise a
   `useQuery`/`useMutation` call directly in the page.
 - Local UI-only state: `useState`.
 
 ### API Error Handling
+
 - The Axios response interceptor only handles the stale-session 401 case (see Authentication Flow
   above); everything else is handled per call site.
 - The standard error shape is `{ success: false, message, code?, details? }`, with one documented
@@ -222,6 +231,7 @@ actually wired into the app. Don't reach for the one in `components/providers/`.
 - Toast notifications via `sonner`.
 
 ### Build Configuration
+
 - TypeScript and ESLint errors are ignored during `next build` (`next.config.ts`) — `npm run lint`
   and `npx tsc --noEmit` are the real gates, run them yourself.
 - `output: "standalone"`, for the Docker image.
@@ -242,6 +252,7 @@ There is no Supabase URL/key to configure — despite what an older version of t
 app has never talked to Supabase directly.
 
 ## Testing Locally
+
 1. `npm install`
 2. Set up `.env.local` per the variables above
 3. Run a local instance of the backend (or point `NEXT_PUBLIC_API_URL` at a hosted one) — this
@@ -249,6 +260,7 @@ app has never talked to Supabase directly.
 4. `npm run dev`, then visit `http://localhost:3000`
 
 ## Deployment
+
 - Primary target: Vercel (`vercel.json`)
 - Also supported: Docker (`Dockerfile`, `docker-compose.yml`) and an AWS EC2 deployment (see the
   comment in `next.config.ts`) — the Docker/EC2 builds serve the standalone Next.js output

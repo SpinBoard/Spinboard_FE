@@ -10,13 +10,13 @@ import { Loader2 } from 'lucide-react'
 
 interface ProtectedRouteProps {
   children: React.ReactNode
-  allowedUserTypes?: ('gamer' | 'brand' | 'admin')[]
+  allowedUserTypes?: ('viewer' | 'brand' | 'admin')[]
   redirectTo?: string
 }
 
 export function ProtectedRoute({
   children,
-  allowedUserTypes = ['gamer', 'brand', 'admin'],
+  allowedUserTypes = ['viewer', 'brand', 'admin'],
   redirectTo = routes.LOGIN
 }: ProtectedRouteProps) {
   const router = useRouter()
@@ -48,8 +48,10 @@ export function ProtectedRoute({
     // If user type is not allowed, redirect appropriately
     if (!allowedUserTypes.includes(user.userType
       )) {
-      if (user.userType === 'gamer') {
-        router.push(routes.USER.DASHBOARD)
+      if (user.userType === 'viewer') {
+        // The billboard, not /user/dashboard — see the matching comment
+        // in login/page.tsx (DECISIONS.md #6 parks that route).
+        router.push(routes.WATCH)
       } else if (user.userType === 'brand') {
         router.push(routes.BRAND.DASHBOARD)
       } else if (user.userType === 'admin') {

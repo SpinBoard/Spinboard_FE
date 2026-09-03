@@ -20,16 +20,9 @@ type GoogleLoginPayload = {
   avatar: string;
   givenName: string;
   familyName: string;
-  referrerUsername?: string;
 };
 
-const GoogleAuthBtn = ({
-  referrerUsername,
-  returnTo,
-}: {
-  referrerUsername?: string;
-  returnTo?: string;
-}) => {
+const GoogleAuthBtn = ({ returnTo }: { returnTo?: string }) => {
   const setUser = useSetAtom(userAtom);
   const router = useRouter();
   const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
@@ -46,11 +39,14 @@ const GoogleAuthBtn = ({
       const { userData, dashboardRoute } = await fetchUserDataForSession(data.data);
       setUser(userData);
       toast.success("Success", { description: "Google sign-in successful!" });
+      // A verified viewer with a complete profile lands on the billboard
+      // itself, not /user/dashboard — see the matching comment in
+      // login/page.tsx (DECISIONS.md #6 parks that route).
       router.push(
         returnTo ||
-          (dashboardRoute === "gamer"
+          (dashboardRoute === "viewer"
             ? userData.profileComplete
-              ? routes.USER.DASHBOARD
+              ? routes.WATCH
               : routes.USER.PROFILE_COMPLETE
             : dashboardRoute === "admin"
               ? routes.ADMIN.CAMPAIGNS
@@ -89,7 +85,6 @@ const GoogleAuthBtn = ({
             avatar: picture,
             givenName: given_name,
             familyName: family_name,
-            ...(referrerUsername ? { referrerUsername } : {}),
           });
           toast.info("Please wait, while we log you in.");
         } catch {

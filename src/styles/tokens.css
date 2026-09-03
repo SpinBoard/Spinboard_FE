@@ -1,0 +1,53 @@
+/* freebiz.tokens.css
+ * Source of truth: design/freebiz-brand-kit.html §05 "Design tokens".
+ * Additive only — nothing here overrides globals.css or the Tailwind
+ * theme. Route accent is remapped by setting [data-route] on a layout
+ * wrapper; components read --accent and never know which route they're in.
+ */
+
+:root {
+  /* base */
+  --ink-900: #0e0c16;
+  --ink-800: #14111f;
+  --ink-700: #1c1830;
+  --ink-600: #272041;
+  --line: rgba(255, 255, 255, 0.09);
+  --line-2: rgba(255, 255, 255, 0.16);
+
+  /* ink (text) */
+  --txt: #efecf7;
+  --muted: #9c96b8;
+  --faint: #6e688a;
+
+  /* meaning — colour is state, never decoration */
+  --free: #ffd23f; /* unclaimed reward */
+  --brand: #7c5cff; /* brand-side action */
+  --live: #3ddc97; /* open, approved */
+  --spent: #ff4d5e; /* claimed, rejected */
+  --admin: #4cc9f0; /* control room only */
+
+  /* route accent — remapped per route wrapper */
+  --accent: var(--free);
+  --accent-soft: rgba(255, 210, 63, 0.14);
+
+  /* shape & depth */
+  --r-sm: 8px;
+  --r: 14px;
+  --r-lg: 22px;
+  --shadow: 0 18px 50px -18px rgba(0, 0, 0, 0.75);
+
+  /* type */
+  --display: "Bricolage Grotesque", system-ui, sans-serif;
+  --body: "Inter Tight", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, monospace;
+}
+
+[data-route="brands"] {
+  --accent: var(--brand);
+  --accent-soft: rgba(124, 92, 255, 0.15);
+}
+
+[data-route="admin"] {
+  --accent: var(--admin);
+  --accent-soft: rgba(76, 201, 240, 0.14);
+}

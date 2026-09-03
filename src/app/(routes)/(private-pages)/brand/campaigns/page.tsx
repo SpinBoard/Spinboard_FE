@@ -1,24 +1,20 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { Card, CardNote } from "@/components/ui/freebiz-card";
+import { Field } from "@/components/ui/freebiz-field";
+import { Input } from "@/components/ui/freebiz-input";
+import { Button } from "@/components/ui/freebiz-button";
+import { Pill } from "@/components/ui/freebiz-pill";
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import {
-  Plus,
-  Search,
-  Eye,
-  Target,
-  Clock,
-  Rocket,
-  BarChart3,
-} from "lucide-react";
+  Table,
+  TableHead,
+  TableBody,
+  TableRow,
+  TableHeadCell,
+  TableCell,
+} from "@/components/ui/freebiz-table";
+import { Plus, Search, BarChart3 } from "lucide-react";
 import Link from "next/link";
 import { routes } from "@/app/_utils/routes";
 import { useQuery } from "@tanstack/react-query";
@@ -30,8 +26,25 @@ import { userAtom } from "@/atom/user";
 import { PageLoader } from "@/components/ui/page-loader";
 import { PageError } from "@/components/ui/page-error";
 import { GoLiveDialog } from "@/components/brand/go-live-dialog";
-import { STATUS_STYLES, MODERATION_STYLES, daysLeft, formatStatusLabel, statusStyle } from "./campaign-status";
+import { formatStatusLabel, STATUS_TONE } from "./campaign-status";
 
+function formatDuration(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+const FILTERS = ["all", "DRAFT", "PENDING_PAYMENT", "ACTIVE", "PAUSED", "EXPIRED", "REJECTED"] as const;
+
+// design/freebiz-mockup.html data-screen="b-dash" — same table this
+// campaign's dashboard truncates, here shown in full with search + status
+// filters (DECISIONS.md #13). GET /ad-campaigns/mine items now carry
+// playsToday/completionRateToday (§2 Revamp 6) — restoring the mockup's
+// "Plays" column as a lightweight glance, distinct from the Premium-only
+// deep-analytics screen. Its Edit/Duplicate/"Read note" row actions still
+// have no backing endpoint and stay dropped — the real per-status actions
+// (View, Analytics for Premium, Go Live / Complete Payment via the existing
+// GoLiveDialog) are kept as-is.
 export default function BrandCampaignsPage() {
   const user = useAtomValue(userAtom);
   const [searchQuery, setSearchQuery] = useState("");
@@ -62,152 +75,199 @@ export default function BrandCampaignsPage() {
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }, [campaigns, searchQuery, statusFilter]);
 
-  if (loadingCampaigns) return <PageLoader message="Loading campaigns..." />;
+  if (loadingCampaigns) return <PageLoader withLayout={false} message="Loading campaigns..." />;
 
   if (campaignsError) {
     return (
-      <PageError
+      <PageError withLayout={false}
         title="Failed to Load Campaigns"
         message="Unable to load your campaigns. Please check your connection and try again."
       />
     );
   }
 
+  const rowAction = (campaign: AdCampaign) => {
+    if (campaign.status === "DRAFT") {
+      return (
+        <Button size="sm" variant="primary" onClick={() => setGoLiveCampaign(campaign)}>
+          Go live
+        </Button>
+      );
+    }
+    if (campaign.status === "PENDING_PAYMENT") {
+      return (
+        <Button size="sm" variant="primary" onClick={() => setGoLiveCampaign(campaign)}>
+          Complete payment
+        </Button>
+      );
+    }
+    if (campaign.tier === "premium") {
+      return (
+        <Link href={routes.BRAND.CAMPAIGN_ANALYTICS(campaign._id)}>
+          <Button size="sm" variant="ghost">
+            <BarChart3 className="h-3.5 w-3.5" />
+            Analytics
+          </Button>
+        </Link>
+      );
+    }
+    return (
+      <Link href={`${routes.BRAND.CAMPAIGNS}/${campaign._id}`}>
+        <Button size="sm" variant="ghost">View</Button>
+      </Link>
+    );
+  };
+
   return (
-    <div className="space-y-8">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold text-foreground font-sora">Ad Campaigns</h1>
-          <p className="text-muted-foreground">Create and manage your video ad campaigns</p>
+          <p
+            style={{
+              fontFamily: "var(--mono)",
+              fontSize: 10.5,
+              letterSpacing: "0.1em",
+              textTransform: "uppercase",
+              color: "var(--faint)",
+            }}>
+            Brands / Campaigns
+          </p>
+          <h1
+            className="mt-1"
+            style={{ fontFamily: "var(--display)", fontWeight: 800, fontSize: 27, letterSpacing: "-0.02em", color: "var(--txt)" }}>
+            All campaigns
+          </h1>
+          <p className="mt-1" style={{ color: "var(--muted)", fontSize: 13.5 }}>
+            Create and manage your video ad campaigns.
+          </p>
         </div>
         <Link href={routes.BRAND.CAMPAIGNS_CREATE}>
-          <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">
-            <Plus className="h-4 w-4 mr-2" />
-            New Campaign
+          <Button variant="primary">
+            <Plus className="h-4 w-4" />
+            New campaign
           </Button>
         </Link>
       </div>
 
-      <div className="space-y-4">
-        <div className="relative max-w-md">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-          <Input
-            placeholder="Search campaigns..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-12 h-12"
-          />
-        </div>
-
-        <div className="flex items-center gap-2 overflow-x-auto pb-2">
-          {(["all", "DRAFT", "PENDING_PAYMENT", "ACTIVE", "PAUSED", "EXPIRED", "REJECTED"] as const).map((key) => {
-            const count =
-              key === "all" ? campaigns?.length ?? 0 : campaigns?.filter((c) => c.status === key).length ?? 0;
+      <div className="flex flex-wrap items-center gap-2">
+        <Field label="Search" className="w-full sm:max-w-xs">
+          <div className="relative">
+            <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "var(--faint)" }} />
+            <Input
+              placeholder="Search campaigns..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={{ paddingLeft: 34 }}
+            />
+          </div>
+        </Field>
+        <div className="flex flex-wrap gap-2 sm:mt-6">
+          {FILTERS.map((key) => {
+            const count = key === "all" ? campaigns?.length ?? 0 : campaigns?.filter((c) => c.status === key).length ?? 0;
+            const active = statusFilter === key;
             return (
               <button
                 key={key}
                 onClick={() => setStatusFilter(key)}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-all ${
-                  statusFilter === key
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-white/5 text-muted-foreground hover:bg-white/10 border border-border"
-                }`}>
-                {key === "all" ? "All" : formatStatusLabel(key)}
-                <span className="text-xs px-2 py-0.5 rounded-full bg-white/10">{count}</span>
+                className={`fb-pill${active ? " fb-pill--live" : ""}`}
+                style={{ cursor: "pointer" }}>
+                {key === "all" ? "All" : formatStatusLabel(key)} {count}
               </button>
             );
           })}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredCampaigns.map((campaign) => {
-          const remaining = daysLeft(campaign.expiresAt);
-          return (
-            <Card key={campaign._id} className="bg-card/50 backdrop-blur-sm border-border flex flex-col">
-              <CardHeader>
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge className={statusStyle(STATUS_STYLES, campaign.status)}>{formatStatusLabel(campaign.status)}</Badge>
-                  <Badge className={statusStyle(MODERATION_STYLES, campaign.moderationStatus)}>
-                    {formatStatusLabel(campaign.moderationStatus)}
-                  </Badge>
-                  <Badge variant="secondary" className="capitalize">{campaign.tier}</Badge>
-                </div>
-                <CardTitle className="text-foreground font-sora text-lg mt-2">{campaign.title}</CardTitle>
-              </CardHeader>
-              <CardContent className="flex-1 flex flex-col justify-between space-y-4">
-                <p className="text-sm text-muted-foreground line-clamp-2">{campaign.description}</p>
-
-                <div className="space-y-2 text-xs text-muted-foreground">
-                  {campaign.status === "ACTIVE" && remaining !== null && (
-                    <div className="flex items-center gap-1.5">
-                      <Clock className="h-3.5 w-3.5 text-secondary" />
-                      {remaining} day{remaining !== 1 ? "s" : ""} left
-                    </div>
-                  )}
-                  {campaign.moderationStatus === "REJECTED" && campaign.moderationReason && (
-                    <p className="text-destructive">{campaign.moderationReason}</p>
-                  )}
-                </div>
-
-                <div className="flex items-center gap-2 pt-2 border-t border-border">
-                  <Link href={`${routes.BRAND.CAMPAIGNS}/${campaign._id}`} className="flex-1">
-                    <Button variant="outline" size="sm" className="w-full border-border text-foreground hover:bg-white/10">
-                      <Eye className="h-3.5 w-3.5 mr-1.5" />
-                      View
-                    </Button>
-                  </Link>
-                  {campaign.tier === "premium" && (
-                    <Link href={routes.BRAND.CAMPAIGN_ANALYTICS(campaign._id)} className="flex-1">
-                      <Button variant="outline" size="sm" className="w-full border-border text-foreground hover:bg-white/10">
-                        <BarChart3 className="h-3.5 w-3.5 mr-1.5" />
-                        Analytics
-                      </Button>
-                    </Link>
-                  )}
-                  {campaign.status === "DRAFT" && (
-                    <Button
-                      size="sm"
-                      className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground"
-                      onClick={() => setGoLiveCampaign(campaign)}>
-                      <Rocket className="h-3.5 w-3.5 mr-1.5" />
-                      Go Live
-                    </Button>
-                  )}
-                  {campaign.status === "PENDING_PAYMENT" && (
-                    <Button
-                      size="sm"
-                      className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground"
-                      onClick={() => setGoLiveCampaign(campaign)}>
-                      <Rocket className="h-3.5 w-3.5 mr-1.5" />
-                      Complete Payment
-                    </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
-
-      {filteredCampaigns.length === 0 && (
-        <div className="text-center py-12">
-          <div className="w-16 h-16 bg-primary/20 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Target className="h-8 w-8 text-primary" />
-          </div>
-          <h3 className="text-xl font-semibold text-foreground mb-2">No campaigns found</h3>
-          <p className="text-muted-foreground mb-6">
+      {filteredCampaigns.length === 0 ? (
+        <Card>
+          <CardNote>
             {searchQuery || statusFilter !== "all"
-              ? "Try adjusting your search or filters"
-              : "Create your first ad campaign to start reaching viewers"}
-          </p>
-          <Link href={routes.BRAND.CAMPAIGNS_CREATE}>
-            <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">
-              <Plus className="h-4 w-4 mr-2" />
-              Create First Campaign
-            </Button>
-          </Link>
-        </div>
+              ? "No campaigns match your search or filters."
+              : "No campaigns yet — create your first ad campaign to start reaching viewers."}
+          </CardNote>
+          {!searchQuery && statusFilter === "all" && (
+            <Link href={routes.BRAND.CAMPAIGNS_CREATE} className="inline-block mt-3">
+              <Button variant="primary">
+                <Plus className="h-4 w-4" />
+                Create first campaign
+              </Button>
+            </Link>
+          )}
+        </Card>
+      ) : (
+        <>
+          <Card tight className="hidden md:block">
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableHeadCell>Campaign</TableHeadCell>
+                  <TableHeadCell>Video</TableHeadCell>
+                  <TableHeadCell>Slot</TableHeadCell>
+                  <TableHeadCell>Today</TableHeadCell>
+                  <TableHeadCell>Created</TableHeadCell>
+                  <TableHeadCell>Status</TableHeadCell>
+                  <TableHeadCell />
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {filteredCampaigns.map((campaign) => (
+                  <TableRow key={campaign._id}>
+                    <TableCell>
+                      <b style={{ color: "var(--txt)" }}>{campaign.title}</b>
+                      {campaign.moderationStatus === "REJECTED" && campaign.moderationReason && (
+                        <div className="fb-hint mt-0.5" style={{ color: "var(--spent)" }}>{campaign.moderationReason}</div>
+                      )}
+                    </TableCell>
+                    <TableCell className="fb-hint" style={{ fontFamily: "var(--mono)" }}>
+                      {formatDuration(campaign.videoDurationSeconds)}
+                    </TableCell>
+                    <TableCell>
+                      <Pill tone={campaign.tier === "premium" ? "brandish" : "default"}>
+                        {campaign.tier === "premium" ? "Premium" : "Basic"}
+                      </Pill>
+                    </TableCell>
+                    <TableCell className="fb-hint">
+                      {campaign.status === "ACTIVE" && campaign.playsToday !== undefined
+                        ? `${campaign.playsToday} play${campaign.playsToday !== 1 ? "s" : ""}${
+                            campaign.completionRateToday !== undefined
+                              ? ` · ${Math.round(campaign.completionRateToday * 100)}%`
+                              : ""
+                          }`
+                        : "—"}
+                    </TableCell>
+                    <TableCell className="fb-hint">{new Date(campaign.createdAt).toLocaleDateString()}</TableCell>
+                    <TableCell>
+                      <Pill tone={STATUS_TONE[campaign.status]} dot>{formatStatusLabel(campaign.status)}</Pill>
+                    </TableCell>
+                    <TableCell style={{ textAlign: "right" }}>{rowAction(campaign)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Card>
+
+          <div className="md:hidden space-y-2">
+            {filteredCampaigns.map((campaign) => (
+              <Card key={campaign._id} tight>
+                <div className="flex items-start justify-between gap-2">
+                  <b style={{ fontSize: 13.5, color: "var(--txt)" }}>{campaign.title}</b>
+                  <Pill tone={STATUS_TONE[campaign.status]} dot>{formatStatusLabel(campaign.status)}</Pill>
+                </div>
+                <p className="fb-hint mt-1">
+                  {campaign.tier === "premium" ? "Premium" : "Basic"} · {formatDuration(campaign.videoDurationSeconds)} ·{" "}
+                  {new Date(campaign.createdAt).toLocaleDateString()}
+                  {campaign.status === "ACTIVE" && campaign.playsToday !== undefined && (
+                    <> · {campaign.playsToday} play{campaign.playsToday !== 1 ? "s" : ""} today</>
+                  )}
+                </p>
+                {campaign.moderationStatus === "REJECTED" && campaign.moderationReason && (
+                  <p className="fb-hint mt-1" style={{ color: "var(--spent)" }}>{campaign.moderationReason}</p>
+                )}
+                <div className="mt-2">{rowAction(campaign)}</div>
+              </Card>
+            ))}
+          </div>
+        </>
       )}
 
       <GoLiveDialog

@@ -3,8 +3,9 @@
 import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Button } from '@/components/ui/button'
-import { GradientButton } from '@/components/ui/gradient-button'
+import { Card } from '@/components/ui/freebiz-card'
+import { Button } from '@/components/ui/freebiz-button'
+import { LogoMark, Wordmark } from '@/components/shell/logo-mark'
 import {
   InputOTP,
   InputOTPGroup,
@@ -20,14 +21,16 @@ import { fetchUserDataForSession } from '@/app/_utils/auth-session'
 import { useSetAtom } from 'jotai/react'
 import { userAtom } from '@/atom/user'
 import { routes } from '@/app/_utils/routes'
-import { Header } from '@/components/layout/header'
-import { Footer } from '@/components/layout/footer'
 
 type VerifyOTPPayload = {
   activation_token: string
   activation_code: string
 }
 
+// RESTYLE (design/DECISIONS.md #26-30) — same minimal centered-card
+// treatment as the other auth screens. InputOTP has no Freebiz-primitive
+// equivalent (none of the 12 primitives cover a segmented code input), so
+// it's kept as-is functionally — only its slot styling moved onto tokens.
 function VerifyOTPForm() {
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -63,12 +66,15 @@ function VerifyOTPForm() {
       setUser(userData)
       toast.success('Success', { description: 'Account verified successfully!' })
       // returnTo (e.g. back to /watch) preserves the viewer's place on the
-      // billboard after verifying.
+      // billboard after verifying. A verified viewer with a complete
+      // profile lands on the billboard itself, not /user/dashboard — see
+      // the matching comment in login/page.tsx (DECISIONS.md #6 parks
+      // that route).
       router.push(
         returnTo ||
-          (dashboardRoute === 'gamer'
+          (dashboardRoute === 'viewer'
             ? userData.profileComplete
-              ? routes.USER.DASHBOARD
+              ? routes.WATCH
               : routes.USER.PROFILE_COMPLETE
             : dashboardRoute === 'admin'
               ? routes.ADMIN.CAMPAIGNS
@@ -94,75 +100,64 @@ function VerifyOTPForm() {
     })
   }
 
+  const slotStyle = { background: "var(--ink-900)", borderColor: "var(--line-2)", color: "var(--txt)" }
+
   return (
-    <div className="min-h-screen flex flex-col">
-      <Header />
-      <div className="flex-1 bg-background flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden pt-32">
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute w-96 h-96 bg-primary opacity-20 rounded-full filter blur-[80px] -top-24 -right-24" />
-          <div className="absolute w-72 h-72 bg-secondary opacity-20 rounded-full filter blur-[80px] -bottom-12 -left-12" />
-        </div>
+    <div className="min-h-screen flex items-center justify-center p-4" style={{ background: "var(--ink-900)" }}>
+      <div className="w-full max-w-sm">
+        <Link href={routes.HOME} className="flex items-center justify-center gap-2 mb-6">
+          <LogoMark />
+          <Wordmark />
+        </Link>
 
-        <div className="w-full max-w-sm relative z-10">
-          <div className="bg-card/60 border border-border rounded-2xl p-8 backdrop-blur-sm">
-            <h1 className="text-2xl font-bold text-foreground text-center mb-1 font-sora">
-              Verify Your Account
-            </h1>
-            <p className="text-muted-foreground text-center text-sm mb-2">
-              We&apos;ve sent a 4-digit code to
-            </p>
-            <p className="text-secondary text-center text-sm font-medium mb-6">{email}</p>
+        <Card>
+          <h1 className="text-center" style={{ fontFamily: "var(--display)", fontWeight: 800, fontSize: 21, color: "var(--txt)" }}>
+            Verify your account
+          </h1>
+          <p className="fb-hint text-center mt-2">We&apos;ve sent a 4-digit code to</p>
+          <p className="text-center mt-0.5" style={{ color: "var(--accent)", fontSize: 13.5, fontWeight: 600 }}>{email}</p>
 
-            <div className="space-y-6">
-              <div className="flex justify-center">
-                <InputOTP
-                  maxLength={4}
-                  value={otp}
-                  onChange={handleOTPChange}
-                  disabled={verifyOTPMutation.isPending}
-                  className="gap-3">
-                  <InputOTPGroup className="gap-3">
-                    <InputOTPSlot index={0} className="w-12 h-12 text-lg font-bold bg-white/10 border-border text-foreground focus:border-secondary focus:bg-white/20" />
-                    <InputOTPSlot index={1} className="w-12 h-12 text-lg font-bold bg-white/10 border-border text-foreground focus:border-secondary focus:bg-white/20" />
-                    <InputOTPSlot index={2} className="w-12 h-12 text-lg font-bold bg-white/10 border-border text-foreground focus:border-secondary focus:bg-white/20" />
-                    <InputOTPSlot index={3} className="w-12 h-12 text-lg font-bold bg-white/10 border-border text-foreground focus:border-secondary focus:bg-white/20" />
-                  </InputOTPGroup>
-                </InputOTP>
-              </div>
+          <div className="mt-5 space-y-4">
+            <div className="flex justify-center">
+              <InputOTP
+                maxLength={4}
+                value={otp}
+                onChange={handleOTPChange}
+                disabled={verifyOTPMutation.isPending}
+                className="gap-3">
+                <InputOTPGroup className="gap-3">
+                  <InputOTPSlot index={0} className="w-12 h-12 text-lg font-bold" style={slotStyle} />
+                  <InputOTPSlot index={1} className="w-12 h-12 text-lg font-bold" style={slotStyle} />
+                  <InputOTPSlot index={2} className="w-12 h-12 text-lg font-bold" style={slotStyle} />
+                  <InputOTPSlot index={3} className="w-12 h-12 text-lg font-bold" style={slotStyle} />
+                </InputOTPGroup>
+              </InputOTP>
+            </div>
 
-              <GradientButton
-                onClick={() => handleSubmit()}
-                disabled={verifyOTPMutation.isPending || otp.length !== 4}
-                className="w-full py-6 text-base"
-                variant="secondary">
-                {verifyOTPMutation.isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Verifying...
-                  </>
-                ) : (
-                  'Verify Account'
-                )}
-              </GradientButton>
+            <Button
+              variant="primary"
+              className="w-full justify-center"
+              onClick={() => handleSubmit()}
+              disabled={verifyOTPMutation.isPending || otp.length !== 4}>
+              {verifyOTPMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Verify account'}
+            </Button>
 
-              <div className="text-center">
-                <p className="text-muted-foreground text-sm mb-2">Didn&apos;t receive the code?</p>
-                <Button variant="link" className="p-0 h-auto text-secondary hover:text-secondary/80 font-medium">
-                  Resend code
-                </Button>
-              </div>
+            <div className="text-center">
+              <p className="fb-hint mb-1.5">Didn&apos;t receive the code?</p>
+              <button style={{ color: "var(--accent)", fontSize: 13, fontWeight: 600 }}>
+                Resend code
+              </button>
+            </div>
 
-              <div className="text-center pt-4 border-t border-border">
-                <Link href={routes.REGISTER} className="inline-flex items-center gap-2 text-muted-foreground hover:text-secondary transition-colors text-sm">
-                  <ArrowLeft className="h-4 w-4" />
-                  Back to registration
-                </Link>
-              </div>
+            <div className="text-center pt-3" style={{ borderTop: "1px solid var(--line)" }}>
+              <Link href={routes.REGISTER} className="inline-flex items-center gap-2" style={{ color: "var(--muted)", fontSize: 13 }}>
+                <ArrowLeft className="h-4 w-4" />
+                Back to registration
+              </Link>
             </div>
           </div>
-        </div>
+        </Card>
       </div>
-      <Footer />
     </div>
   )
 }
@@ -170,8 +165,8 @@ function VerifyOTPForm() {
 export default function VerifyOTPPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--ink-900)" }}>
+        <Loader2 className="h-8 w-8 animate-spin" style={{ color: "var(--accent)" }} />
       </div>
     }>
       <VerifyOTPForm />

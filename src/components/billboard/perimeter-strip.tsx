@@ -1,33 +1,13 @@
 "use client";
 
 import { useMemo } from "react";
-import { Gift, Sparkles } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import { StripFeedItem } from "@/types";
+import { VoucherChip } from "@/components/ui/freebiz-voucher-chip";
+import { useNextDropWindow } from "@/hooks/use-freebies";
 
 interface PerimeterStripProps {
   items: StripFeedItem[];
-}
-
-// Freebie codes only ever exist in the feed once they're actually live —
-// no "coming soon" state exists anywhere. AVAILABLE renders static/pinned
-// (it needs to be readable and typeable); TAKEN renders red for a short
-// grace window before it drops out of the feed entirely.
-function FreebiePill({ item }: { item: StripFeedItem }) {
-  const taken = item.state === "TAKEN";
-  return (
-    <div
-      className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-mono font-semibold transition-colors ${
-        taken
-          ? "bg-destructive/10 border-destructive/40 text-destructive line-through"
-          : "bg-secondary/10 border-secondary/40 text-secondary"
-      }`}>
-      <Gift className="h-3.5 w-3.5 flex-shrink-0" />
-      <span className="whitespace-nowrap">{item.publicCode}</span>
-      <span className="text-xs font-normal text-muted-foreground whitespace-nowrap">
-        {item.valueLabel}
-      </span>
-    </div>
-  );
 }
 
 type MarqueeEntry =
@@ -61,13 +41,54 @@ const WATCH_SCREEN_HINTS: MarqueeEntry[] = [
   { key: "hint-screen-fullscreen", kind: "promo", text: "Freebies don't just show up on the strip — watch for a full-screen drop too." },
 ];
 
-// Promo phrases, live freebie codes, and static "watch the screen" hints,
-// mixed and shuffled together so the strip alternates between hype text and
-// "here's a code, go type it" call-outs instead of separate lanes. The
-// pinned strips (positioned around the video frame) remain the actual
-// click-to-type surface for a freebie — this is just extra visibility for
-// it while it scrolls by.
-function ScrollingPromo({ promos, freebies }: { promos: StripFeedItem[]; freebies: StripFeedItem[] }) {
+function formatWindowTime(iso: string, timeZone: string): string {
+  return new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", timeZone });
+}
+
+// The calendar date of `date` as it reads in `timeZone`, not the browser's
+// local zone — "today"/"tomorrow" have to be judged against the zone the
+// window itself is anchored to (Africa/Lagos), not wherever the viewer is.
+function dateKeyInZone(date: Date, timeZone: string): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).format(date);
+}
+
+// Bug found 2026-08-29: the ticker was showing only hour:minute
+// (windowStart/windowEnd carry a full date, always did — the API never
+// lost this, the frontend was just discarding it), so a window past
+// midnight read as an ambiguous "8:00 AM-9:00 AM" with no way to tell it
+// was tomorrow morning, not today. Frontend-only fix — no backend change.
+function formatWindowDayLabel(windowStartIso: string, timeZone: string): string {
+  const windowDate = new Date(windowStartIso);
+  const now = new Date();
+  const windowKey = dateKeyInZone(windowDate, timeZone);
+  if (windowKey === dateKeyInZone(now, timeZone)) return "Today";
+  const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+  if (windowKey === dateKeyInZone(tomorrow, timeZone)) return "Tomorrow";
+  // Defensive — the "next" window shouldn't ever be further out than
+  // tomorrow given how frequently drops happen, but don't show a wrong
+  // "Today"/"Tomorrow" label if it somehow is.
+  return new Intl.DateTimeFormat("en-US", { timeZone, month: "short", day: "numeric" }).format(windowDate);
+}
+
+// design/freebiz-mockup.html's .strip/.track — a thin, always-moving ticker.
+// Promo phrases, live freebie codes, the static "watch the screen" hints,
+// and the next-drop-window heads-up (added 2026-08-29, GET
+// /freebies/next-drop-window — a fixed, clock-aligned window whose duration
+// is server-config and has already changed once live (1h and 2h both
+// observed — don't assume a fixed length), reversing BUSINESS_RULES.md's
+// earlier "no way to see a future drop, unpredictability is the point"
+// rule) are all mixed and shuffled together so the strip
+// alternates between hype text and "here's a code, go type it" call-outs
+// instead of separate lanes. This scrolling ticker is now the ONLY place a
+// live freebie code shows up outside of its one full-screen billboard
+// takeover — a separate row of static chips pinned to the video frame's
+// edges (by positionHint: TOP/BOTTOM/LEFT/RIGHT) used to render underneath
+// this and was pulled per explicit product feedback: it duplicated codes
+// already in the ticker and visually looked like it was "hanging" off the
+// player.
+function Ticker({ promos, freebies }: { promos: StripFeedItem[]; freebies: StripFeedItem[] }) {
+  const { data: nextDropWindow } = useNextDropWindow();
+
   const promoEntries: MarqueeEntry[] = promos
     .filter((i) => i.text)
     .map((i, idx) => ({ key: `promo-${idx}-${i.text}`, kind: "promo", text: i.text as string }));
@@ -81,11 +102,28 @@ function ScrollingPromo({ promos, freebies }: { promos: StripFeedItem[]; freebie
       value: i.valueLabel,
     }));
 
+  // A fixed, clock-aligned window (duration is server-config, not assumed
+  // here), never the exact scheduled instant or the prize type — see the
+  // NextDropWindow comment in src/types/index.ts.
+  const dropWindowEntries: MarqueeEntry[] = nextDropWindow
+    ? [
+        {
+          key: `drop-window-${nextDropWindow.windowStart}`,
+          kind: "promo",
+          text: `Next freebie window: ${formatWindowDayLabel(nextDropWindow.windowStart, nextDropWindow.timeZone)} ${formatWindowTime(nextDropWindow.windowStart, nextDropWindow.timeZone)}–${formatWindowTime(nextDropWindow.windowEnd, nextDropWindow.timeZone)} (${nextDropWindow.timeZone})`,
+        },
+      ]
+    : [];
+
   const signature =
-    promoEntries.map((e) => e.key).join(",") + "|" + freebieEntries.map((e) => e.key).join(",");
+    promoEntries.map((e) => e.key).join(",") +
+    "|" +
+    freebieEntries.map((e) => e.key).join(",") +
+    "|" +
+    dropWindowEntries.map((e) => e.key).join(",");
 
   const entries = useMemo(
-    () => shuffled([...promoEntries, ...freebieEntries, ...WATCH_SCREEN_HINTS], signature),
+    () => shuffled([...promoEntries, ...freebieEntries, ...WATCH_SCREEN_HINTS, ...dropWindowEntries], signature),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [signature]
   );
@@ -94,26 +132,24 @@ function ScrollingPromo({ promos, freebies }: { promos: StripFeedItem[]; freebie
   // Duplicate the run so the marquee loops seamlessly.
   const run = [...entries, ...entries];
   return (
-    <div className="overflow-hidden whitespace-nowrap py-2 border-y border-border bg-white/5">
-      <div className="inline-flex animate-marquee gap-10">
+    <div className="overflow-hidden whitespace-nowrap" style={{ background: "var(--ink-900)" }}>
+      <div className="inline-flex animate-marquee items-center gap-8 py-1.5">
         {run.map((entry, i) =>
           entry.kind === "freebie" ? (
-            <span
-              key={`${entry.key}-${i}`}
-              className="inline-flex items-center gap-2 text-sm font-mono font-semibold text-secondary">
-              <Gift className="h-3.5 w-3.5 flex-shrink-0" />
-              {entry.code}
-              {entry.value && (
-                <span className="text-xs font-normal font-sans text-muted-foreground">
-                  {entry.value}
-                </span>
-              )}
-            </span>
+            <VoucherChip key={`${entry.key}-${i}`} code={entry.code} value={entry.value} />
           ) : (
             <span
               key={`${entry.key}-${i}`}
-              className="inline-flex items-center gap-2 text-sm text-foreground/80">
-              <Sparkles className="h-3.5 w-3.5 text-primary flex-shrink-0" />
+              className="inline-flex items-center gap-2 whitespace-nowrap"
+              style={{
+                fontFamily: "var(--mono)",
+                fontSize: 10.5,
+                letterSpacing: "0.1em",
+                textTransform: "uppercase",
+                color: "var(--free)",
+                opacity: 0.85,
+              }}>
+              <Sparkles className="h-3 w-3 flex-shrink-0" />
               {entry.text}
             </span>
           )
@@ -131,6 +167,11 @@ function ScrollingPromo({ promos, freebies }: { promos: StripFeedItem[]; freebie
         .animate-marquee {
           animation: marquee 25s linear infinite;
         }
+        @media (prefers-reduced-motion: reduce) {
+          .animate-marquee {
+            animation: none;
+          }
+        }
       `}</style>
     </div>
   );
@@ -140,51 +181,5 @@ export function PerimeterStrip({ items }: PerimeterStripProps) {
   const freebies = items.filter((i) => i.kind === "FREEBIE");
   const promos = items.filter((i) => i.kind === "PROMO");
 
-  const byPosition = (hint: string) =>
-    freebies.filter((i) => i.positionHint === hint);
-
-  const top = byPosition("TOP");
-  const bottom = byPosition("BOTTOM");
-  const left = byPosition("LEFT");
-  const right = byPosition("RIGHT");
-
-  return (
-    <div className="space-y-3">
-      {/* The scrolling marquee leads, at the top of the frame — the most
-          visible spot — with the pinned freebie pills (if any are live)
-          underneath it. */}
-      <ScrollingPromo promos={promos} freebies={freebies} />
-
-      {top.length > 0 && (
-        <div className="flex flex-wrap items-center gap-2 justify-center">
-          {top.map((item) => (
-            <FreebiePill key={item.codeId} item={item} />
-          ))}
-        </div>
-      )}
-
-      {(left.length > 0 || right.length > 0) && (
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex flex-wrap gap-2">
-            {left.map((item) => (
-              <FreebiePill key={item.codeId} item={item} />
-            ))}
-          </div>
-          <div className="flex flex-wrap gap-2 justify-end">
-            {right.map((item) => (
-              <FreebiePill key={item.codeId} item={item} />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {bottom.length > 0 && (
-        <div className="flex flex-wrap items-center gap-2 justify-center">
-          {bottom.map((item) => (
-            <FreebiePill key={item.codeId} item={item} />
-          ))}
-        </div>
-      )}
-    </div>
-  );
+  return <Ticker promos={promos} freebies={freebies} />;
 }

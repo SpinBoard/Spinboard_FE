@@ -23,6 +23,23 @@ export const MODERATION_STYLES: Record<AdCampaignModerationStatus, string> = {
   REJECTED: "bg-destructive/20 text-destructive border-destructive/30",
 };
 
+// Freebiz Pill tone equivalents of the maps above, for the redesigned
+// (b-dash / b-new / b-analytics) screens.
+export const STATUS_TONE: Record<AdCampaignStatus, "live" | "warn" | "bad" | "default"> = {
+  DRAFT: "default",
+  PENDING_PAYMENT: "warn",
+  ACTIVE: "live",
+  PAUSED: "warn",
+  EXPIRED: "default",
+  REJECTED: "bad",
+};
+
+export const MODERATION_TONE: Record<AdCampaignModerationStatus, "live" | "warn" | "bad"> = {
+  PENDING: "warn",
+  APPROVED: "live",
+  REJECTED: "bad",
+};
+
 // Looks up a style for a status value that isn't guaranteed to be present
 // or to match the known enum — e.g. a legacy campaign fetched from the live
 // API without a moderationStatus set. Falls back to a neutral style instead

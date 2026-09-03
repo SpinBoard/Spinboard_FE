@@ -1,0 +1,378 @@
+/* Freebiz design-system primitives — src/components/ui/freebiz-*.tsx
+ *
+ * Ported from design/freebiz-mockup.html's base primitive rules. Every
+ * colour, radius, shadow and font here comes from a var(--token) defined
+ * in src/styles/tokens.css — nothing is hardcoded. All selectors are
+ * scoped under an `fb-` prefixed class (never a bare element selector like
+ * the mockup's own `table{}`/`th{}`/`td{}`), since this stylesheet loads
+ * into a real multi-screen app rather than a single static prototype page
+ * — an unscoped rule here would silently restyle unrelated tables/headings
+ * anywhere else that happens to import one of these components.
+ */
+
+/* ---------- Button ---------- */
+.fb-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  font-family: var(--body);
+  font-weight: 600;
+  font-size: 13px;
+  background: var(--ink-600);
+  color: var(--txt);
+  border: 1px solid var(--line-2);
+  transition: 0.15s;
+}
+.fb-btn:hover {
+  border-color: rgba(255, 255, 255, 0.3);
+}
+.fb-btn--primary {
+  background: var(--accent);
+  color: var(--ink-900);
+  border-color: transparent;
+}
+.fb-btn--primary:hover {
+  filter: brightness(1.08);
+}
+.fb-btn--ghost {
+  background: none;
+  border-color: var(--line-2);
+  color: var(--muted);
+}
+.fb-btn--ghost:hover {
+  color: var(--txt);
+}
+.fb-btn--danger {
+  background: rgba(255, 77, 94, 0.14);
+  color: var(--spent);
+  border-color: rgba(255, 77, 94, 0.35);
+}
+.fb-btn--sm {
+  padding: 6px 11px;
+  font-size: 12px;
+  border-radius: 8px;
+}
+
+/* ---------- Pill ---------- */
+.fb-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-family: var(--body);
+  font-size: 11.5px;
+  font-weight: 600;
+  border: 1px solid var(--line-2);
+  color: var(--muted);
+}
+.fb-pill--live {
+  color: var(--live);
+  border-color: rgba(61, 220, 151, 0.35);
+  background: rgba(61, 220, 151, 0.1);
+}
+.fb-pill--warn {
+  color: var(--free);
+  border-color: rgba(255, 210, 63, 0.35);
+  background: rgba(255, 210, 63, 0.1);
+}
+.fb-pill--bad {
+  color: var(--spent);
+  border-color: rgba(255, 77, 94, 0.35);
+  background: rgba(255, 77, 94, 0.1);
+}
+.fb-pill--info {
+  color: var(--admin);
+  border-color: rgba(76, 201, 240, 0.35);
+  background: rgba(76, 201, 240, 0.1);
+}
+/* A <button> reusing .fb-pill as a clickable filter chip (e.g. campaign
+ * status filters) — resets the browser's native button chrome so it
+ * matches the <span> version exactly. */
+button.fb-pill {
+  background: none;
+  cursor: pointer;
+  font: inherit;
+  font-family: var(--body);
+}
+.fb-pill--brandish {
+  color: var(--brand);
+  border-color: rgba(124, 92, 255, 0.4);
+  background: rgba(124, 92, 255, 0.12);
+}
+.fb-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex: 0 0 auto;
+}
+.fb-dot--pulse {
+  animation: fb-pulse 1.8s infinite;
+}
+@keyframes fb-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.28;
+  }
+}
+
+/* ---------- Card ---------- */
+.fb-card {
+  background: var(--ink-800);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  padding: 20px;
+}
+.fb-card--tight {
+  padding: 15px;
+}
+.fb-card h3 {
+  font-family: var(--display);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin: 0 0 3px;
+  font-size: 15px;
+}
+.fb-card-note {
+  color: var(--muted);
+  font-size: 12.5px;
+  margin: 0;
+}
+
+/* ---------- Stat ---------- */
+.fb-stat {
+  background: var(--ink-800);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  padding: 15px 16px;
+}
+.fb-stat__k {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+.fb-stat__v {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 26px;
+  letter-spacing: -0.03em;
+  margin-top: 6px;
+  line-height: 1;
+  color: var(--txt);
+}
+.fb-stat__v small {
+  font-size: 13px;
+  color: var(--muted);
+  font-weight: 600;
+  font-family: var(--body);
+}
+.fb-stat__d {
+  font-size: 11.5px;
+  color: var(--muted);
+  margin-top: 5px;
+}
+
+/* ---------- Field / Input ---------- */
+.fb-field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.fb-field label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  font-family: var(--body);
+}
+.fb-input {
+  background: var(--ink-900);
+  border: 1px solid var(--line-2);
+  border-radius: 10px;
+  padding: 11px 13px;
+  color: var(--txt);
+  font: inherit;
+  font-family: var(--body);
+  width: 100%;
+}
+.fb-input::placeholder {
+  color: var(--faint);
+}
+.fb-input:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+.fb-input:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.fb-hint {
+  font-size: 11.5px;
+  color: var(--faint);
+}
+
+/* ---------- Table ---------- */
+.fb-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.fb-table th {
+  text-align: left;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--faint);
+  font-weight: 400;
+  padding: 0 12px 10px;
+  border-bottom: 1px solid var(--line);
+}
+.fb-table td {
+  padding: 13px 12px;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+  vertical-align: middle;
+  color: var(--txt);
+}
+.fb-table tr:last-child td {
+  border-bottom: 0;
+}
+.fb-table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+/* Numeric/mono formatting — used on table cells, stat values, limit rows */
+.fb-num {
+  font-family: var(--mono);
+  font-size: 12.5px;
+}
+
+/* ---------- Voucher chip (signature) ---------- */
+.fb-voucher {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 15px;
+  border-radius: 9px;
+  background: var(--ink-900);
+  border: 1.5px dashed rgba(61, 220, 151, 0.55);
+  color: var(--live);
+  font-family: var(--mono);
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.14em;
+}
+.fb-voucher::before,
+.fb-voucher::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--ink-800);
+  transform: translateY(-50%);
+}
+.fb-voucher::before {
+  left: -5px;
+}
+.fb-voucher::after {
+  right: -5px;
+}
+.fb-voucher--used {
+  border-color: rgba(255, 77, 94, 0.5);
+  color: var(--spent);
+  text-decoration: line-through;
+  opacity: 0.75;
+}
+.fb-voucher__tag {
+  font-family: var(--body);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--faint);
+  font-weight: 600;
+}
+
+/* ---------- Avatar ---------- */
+.fb-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 30px;
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 12px;
+}
+
+/* ---------- Progress ---------- */
+.fb-progress {
+  height: 4px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+}
+.fb-progress > i {
+  display: block;
+  height: 100%;
+  border-radius: 99px;
+  font-style: normal;
+}
+
+/* ---------- LimitRow ---------- */
+.fb-limit {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 9px 0;
+  border-bottom: 1px dashed var(--line);
+  font-size: 13px;
+  color: var(--muted);
+  font-family: var(--body);
+}
+.fb-limit:last-of-type {
+  border-bottom: 0;
+}
+.fb-limit b {
+  color: var(--txt);
+  font-weight: 700;
+}
+.fb-limit--total {
+  border-top: 1px solid var(--line-2);
+  border-bottom: 0;
+  margin-top: 4px;
+  padding-top: 12px;
+}
+.fb-limit--total b {
+  font-size: 16px;
+  color: var(--accent);
+}
+
+/* ---------- Steps ---------- */
+.fb-steps {
+  list-style: decimal; /* Tailwind preflight resets ol/ul to list-style:none */
+  margin: 12px 0 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  font-size: 12.8px;
+  color: var(--muted);
+  font-family: var(--body);
+}
+.fb-steps b {
+  color: var(--txt);
+}
+.fb-steps li::marker {
+  color: var(--accent);
+}

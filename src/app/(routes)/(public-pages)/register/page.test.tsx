@@ -60,7 +60,7 @@ describe("RegisterPage", () => {
     expect(screen.queryByPlaceholderText(/last name/i)).not.toBeInTheDocument();
   });
 
-  it("submits exactly { username, email, password } to the gamer register endpoint", async () => {
+  it("submits exactly { username, email, password } to the viewer register endpoint", async () => {
     renderPage();
     const user = userEvent.setup();
     await user.type(await screen.findByPlaceholderText("Username"), "player_one");
@@ -69,7 +69,7 @@ describe("RegisterPage", () => {
     await user.click(screen.getByRole("button", { name: /sign up/i }));
 
     expect(axiosPost).toHaveBeenCalledWith(
-      expect.stringContaining("/auth/gamer/register"),
+      expect.stringContaining("/auth/viewer/register"),
       { username: "player_one", email: "player@test.com", password: "password123" }
     );
   });

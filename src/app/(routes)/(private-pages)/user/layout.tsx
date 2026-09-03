@@ -4,6 +4,7 @@ import { useAtomValue } from 'jotai'
 import { userAtom } from '@/atom/user'
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { AppShell } from '@/components/shell/app-shell'
 
 export default function UserLayout({
   children,
@@ -14,10 +15,10 @@ export default function UserLayout({
   const router = useRouter()
 
   useEffect(() => {
-    if (user && user.userType !== 'gamer') {
+    if (user && user.userType !== 'viewer') {
       router.push('/brand/dashboard')
     }
   }, [user, router])
 
-  return <div>{children}</div>
+  return <AppShell route="viewer">{children}</AppShell>
 }

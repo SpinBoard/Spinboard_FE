@@ -133,6 +133,7 @@ redesign first.
 | `a-permissions`                       | Next                  | Needed before the team grows past the people who have database access.                                                                                                                                                                  |
 | `a-fraud`                             | Next                  | Needed before viewer volume makes fastest-fingers worth scripting. Watch for this the week after the first flier campaign.                                                                                                              |
 | `v-promote`, `b-contest`, `a-contest` | **Phase 2, not now**  | The contest backend doesn't exist. Do not scaffold these.                                                                                                                                                                               |
+|  |
 
 ---
 

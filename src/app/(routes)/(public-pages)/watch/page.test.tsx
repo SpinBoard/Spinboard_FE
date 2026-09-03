@@ -14,7 +14,7 @@ const loggedInUser = {
   id: "user1",
   fullName: "Test User",
   email: "user@test.com",
-  userType: "gamer" as const,
+  userType: "viewer" as const,
   isVerified: true,
   createdAt: "2026-01-01",
   accessToken: "test-token",
@@ -109,18 +109,18 @@ describe("WatchPage", () => {
     expect(screen.queryByTestId("spin-machine")).not.toBeInTheDocument();
   });
 
-  it("renders the freebie strip with the pinned code and scrolling promo", async () => {
+  it("renders the freebie strip with the live code and scrolling promo", async () => {
     renderPage();
-    // The code renders once pinned (readable/typeable) and again inside the
-    // scrolling marquee (duplicated there for a seamless loop), so multiple
-    // matches are expected rather than a single unique one.
+    // The strip's scrolling ticker is the only place a live code shows up
+    // outside its billboard takeover — the run is duplicated once for a
+    // seamless marquee loop, so multiple matches are expected.
     expect((await screen.findAllByText("PZL7K2Q9")).length).toBeGreaterThan(0);
     expect(screen.getAllByText("Eyes on the edges.").length).toBeGreaterThan(0);
   });
 
   it("the Apply box always renders and submits a code to /freebies/apply", async () => {
     renderPage();
-    const input = await screen.findByPlaceholderText(/type a code/i);
+    const input = await screen.findByPlaceholderText(/type the code on the board/i);
     const user = userEvent.setup();
     await user.type(input, "PZL7K2Q9");
     await user.click(screen.getByRole("button", { name: /apply code/i }));

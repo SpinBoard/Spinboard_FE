@@ -29,7 +29,7 @@ export function apiErrorDetails<T = Record<string, unknown>>(
   return data?.details;
 }
 
-const DEVICE_ID_KEY = "pazzell_device_id";
+const DEVICE_ID_KEY = "freebiz_device_id";
 
 // A stable per-browser identifier sent as X-Device-Id on freebie claims —
 // feeds the device-ceiling anti-abuse check (docs/CONFIG.md `freebie.deviceDailyCap`).
@@ -50,7 +50,7 @@ export function getOrCreateDeviceId(): string {
   }
 }
 
-const DAILY_PLAYED_KEY = "pazzell_played_today";
+const DAILY_PLAYED_KEY = "freebiz_played_today";
 
 function todayStr(): string {
   return new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"

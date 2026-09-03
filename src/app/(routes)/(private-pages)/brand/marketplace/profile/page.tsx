@@ -10,12 +10,11 @@ import { routes } from "@/app/_utils/routes";
 import { apiErrorMessage } from "@/app/_utils/helper";
 import { BusinessProfile, BusinessProfileResponse, BusinessSocialLinks } from "@/types";
 import { PageLoader } from "@/components/ui/page-loader";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Card } from "@/components/ui/freebiz-card";
+import { Field } from "@/components/ui/freebiz-field";
+import { Input, Textarea } from "@/components/ui/freebiz-input";
+import { Button } from "@/components/ui/freebiz-button";
+import { Toggle } from "@/components/settings/notif-toggle";
 import { Store, Save, Loader2, Package, Globe } from "lucide-react";
 
 const SOCIAL_FIELDS: (keyof BusinessSocialLinks)[] = [
@@ -39,6 +38,11 @@ const emptyForm = {
   isListed: false,
 };
 
+// RESTYLE + rename (design/DECISIONS.md §Marketplace) — this is the brand's
+// own directory-listing management, un-parked alongside the viewer-facing
+// "Brands" browse page. Kept as "Directory listing" here rather than
+// "Brands" too — see nav-config.tsx's note on why the two labels differ.
+// Fetch/mutation unchanged.
 export default function BusinessProfilePage() {
   const queryClient = useQueryClient();
   const [form, setForm] = useState(emptyForm);
@@ -93,7 +97,7 @@ export default function BusinessProfilePage() {
     },
   });
 
-  if (isLoading) return <PageLoader message="Loading your directory listing..." />;
+  if (isLoading) return <PageLoader withLayout={false} message="Loading your directory listing..." />;
 
   const update = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) =>
     setForm((f) => ({ ...f, [key]: value }));
@@ -106,112 +110,99 @@ export default function BusinessProfilePage() {
     (!!form.contactEmail.trim() || !!form.contactPhone.trim() || !!form.whatsappNumber.trim());
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-3xl font-bold text-foreground font-sora flex items-center gap-3">
-            <Store className="h-7 w-7 text-secondary" />
-            Marketplace Listing
+          <h1 className="flex items-center gap-2" style={{ fontFamily: "var(--display)", fontWeight: 800, fontSize: 27, letterSpacing: "-0.02em", color: "var(--txt)" }}>
+            <Store className="h-6 w-6" style={{ color: "var(--accent)" }} />
+            Directory listing
           </h1>
-          <p className="text-muted-foreground">
-            A public business-directory profile — no checkout, no prices charged in-app. Users browse and
-            contact you directly.
+          <p className="mt-1" style={{ color: "var(--muted)", fontSize: 13.5 }}>
+            A public business-directory profile — no checkout, no prices charged in-app. Users
+            browse and contact you directly.
           </p>
         </div>
         <Link href={routes.BRAND.PRODUCTS}>
-          <Button variant="outline" className="border-border text-foreground hover:bg-white/10">
-            <Package className="h-4 w-4 mr-2" />
-            Manage Products
+          <Button variant="ghost">
+            <Package className="h-4 w-4" />
+            Manage products
           </Button>
         </Link>
       </div>
 
-      <Card className="bg-card/50 backdrop-blur-sm border-border">
-        <CardHeader>
-          <CardTitle className="text-foreground font-sora text-lg">Business profile</CardTitle>
-          <CardDescription>This is what shows on your public directory page.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="space-y-2">
-            <Label>Business name</Label>
+      <Card>
+        <h3 style={{ fontFamily: "var(--display)", fontSize: 15, color: "var(--txt)" }}>Business profile</h3>
+        <p className="fb-hint mt-1">This is what shows on your public directory page.</p>
+
+        <div className="mt-4 space-y-3">
+          <Field label="Business name">
             <Input
               value={form.businessName}
               onChange={(e) => update("businessName", e.target.value)}
               placeholder="e.g. Naija Snacks Co."
             />
-          </div>
+          </Field>
 
           {profile?.category && profile.category.length > 0 && (
-            <p className="text-xs text-muted-foreground">
+            <p className="fb-hint">
               Listed under: {profile.category.join(", ")} — categories come from your{" "}
-              <Link href={routes.BRAND.PROFILE} className="text-secondary hover:underline">
+              <Link href={routes.BRAND.PROFILE} style={{ color: "var(--accent)" }}>
                 business categories on your brand profile
               </Link>
               .
             </p>
           )}
 
-          <div className="space-y-2">
-            <Label>Description</Label>
+          <Field label="Description">
             <Textarea
-              className="min-h-[100px]"
+              rows={4}
               value={form.businessDescription}
               onChange={(e) => update("businessDescription", e.target.value)}
               placeholder="What do you offer?"
             />
-          </div>
+          </Field>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Logo</Label>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <Field label="Logo">
               <Input type="file" accept="image/*" onChange={(e) => setLogoFile(e.target.files?.[0] ?? null)} />
-            </div>
-            <div className="space-y-2">
-              <Label>Cover image</Label>
+            </Field>
+            <Field label="Cover image">
               <Input type="file" accept="image/*" onChange={(e) => setCoverFile(e.target.files?.[0] ?? null)} />
-            </div>
+            </Field>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label>Contact email</Label>
-              <Input
-                type="email"
-                value={form.contactEmail}
-                onChange={(e) => update("contactEmail", e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Contact phone</Label>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <Field label="Contact email">
+              <Input type="email" value={form.contactEmail} onChange={(e) => update("contactEmail", e.target.value)} />
+            </Field>
+            <Field label="Contact phone">
               <Input value={form.contactPhone} onChange={(e) => update("contactPhone", e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label>WhatsApp number</Label>
+            </Field>
+            <Field label="WhatsApp number">
               <Input value={form.whatsappNumber} onChange={(e) => update("whatsappNumber", e.target.value)} />
-            </div>
+            </Field>
           </div>
 
-          <div className="space-y-2">
-            <Label>Address</Label>
+          <Field label="Address">
             <Input value={form.address} onChange={(e) => update("address", e.target.value)} />
             {(profile?.country || profile?.state || profile?.city) && (
-              <p className="text-xs text-muted-foreground">
+              <span className="fb-hint mt-1">
                 {[profile?.city, profile?.state, profile?.country].filter(Boolean).join(", ")} — country/state/city
                 come from your{" "}
-                <Link href={routes.BRAND.PROFILE} className="text-secondary hover:underline">
+                <Link href={routes.BRAND.PROFILE} style={{ color: "var(--accent)" }}>
                   brand profile
                 </Link>
                 .
-              </p>
+              </span>
             )}
-          </div>
+          </Field>
 
-          <div className="space-y-2">
-            <Label className="flex items-center gap-1.5">
+          <div>
+            <p className="flex items-center gap-1.5 mb-1.5" style={{ fontSize: 12, fontWeight: 600, color: "var(--muted)" }}>
               <Globe className="h-3.5 w-3.5" />
               Social links
-            </Label>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
               {SOCIAL_FIELDS.map((field) => (
                 <Input
                   key={field}
@@ -225,37 +216,29 @@ export default function BusinessProfilePage() {
             </div>
           </div>
 
-          <div className="flex items-start gap-3 rounded-lg border border-border p-4">
-            <Checkbox
-              id="isListed"
-              checked={form.isListed}
-              disabled={!canPublish && !form.isListed}
-              onCheckedChange={(checked) => update("isListed", checked === true)}
-            />
+          <div className="flex items-start justify-between gap-3 rounded-lg p-3" style={{ border: "1px solid var(--line)" }}>
             <div>
-              <Label htmlFor="isListed">Publish to the public directory</Label>
-              <p className="text-xs text-muted-foreground mt-0.5">
+              <p style={{ fontSize: 13, color: "var(--txt)" }}>Publish to the public directory</p>
+              <p className="fb-hint mt-0.5">
                 {canPublish || form.isListed
-                  ? "Visible to everyone browsing the marketplace directory."
+                  ? "Visible to everyone browsing the Brands directory."
                   : "Add a business name and at least one contact method (email, phone, or WhatsApp) before you can publish."}
               </p>
             </div>
+            <Toggle
+              checked={form.isListed}
+              disabled={!canPublish && !form.isListed}
+              onChange={(checked) => update("isListed", checked)}
+            />
           </div>
 
-          <div className="flex gap-3 pt-2 border-t border-border">
-            <Button
-              onClick={() => saveMutation.mutate()}
-              disabled={saveMutation.isPending}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground">
-              {saveMutation.isPending ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <Save className="h-4 w-4 mr-2" />
-              )}
+          <div className="pt-3" style={{ borderTop: "1px solid var(--line)" }}>
+            <Button variant="primary" onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
+              {saveMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
               Save listing
             </Button>
           </div>
-        </CardContent>
+        </div>
       </Card>
     </div>
   );

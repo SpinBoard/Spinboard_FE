@@ -1,11 +1,11 @@
 import { api } from "@/lib/api";
 import { ENDPOINTS } from "@/app/_utils/endpoints";
-import { BrandProfileData, GamerProfileData, MeResponse, UserData } from "@/types";
+import { BrandProfileData, ViewerProfileData, MeResponse, UserData } from "@/types";
 
 interface AuthedLoginData {
   accessToken: string;
   refreshToken: string;
-  user: { role: "gamer" | "brand" | "admin" };
+  user: { role: "viewer" | "brand" | "admin" };
 }
 
 // Shared by login, verify-otp, and Google auth — all three receive the same
@@ -15,11 +15,11 @@ interface AuthedLoginData {
 // duplicated (and drifting) across those three call sites.
 export async function fetchUserDataForSession(loginData: AuthedLoginData): Promise<{
   userData: UserData;
-  dashboardRoute: "gamer" | "brand" | "admin";
+  dashboardRoute: "viewer" | "brand" | "admin";
 }> {
   const authHeader = { headers: { Authorization: `Bearer ${loginData.accessToken}` } };
 
-  // Admin accounts aren't self-registered — there's no gamer/brand profile
+  // Admin accounts aren't self-registered — there's no viewer/brand profile
   // to fetch, so this falls back to the generic cached-session-user route.
   if (loginData.user.role === "admin") {
     const response = await api.get<MeResponse>(ENDPOINTS.USER_ME, authHeader);
@@ -43,27 +43,26 @@ export async function fetchUserDataForSession(loginData: AuthedLoginData): Promi
     };
   }
 
-  if (loginData.user.role === "gamer") {
-    const response = await api.get<{ profile: GamerProfileData }>(
-      ENDPOINTS.GAMER_PROFILE,
+  if (loginData.user.role === "viewer") {
+    const response = await api.get<{ profile: ViewerProfileData }>(
+      ENDPOINTS.VIEWER_PROFILE,
       authHeader
     );
-    const gamerData = response.data.profile;
+    const viewerData = response.data.profile;
     return {
-      dashboardRoute: "gamer",
+      dashboardRoute: "viewer",
       userData: {
-        id: gamerData._id,
-        firstName: gamerData.firstName,
-        lastName: gamerData.lastName,
-        fullName: `${gamerData.firstName} ${gamerData.lastName}`,
-        avatar: gamerData.avatar,
-        username: gamerData.username,
-        email: gamerData.email,
-        leaderboardPosition: gamerData.leaderboardPosition,
-        userType: gamerData.role,
-        isVerified: gamerData.isVerified,
-        profileComplete: gamerData.profileComplete,
-        createdAt: gamerData.createdAt,
+        id: viewerData._id,
+        firstName: viewerData.firstName,
+        lastName: viewerData.lastName,
+        fullName: `${viewerData.firstName} ${viewerData.lastName}`,
+        avatar: viewerData.avatar,
+        username: viewerData.username,
+        email: viewerData.email,
+        userType: viewerData.role,
+        isVerified: viewerData.isVerified,
+        profileComplete: viewerData.profileComplete,
+        createdAt: viewerData.createdAt,
         accessToken: loginData.accessToken,
         refreshToken: loginData.refreshToken,
       },

@@ -1,0 +1,2404 @@
+openapi: 3.0.3
+info:
+  title: Pazzell API
+  description: >
+    Billboard + Perimeter Freebie Codes platform. All paths are relative to
+    /api/v1. See docs/frontend/API_GUIDE.md for a narrative walkthrough,
+    DATA_MODELS.md for full shape detail, and BUSINESS_RULES.md for behavior
+    that isn't obvious from the schema alone.
+  version: "2.0.0"
+servers:
+  - url: /api/v1
+tags:
+  - name: Auth
+  - name: Profile
+  - name: Billboard
+  - name: Freebies
+  - name: Wallet
+  - name: AdCampaigns
+  - name: Marketplace
+  - name: PromoteAndEarn
+  - name: Forum
+  - name: Analytics
+  - name: Admin
+  - name: BusinessKYC
+  - name: Projects
+
+security:
+  - bearerAuth: []
+
+paths:
+  # ---------------------------------------------------------------- Auth
+  /auth/google:
+    post:
+      tags: [Auth]
+      security: []
+      summary: Google OAuth sign-in / sign-up
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                idToken: { type: string }
+                email: { type: string }
+                name: { type: string }
+                avatar: { type: string }
+                googleId: { type: string }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/AuthResponse" } } } }
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      security: []
+      summary: Unified login (viewer or brand)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string }
+                password: { type: string }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/AuthResponse" } } } }
+        "401": { $ref: "#/components/responses/Error" }
+
+  /auth/viewer/register:
+    post:
+      tags: [Auth]
+      security: []
+      summary: Register a viewer account (email/password)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, email, password]
+              properties:
+                username: { type: string }
+                email: { type: string }
+                password: { type: string }
+      responses:
+        "201": { description: Activation email sent, content: { application/json: { schema: { $ref: "#/components/schemas/ActivationPending" } } } }
+
+  /auth/brand/register:
+    post:
+      tags: [Auth]
+      security: []
+      summary: Register a brand account (email/password)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, email, password]
+              properties:
+                username: { type: string }
+                email: { type: string }
+                password: { type: string }
+      responses:
+        "201": { description: Activation email sent, content: { application/json: { schema: { $ref: "#/components/schemas/ActivationPending" } } } }
+
+  /auth/user/activate:
+    post:
+      tags: [Auth]
+      security: []
+      summary: Activate a registered account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [activation_token, activation_code]
+              properties:
+                activation_token: { type: string }
+                activation_code: { type: string }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/AuthResponse" } } } }
+        "201": { description: Account created, content: { application/json: { schema: { $ref: "#/components/schemas/AuthResponse" } } } }
+
+  /auth/user/resend-activation:
+    post:
+      tags: [Auth]
+      security: []
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [email], properties: { email: { type: string } } } } }
+      responses:
+        "200": { description: OK }
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      responses:
+        "200": { description: OK }
+
+  /auth/forgot-password:
+    post:
+      tags: [Auth]
+      security: []
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [email], properties: { email: { type: string } } } } }
+      responses:
+        "200": { description: Always 200 regardless of whether the email exists }
+
+  /auth/reset-password:
+    post:
+      tags: [Auth]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, new_password]
+              properties:
+                token: { type: string }
+                new_password: { type: string, minLength: 6 }
+      responses:
+        "200": { description: OK }
+
+  # ---------------------------------------------------------------- Profile
+  /me:
+    get:
+      tags: [Profile]
+      summary: Cached session user
+      responses:
+        "200": { description: OK }
+
+  /profile/viewer:
+    get:
+      tags: [Profile]
+      summary: Full viewer profile with points/leaderboard stats
+      responses:
+        "200": { description: OK }
+    put:
+      tags: [Profile]
+      summary: Update viewer profile (multipart, optional avatar file)
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                avatar: { type: string, format: binary }
+                firstName: { type: string }
+                lastName: { type: string }
+                username: { type: string }
+                age: { type: integer, minimum: 0, maximum: 120 }
+                sex: { type: string, enum: [man, woman, prefer_not_to_say] }
+                country: { type: string }
+                state: { type: string }
+                city: { type: string }
+                phone: { type: string }
+      responses:
+        "200": { description: OK }
+
+  /profile/brand:
+    get:
+      tags: [Profile]
+      summary: Brand profile with brand details and campaign count
+      responses:
+        "200": { description: OK }
+    put:
+      tags: [Profile]
+      summary: Update brand profile (multipart, optional avatar file)
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                avatar: { type: string, format: binary }
+                name: { type: string }
+                companyName: { type: string }
+                businessCategories: { type: array, items: { type: string } }
+                country: { type: string }
+                state: { type: string }
+                city: { type: string }
+                registrationNumber: { type: string }
+      responses:
+        "200": { description: OK }
+
+  /settings:
+    get:
+      tags: [Profile]
+      responses: { "200": { description: OK } }
+
+  /profile/change-password:
+    patch:
+      tags: [Profile]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [currentPassword, newPassword]
+              properties: { currentPassword: { type: string }, newPassword: { type: string, minLength: 6 } }
+      responses: { "200": { description: OK } }
+
+  /profile/notifications:
+    patch:
+      tags: [Profile]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                emailNotifications: { type: boolean }
+                leaderboardUpdates: { type: boolean }
+                newCampaignAlerts: { type: boolean }
+                weeklyDigest: { type: boolean }
+      responses: { "200": { description: OK } }
+
+  /profile/privacy:
+    patch:
+      tags: [Profile]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [showOnLeaderboard], properties: { showOnLeaderboard: { type: boolean } } } } }
+      responses: { "200": { description: OK } }
+
+  /profile/account:
+    delete:
+      tags: [Profile]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [password], properties: { password: { type: string } } } } }
+      responses: { "200": { description: OK } }
+
+  # ---------------------------------------------------------------- Billboard
+  /billboard/session:
+    post:
+      tags: [Billboard]
+      security: []
+      summary: Mint a viewing session (works with or without auth)
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { success: { type: boolean }, sessionId: { type: string } }
+
+  /billboard/queue:
+    get:
+      tags: [Billboard]
+      security: []
+      summary: Fetch upcoming billboard slots
+      parameters:
+        - name: sessionId
+          in: query
+          required: true
+          schema: { type: string }
+        - name: size
+          in: query
+          schema: { type: integer, default: 5 }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  slots: { type: array, items: { $ref: "#/components/schemas/BillboardSlot" } }
+
+  /billboard/impressions/heartbeat:
+    post:
+      tags: [Billboard]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [sessionId, slotId]
+              properties: { sessionId: { type: string }, slotId: { type: string }, watchedMs: { type: number } }
+      responses: { "200": { description: OK } }
+
+  /billboard/impressions/complete:
+    post:
+      tags: [Billboard]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [sessionId, slotId]
+              properties: { sessionId: { type: string }, slotId: { type: string }, watchedMs: { type: number } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { success: { type: boolean }, ok: { type: boolean }, completed: { type: boolean } }
+
+  /billboard/impressions/click:
+    post:
+      tags: [Billboard]
+      security: []
+      summary: Fire-and-forget click-through tracking for an AD slot's clickUrl
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [sessionId, slotId]
+              properties: { sessionId: { type: string }, slotId: { type: string } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { success: { type: boolean }, ok: { type: boolean }, clicked: { type: boolean } }
+        "400":
+          description: Slot has no campaign to click through to (HOUSE/FREEBIE slot)
+
+  /billboard/stats:
+    get:
+      tags: [Billboard]
+      security: []
+      summary: Headline watch-screen counters
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  stats:
+                    type: object
+                    properties:
+                      watchingNow: { type: integer }
+                      codesToday: { type: integer }
+                      adsInRotation: { type: integer }
+
+  /billboard/my-streak:
+    get:
+      tags: [Billboard]
+      summary: Caller's consecutive-day watch streak (hard auth required, unlike the rest of this tag)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { success: { type: boolean }, streakDays: { type: integer } }
+
+  # ---------------------------------------------------------------- Freebies
+  /freebies/strip:
+    get:
+      tags: [Freebies]
+      security: []
+      summary: Poll the perimeter strip feed (pinned codes + scrolling promo)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/StripFeed" }
+
+  /freebies/strip/events:
+    get:
+      tags: [Freebies]
+      security: []
+      summary: SSE variant of the strip feed
+      responses:
+        "200": { description: "text/event-stream of StripFeed payloads" }
+
+  /freebies/phrases:
+    get:
+      tags: [Freebies]
+      security: []
+      summary: Full active phrase pool, ETag-cacheable
+      responses:
+        "200": { description: OK }
+        "304": { description: Not modified (If-None-Match matched current ETag) }
+
+  /freebies/recent-catches:
+    get:
+      tags: [Freebies]
+      security: []
+      summary: Small "who just won" social-proof feed
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  catches:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        displayName: { type: string }
+                        type: { type: string, enum: [AIRTIME, CASH] }
+                        valueLabel: { type: string }
+                        takenAt: { type: string, format: date-time }
+
+  /freebies/limits/mine:
+    get:
+      tags: [Freebies]
+      summary: Caller's today's per-type claim-cap usage
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  limits:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        type: { type: string, enum: [AIRTIME, CASH] }
+                        cap: { type: integer }
+                        claimedToday: { type: integer }
+                        remaining: { type: integer }
+                        resetsAt: { type: string, format: date-time }
+
+  /freebies/apply:
+    post:
+      tags: [Freebies]
+      summary: Claim a live public code, or redeem one of the caller's own secret codes
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          schema: { type: string }
+          description: Retry-safe on the claim branch
+        - name: X-Device-Id
+          in: header
+          schema: { type: string }
+          description: Strongly recommended — feeds the device-ceiling anti-abuse check
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [code], properties: { code: { type: string } } }
+      responses:
+        "200":
+          description: Claimed or redeemed
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/ClaimedResult"
+                  - $ref: "#/components/schemas/RedeemedCashResult"
+                  - $ref: "#/components/schemas/RedeemedAirtimeResult"
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
+        "429": { $ref: "#/components/responses/Error" }
+
+  /me/claims:
+    get:
+      tags: [Freebies]
+      summary: Full claim history — secret codes always visible
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  claims: { type: array, items: { $ref: "#/components/schemas/ClaimHistoryItem" } }
+
+  /me/claims/{claimId}/redeem:
+    post:
+      tags: [Freebies]
+      summary: Redeem a claim without needing its secret code (ownership proven by auth)
+      parameters:
+        - name: claimId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Redeemed
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/RedeemedCashResult"
+                  - $ref: "#/components/schemas/RedeemedAirtimeResult"
+
+  # ---------------------------------------------------------------- Wallet
+  /wallet/balance:
+    get:
+      tags: [Wallet]
+      responses:
+        "200":
+          description: OK
+          content: { application/json: { schema: { $ref: "#/components/schemas/WalletBalance" } } }
+
+  /wallet/transactions:
+    get:
+      tags: [Wallet]
+      parameters:
+        - name: limit
+          in: query
+          schema: { type: integer, default: 50 }
+      responses: { "200": { description: OK } }
+
+  /wallet/bank-accounts:
+    post:
+      tags: [Wallet]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [accountNumber, bankCode, bankName]
+              properties: { accountNumber: { type: string }, bankCode: { type: string }, bankName: { type: string } }
+      responses: { "201": { description: Created }, "409": { description: Already saved } }
+    get:
+      tags: [Wallet]
+      responses: { "200": { description: OK } }
+
+  /wallet/bank-accounts/{id}:
+    delete:
+      tags: [Wallet]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses: { "200": { description: OK }, "404": { description: Not found } }
+
+  # /referrals/* removed entirely — the referral feature has been retired.
+
+  # ---------------------------------------------------------------- Ad campaigns
+  /ad-campaigns:
+    post:
+      tags: [AdCampaigns]
+      summary: Create a campaign (brand only, multipart with a video file)
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [title, description, tier, video]
+              properties:
+                video: { type: string, format: binary }
+                title: { type: string }
+                description: { type: string }
+                tier: { type: string, enum: [basic, premium] }
+                brandUrl: { type: string, description: "Must be a well-formed http(s) URL if set — becomes a clickable link on the billboard (see BillboardSlot.clickUrl). 400 otherwise." }
+                campaignUrl: { type: string, description: "Same http(s)-only validation as brandUrl; takes priority over brandUrl for clickUrl when both are set." }
+      responses:
+        "201": { description: Created, content: { application/json: { schema: { $ref: "#/components/schemas/AdCampaign" } } } }
+        "400": { description: "Missing/invalid field, including a brandUrl/campaignUrl that isn't a valid http(s) URL" }
+    get:
+      tags: [AdCampaigns]
+      summary: "List all campaigns (admin only) — each item includes reportCount, reportCountLastHour, flagged/flaggedAt/flagReasons, brandStrikeCount, brandSuspended"
+      parameters:
+        - { name: status, in: query, schema: { type: string } }
+        - { name: tier, in: query, schema: { type: string } }
+      responses: { "200": { description: OK } }
+
+  /ad-campaigns/mine:
+    get:
+      tags: [AdCampaigns]
+      summary: "List the calling brand's own campaigns — each item includes playsToday, completionRateToday"
+      responses: { "200": { description: OK } }
+
+  /ad-campaigns/{campaignId}:
+    get:
+      tags: [AdCampaigns]
+      security: []
+      parameters: [{ name: campaignId, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/AdCampaign" } } } }
+        "404": { $ref: "#/components/responses/Error" }
+
+  /ad-campaigns/{campaignId}/pause:
+    post:
+      tags: [AdCampaigns]
+      summary: Brand self-serve pause of their own campaign — ACTIVE to PAUSED, no penalty
+      parameters: [{ name: campaignId, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/AdCampaign" } } } }
+        "400": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+
+  /ad-campaigns/{campaignId}/resume:
+    post:
+      tags: [AdCampaigns]
+      summary: "Brand self-serve resume — PAUSED to ACTIVE, only if brand-paused (403 ADMIN_TAKEDOWN if admin-paused)"
+      parameters: [{ name: campaignId, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/AdCampaign" } } } }
+        "400": { $ref: "#/components/responses/Error" }
+        "403": { description: "ADMIN_TAKEDOWN or BRAND_SUSPENDED", content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+
+  /ad-campaigns/{campaignId}/report:
+    post:
+      tags: [AdCampaigns]
+      summary: Viewer report against a running campaign — one per user per campaign, idempotent
+      parameters: [{ name: campaignId, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [reason], properties: { reason: { type: string } } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { success: { type: boolean }, reported: { type: boolean }, flagged: { type: boolean } }
+
+  /ad-campaigns/{campaignId}/warn:
+    post:
+      tags: [AdCampaigns]
+      summary: Add a strike to the campaign's brand without taking the campaign down (admin only)
+      parameters: [{ name: campaignId, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [note], properties: { note: { type: string } } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  campaign: { type: object, description: "Updated AdCampaign — see the AdCampaign schema's `campaign` property shape" }
+                  strikeCount: { type: integer }
+                  autoSuspended: { type: boolean }
+
+  /ad-campaigns/deactivate:
+    post:
+      tags: [AdCampaigns]
+      summary: Bulk-pull live campaigns out of rotation (admin only); adds one strike per campaign to its brand
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [campaignIds, reason]
+              properties:
+                campaignIds: { type: array, items: { type: string } }
+                reason: { type: string, description: "Required — logged against the strike this adds to each affected brand" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  matched: { type: integer }
+                  deactivated: { type: integer }
+
+  /ad-campaigns/reactivate:
+    post:
+      tags: [AdCampaigns]
+      summary: Bulk-restore previously-deactivated campaigns to rotation (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [campaignIds]
+              properties:
+                campaignIds: { type: array, items: { type: string } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  matched: { type: integer }
+                  reactivated: { type: integer }
+                  skippedExpired: { type: array, items: { type: string } }
+
+  /ad-campaigns/{campaignId}/analytics:
+    get:
+      tags: [AdCampaigns]
+      summary: "Campaign analytics summary + time series (Premium tier only, 403 on Basic) — includes costPerCompletedView, clicks, clickThroughRate"
+      parameters:
+        - { name: campaignId, in: path, required: true, schema: { type: string } }
+        - { name: from, in: query, schema: { type: string, format: date } }
+        - { name: to, in: query, schema: { type: string, format: date } }
+      responses: { "200": { description: OK }, "403": { $ref: "#/components/responses/Error" } }
+
+  /ad-campaigns/{campaignId}/analytics/breakdown:
+    get:
+      tags: [AdCampaigns]
+      summary: "Combinable demographic breakdown, cohort-suppressed below Config: analytics.minCohort"
+      parameters:
+        - { name: campaignId, in: path, required: true, schema: { type: string } }
+        - { name: dimension, in: query, required: true, schema: { type: string, enum: [country, state, sex, ageBand, device, hour] } }
+        - { name: country, in: query, schema: { type: string } }
+        - { name: state, in: query, schema: { type: string } }
+        - { name: city, in: query, schema: { type: string } }
+        - { name: sex, in: query, schema: { type: string } }
+        - { name: ageBand, in: query, schema: { type: string } }
+        - { name: device, in: query, schema: { type: string } }
+      responses: { "200": { description: OK } }
+
+  /ad-campaigns/{campaignId}/analytics/export.csv:
+    get:
+      tags: [AdCampaigns]
+      parameters:
+        - { name: campaignId, in: path, required: true, schema: { type: string } }
+        - { name: from, in: query, schema: { type: string, format: date } }
+        - { name: to, in: query, schema: { type: string, format: date } }
+      responses: { "200": { description: "text/csv" } }
+
+  /ad-payments/initialize:
+    post:
+      tags: [AdCampaigns]
+      summary: Start Paystack checkout for a campaign's flat tier price
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [campaignId, email]
+              properties: { campaignId: { type: string }, email: { type: string } }
+      responses:
+        "200": { description: OK }
+        "403": { description: "PROFILE_INCOMPLETE — brand profile not complete yet" }
+
+  /ad-payments/verify/{reference}:
+    get:
+      tags: [AdCampaigns]
+      parameters: [{ name: reference, in: path, required: true, schema: { type: string } }]
+      responses: { "200": { description: OK }, "400": { description: Verification failed } }
+
+  # -------------------------------------------------- Marketplace (business directory, no checkout)
+  /marketplace/business/profile/mine:
+    get:
+      tags: [Marketplace]
+      summary: The calling brand's own directory profile, regardless of isListed
+      responses:
+        "200":
+          description: OK
+          content: { application/json: { schema: { $ref: "#/components/schemas/BusinessProfileResponse" } } }
+        "404": { $ref: "#/components/responses/Error" }
+
+  /marketplace/business/profile:
+    put:
+      tags: [Marketplace]
+      summary: Create/update the calling brand's directory profile (brand only)
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                logo: { type: string, format: binary }
+                coverImage: { type: string, format: binary }
+                logoUrl: { type: string, description: "Alternative to uploading a file" }
+                coverImageUrl: { type: string }
+                businessName: { type: string }
+                businessDescription: { type: string }
+                contactEmail: { type: string }
+                contactPhone: { type: string }
+                whatsappNumber: { type: string }
+                address: { type: string }
+                socialLinks:
+                  type: object
+                  properties:
+                    website: { type: string }
+                    instagram: { type: string }
+                    facebook: { type: string }
+                    twitter: { type: string }
+                    tiktok: { type: string }
+                    linkedin: { type: string }
+                    youtube: { type: string }
+                isListed: { type: boolean }
+      responses:
+        "200":
+          description: OK
+          content: { application/json: { schema: { $ref: "#/components/schemas/BusinessProfileResponse" } } }
+        "400":
+          description: "PROFILE_NOT_LISTABLE — tried to set isListed:true without a name and a contact method"
+          content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+
+  /marketplace/businesses:
+    get:
+      tags: [Marketplace]
+      security: []
+      summary: Public directory browse/search — isListed:true businesses only
+      parameters:
+        - { name: category, in: query, schema: { type: string } }
+        - { name: country, in: query, schema: { type: string } }
+        - { name: state, in: query, schema: { type: string } }
+        - { name: city, in: query, schema: { type: string } }
+        - { name: search, in: query, schema: { type: string } }
+        - { name: limit, in: query, schema: { type: integer, default: 50 } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  businesses: { type: array, items: { $ref: "#/components/schemas/BusinessProfile" } }
+
+  /marketplace/businesses/{brandId}:
+    get:
+      tags: [Marketplace]
+      security: []
+      summary: A listed business's full profile plus its active products
+      parameters: [{ name: brandId, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  business: { $ref: "#/components/schemas/BusinessProfile" }
+                  products: { type: array, items: { $ref: "#/components/schemas/MarketplaceProduct" } }
+        "404":
+          description: Business not found or not listed — the two are never distinguished
+          content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+
+  /marketplace/products/mine:
+    get:
+      tags: [Marketplace]
+      summary: The calling brand's own listings, including inactive ones
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  products: { type: array, items: { $ref: "#/components/schemas/MarketplaceProduct" } }
+
+  /marketplace/products:
+    post:
+      tags: [Marketplace]
+      summary: Create a showcase product/service (brand only) — no price/checkout fields
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [name, description, category]
+              properties:
+                images: { type: array, items: { type: string, format: binary }, description: "Up to 6 photos" }
+                name: { type: string }
+                description: { type: string }
+                category: { type: string }
+                priceLabel: { type: string, description: 'Free display text, e.g. "From ₦5,000" — never a charged amount' }
+      responses:
+        "201":
+          description: Created
+          content: { application/json: { schema: { type: object, properties: { success: { type: boolean }, product: { $ref: "#/components/schemas/MarketplaceProduct" } } } } }
+    get:
+      tags: [Marketplace]
+      security: []
+      summary: Public browse — active products belonging to currently-listed businesses only
+      parameters:
+        - { name: category, in: query, schema: { type: string } }
+        - { name: brandId, in: query, schema: { type: string } }
+        - { name: search, in: query, schema: { type: string } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  products: { type: array, items: { $ref: "#/components/schemas/MarketplaceProduct" } }
+
+  /marketplace/products/{productId}:
+    get:
+      tags: [Marketplace]
+      security: []
+      summary: Product detail, with the owning business's contact info denormalized in
+      parameters: [{ name: productId, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  product: { $ref: "#/components/schemas/MarketplaceProduct" }
+                  business: { $ref: "#/components/schemas/BusinessProfile" }
+        "404": { $ref: "#/components/responses/Error" }
+    put:
+      tags: [Marketplace]
+      summary: Update a product/service (brand only, own listings only)
+      parameters: [{ name: productId, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                images: { type: array, items: { type: string, format: binary } }
+                name: { type: string }
+                description: { type: string }
+                category: { type: string }
+                priceLabel: { type: string }
+                isActive: { type: boolean }
+      responses:
+        "200": { description: OK }
+        "403": { $ref: "#/components/responses/Error" }
+    delete:
+      tags: [Marketplace]
+      summary: Delete a product/service (brand only, own listings only)
+      parameters: [{ name: productId, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: OK }
+        "403": { $ref: "#/components/responses/Error" }
+
+  # ------------------------------------------------------------ Promote & Earn
+  /promote/campaigns:
+    post:
+      tags: [PromoteAndEarn]
+      summary: Post a Promote & Earn campaign (brand only). Free — no payment, auto-ACTIVE.
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [media, title, description]
+              properties:
+                media: { type: string, format: binary }
+                title: { type: string }
+                description: { type: string }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { success: { type: boolean }, campaign: { $ref: "#/components/schemas/PromoCampaign" } }
+    get:
+      tags: [PromoteAndEarn]
+      summary: List all Promote & Earn campaigns (admin only)
+      parameters:
+        - { name: status, in: query, schema: { type: string, enum: [ACTIVE, PAUSED] } }
+        - { name: brandId, in: query, schema: { type: string } }
+      responses: { "200": { description: OK } }
+
+  /promote/campaigns/mine:
+    get:
+      tags: [PromoteAndEarn]
+      summary: List the calling brand's own campaigns
+      responses: { "200": { description: OK } }
+
+  /promote/campaigns/deactivate:
+    post:
+      tags: [PromoteAndEarn]
+      summary: Bulk-pause ACTIVE campaigns (admin only)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [campaignIds]
+              properties:
+                campaignIds: { type: array, items: { type: string } }
+                reason: { type: string }
+      responses: { "200": { description: OK } }
+
+  /promote/campaigns/reactivate:
+    post:
+      tags: [PromoteAndEarn]
+      summary: Bulk-restore PAUSED campaigns to ACTIVE (admin only)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [campaignIds]
+              properties: { campaignIds: { type: array, items: { type: string } } }
+      responses: { "200": { description: OK } }
+
+  /promote/campaigns/{campaignId}:
+    get:
+      tags: [PromoteAndEarn]
+      security: []
+      summary: Campaign detail — what a shared link's landing page reads
+      parameters: [{ name: campaignId, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { success: { type: boolean }, campaign: { $ref: "#/components/schemas/PromoCampaign" } }
+        "404": { $ref: "#/components/responses/Error" }
+
+  /promote/campaigns/{campaignId}/links:
+    post:
+      tags: [PromoteAndEarn]
+      summary: Mint or return this viewer's share link for a campaign (idempotent)
+      parameters: [{ name: campaignId, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { success: { type: boolean }, link: { $ref: "#/components/schemas/PromoLink" } }
+
+  /promote/links/mine:
+    get:
+      tags: [PromoteAndEarn]
+      summary: Every share link this viewer holds, across every campaign, each with its clickCount/signupCount/likeCount funnel
+      responses: { "200": { description: OK } }
+
+  /promote/l/{slug}:
+    get:
+      tags: [PromoteAndEarn]
+      security: []
+      summary: Resolve a share link's slug to campaign detail, and log a funnel click for this browser (deduped per browser per link)
+      parameters: [{ name: slug, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  campaignId: { type: string }
+                  linkId: { type: string }
+                  promoterUserId: { type: string }
+                  campaign: { $ref: "#/components/schemas/PromoCampaign" }
+        "404": { $ref: "#/components/responses/Error" }
+
+  /promote/like/{slug}:
+    post:
+      tags: [PromoteAndEarn]
+      summary: Vote/like the campaign a share link points to. No account-age gate. Idempotent — one vote per user per (promoter, campaign) pair.
+      parameters: [{ name: slug, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200":
+          description: "OK — alreadyLiked:true + message on a repeat vote for the same promoter+campaign pair, not an error"
+        "400": { description: "SELF_LIKE_NOT_ALLOWED | CAMPAIGN_NOT_ACTIVE" }
+        "404": { description: LINK_NOT_FOUND }
+
+  /promote/leaderboard:
+    get:
+      tags: [PromoteAndEarn]
+      security: []
+      summary: Platform-wide leaderboard, cumulative across every campaign each promoter has shared
+      parameters:
+        - { name: periodId, in: query, schema: { type: string }, description: "Omit for the currently OPEN period" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  period: { $ref: "#/components/schemas/PromoPrizePeriod" }
+                  entries:
+                    type: array
+                    items: { $ref: "#/components/schemas/PromoLeaderboardEntry" }
+
+  /admin/promote/likes/{likeId}/void:
+    post:
+      tags: [PromoteAndEarn]
+      summary: Discount one like from every leaderboard computation (admin only)
+      parameters: [{ name: likeId, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object, required: [reason], properties: { reason: { type: string } } }
+      responses: { "200": { description: OK } }
+
+  /admin/promote/promoters/{userId}/disqualify:
+    post:
+      tags: [PromoteAndEarn]
+      summary: Exclude a promoter from every leaderboard computation, globally (admin only)
+      parameters: [{ name: userId, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object, required: [reason], properties: { reason: { type: string } } }
+      responses: { "200": { description: OK } }
+
+  /admin/promote/promoters/{userId}/requalify:
+    post:
+      tags: [PromoteAndEarn]
+      summary: Undo a disqualification (admin only)
+      parameters: [{ name: userId, in: path, required: true, schema: { type: string } }]
+      responses: { "200": { description: OK } }
+
+  /admin/promote/promoters/disqualified:
+    get:
+      tags: [PromoteAndEarn]
+      summary: List currently disqualified promoters (admin only)
+      responses: { "200": { description: OK } }
+
+  /admin/promote/periods:
+    post:
+      tags: [PromoteAndEarn]
+      summary: Open a grand-prize window (admin only)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [periodStart, periodEnd, prizeDescription]
+              properties:
+                periodStart: { type: string, format: date-time }
+                periodEnd: { type: string, format: date-time }
+                prizeDescription: { type: string }
+                prizeAmount: { type: number }
+                currency: { type: string }
+      responses: { "201": { description: Created } }
+    get:
+      tags: [PromoteAndEarn]
+      summary: List all prize periods (admin only)
+      responses: { "200": { description: OK } }
+
+  /admin/promote/periods/{periodId}/settle:
+    post:
+      tags: [PromoteAndEarn]
+      summary: Determine the winner and credit their wallet if prizeAmount was set (admin only)
+      parameters: [{ name: periodId, in: path, required: true, schema: { type: string } }]
+      responses: { "200": { description: OK } }
+
+  /admin/promote/periods/{periodId}/cancel:
+    post:
+      tags: [PromoteAndEarn]
+      summary: Cancel an OPEN period without settling it (admin only)
+      parameters: [{ name: periodId, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object, required: [reason], properties: { reason: { type: string } } }
+      responses: { "200": { description: OK } }
+
+  # ---------------------------------------------------------------- Analytics
+  /analytics/app:
+    get:
+      tags: [Analytics]
+      security: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  analytics:
+                    type: object
+                    properties:
+                      totalAdsWatched: { type: integer }
+                      adsWatchedToday: { type: integer }
+                      currentlyPlaying: { type: integer }
+                      onlineUsers: { type: integer }
+
+  # ---------------------------------------------------------------- Admin
+  /admin/brands/{brandId}/suspend:
+    post:
+      tags: [Admin, AdCampaigns]
+      summary: Suspend a brand — pauses every ACTIVE campaign they have running
+      parameters: [{ name: brandId, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [reason], properties: { reason: { type: string } } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { success: { type: boolean }, pausedCampaigns: { type: integer } }
+
+  /admin/brands/{brandId}/unsuspend:
+    post:
+      tags: [Admin, AdCampaigns]
+      summary: "Lift a suspension — does not reset strikeCount or reactivate paused campaigns"
+      parameters: [{ name: brandId, in: path, required: true, schema: { type: string } }]
+      responses: { "200": { description: OK } }
+
+  /admin/dashboard:
+    get:
+      tags: [Admin]
+      responses:
+        "200":
+          description: OK
+          content: { application/json: { schema: { $ref: "#/components/schemas/AdminDashboard" } } }
+
+  /admin/config:
+    get:
+      tags: [Admin]
+      responses: { "200": { description: OK } }
+
+  /admin/config/{key}:
+    put:
+      tags: [Admin]
+      parameters: [{ name: key, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [value]
+              properties: { value: {}, description: { type: string } }
+      responses: { "200": { description: OK }, "400": { description: Unknown config key } }
+
+  # /admin/freebie-prizes/batch/airtime removed — cash-only cutover, see
+  # BUSINESS_RULES.md. batch/cash below is the only creation endpoint now.
+
+  /admin/freebie-prizes/batch/cash:
+    post:
+      tags: [Admin]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                prizes:
+                  type: array
+                  items: { type: object, properties: { value: { type: number }, currency: { type: string } } }
+      responses: { "201": { description: Created } }
+
+  /admin/freebie-prizes:
+    get:
+      tags: [Admin]
+      parameters:
+        - { name: type, in: query, schema: { type: string, enum: [AIRTIME, CASH] } }
+        - { name: status, in: query, schema: { type: string } }
+      responses: { "200": { description: OK } }
+
+  /admin/freebie-prizes/low-inventory:
+    get:
+      tags: [Admin]
+      responses: { "200": { description: OK } }
+
+  /admin/freebie-prizes/{prizeItemId}:
+    get:
+      tags: [Admin]
+      parameters: [{ name: prizeItemId, in: path, required: true, schema: { type: string } }]
+      responses: { "200": { description: OK }, "404": { description: Not found } }
+
+  /admin/freebie-prizes/{prizeItemId}/void:
+    post:
+      tags: [Admin]
+      parameters: [{ name: prizeItemId, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [reason], properties: { reason: { type: string } } } } }
+      responses: { "200": { description: OK } }
+
+  /admin/freebie-prizes/{prizeItemId}/reveal-pin:
+    post:
+      tags: [Admin]
+      summary: The one explicit, audit-logged path a PIN is exposed outside a real redemption
+      parameters: [{ name: prizeItemId, in: path, required: true, schema: { type: string } }]
+      responses: { "200": { description: OK } }
+
+  /admin/freebies/schedule:
+    get:
+      tags: [Admin]
+      parameters: [{ name: date, in: query, required: true, schema: { type: string, format: date } }]
+      responses: { "200": { description: OK } }
+
+  /admin/freebies/schedule/generate:
+    post:
+      tags: [Admin]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [date], properties: { date: { type: string, format: date } } } } }
+      responses: { "201": { description: Created } }
+
+  /admin/freebies/schedule/{scheduleId}/cancel:
+    post:
+      tags: [Admin]
+      parameters: [{ name: scheduleId, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [reason], properties: { reason: { type: string } } } } }
+      responses: { "200": { description: OK } }
+
+  /admin/freebies/force-live:
+    post:
+      tags: [Admin]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [type], properties: { type: { type: string, enum: [AIRTIME, CASH] } } }
+      responses: { "201": { description: Created } }
+
+  /admin/phrases:
+    get:
+      tags: [Admin]
+      parameters: [{ name: slot, in: query, schema: { type: string } }]
+      responses: { "200": { description: OK } }
+    post:
+      tags: [Admin]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [slot, text]
+              properties:
+                slot: { type: string, enum: [PROMO, FREEBIE_LIVE, FREEBIE_GONE, WELCOME, EMPTY_STATE] }
+                text: { type: string }
+                weight: { type: number }
+      responses: { "201": { description: Created } }
+
+  /admin/phrases/{phraseId}:
+    put:
+      tags: [Admin]
+      parameters: [{ name: phraseId, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties: { text: { type: string }, weight: { type: number }, active: { type: boolean } }
+      responses: { "200": { description: OK } }
+    delete:
+      tags: [Admin]
+      parameters: [{ name: phraseId, in: path, required: true, schema: { type: string } }]
+      responses: { "200": { description: OK } }
+
+  /admin/claims:
+    get:
+      tags: [Admin]
+      parameters:
+        - { name: secretCode, in: query, schema: { type: string } }
+        - { name: userId, in: query, schema: { type: string } }
+      responses: { "200": { description: OK } }
+
+  /admin/claims/{claimId}/void:
+    post:
+      tags: [Admin]
+      parameters: [{ name: claimId, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [reason], properties: { reason: { type: string } } } } }
+      responses: { "200": { description: OK } }
+
+  /admin/payout-runs:
+    get:
+      tags: [Admin]
+      responses: { "200": { description: OK } }
+    post:
+      tags: [Admin]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [periodStart, periodEnd]
+              properties: { periodStart: { type: string, format: date-time }, periodEnd: { type: string, format: date-time } }
+      responses: { "201": { description: Created } }
+
+  /admin/payout-runs/{runId}/items:
+    get:
+      tags: [Admin]
+      parameters: [{ name: runId, in: path, required: true, schema: { type: string } }]
+      responses: { "200": { description: OK } }
+
+  /admin/payout-runs/{runId}/lock:
+    post:
+      tags: [Admin]
+      parameters: [{ name: runId, in: path, required: true, schema: { type: string } }]
+      responses: { "200": { description: OK } }
+
+  /admin/payout-runs/{runId}/export.csv:
+    get:
+      tags: [Admin]
+      parameters: [{ name: runId, in: path, required: true, schema: { type: string } }]
+      responses: { "200": { description: "text/csv" } }
+
+  /admin/payout-runs/{runId}/items/{itemId}/paid:
+    post:
+      tags: [Admin]
+      parameters:
+        - { name: runId, in: path, required: true, schema: { type: string } }
+        - { name: itemId, in: path, required: true, schema: { type: string } }
+      requestBody:
+        content: { application/json: { schema: { type: object, properties: { method: { type: string }, reference: { type: string } } } } }
+      responses: { "200": { description: OK } }
+
+  /admin/payout-runs/{runId}/items/paid-bulk:
+    post:
+      tags: [Admin]
+      parameters: [{ name: runId, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [itemIds]
+              properties:
+                itemIds: { type: array, items: { type: string } }
+                method: { type: string }
+                reference: { type: string }
+      responses: { "200": { description: OK } }
+
+  /admin/payout-runs/{runId}/items/{itemId}/skip:
+    post:
+      tags: [Admin]
+      parameters:
+        - { name: runId, in: path, required: true, schema: { type: string } }
+        - { name: itemId, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [reason], properties: { reason: { type: string } } } } }
+      responses: { "200": { description: OK } }
+
+  /admin/payout-runs/{runId}/items/{itemId}/fail:
+    post:
+      tags: [Admin]
+      parameters:
+        - { name: runId, in: path, required: true, schema: { type: string } }
+        - { name: itemId, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [reason], properties: { reason: { type: string } } } } }
+      responses: { "200": { description: OK } }
+
+  /admin/payout-runs/{runId}/complete:
+    post:
+      tags: [Admin]
+      parameters: [{ name: runId, in: path, required: true, schema: { type: string } }]
+      responses: { "200": { description: OK } }
+
+  # ---------------------------------------------------------------- Forum
+  /forum/threads:
+    get:
+      tags: [Forum]
+      security: []
+      responses: { "200": { description: OK } }
+    post:
+      tags: [Forum]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object } } }
+      responses: { "201": { description: Created } }
+
+  /forum/threads/{id}/posts:
+    get:
+      tags: [Forum]
+      security: []
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses: { "200": { description: OK } }
+    post:
+      tags: [Forum]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object } } }
+      responses: { "201": { description: Created } }
+
+  /forum/posts/{id}/like:
+    post:
+      tags: [Forum]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses: { "200": { description: OK } }
+    delete:
+      tags: [Forum]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses: { "200": { description: OK } }
+
+  /forum/posts/{id}/flag:
+    post:
+      tags: [Forum]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses: { "200": { description: OK } }
+
+  /forum/winner-submissions:
+    post:
+      tags: [Forum]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object } } }
+      responses: { "201": { description: Created } }
+    get:
+      tags: [Forum]
+      summary: All submissions (admin only)
+      responses: { "200": { description: OK } }
+
+  /forum/winner-submissions/mine:
+    get:
+      tags: [Forum]
+      responses: { "200": { description: OK } }
+
+  # -------------------------------------------------------- Payments (shared)
+  /payments/transactions:
+    get:
+      tags: [AdCampaigns]
+      summary: Brand's own transaction history
+      responses: { "200": { description: OK } }
+
+  /payments/webhook/paystack:
+    post:
+      tags: [AdCampaigns]
+      security: []
+      summary: Paystack webhook — called by Paystack, not the frontend
+      responses: { "200": { description: OK } }
+
+  # -------------------------------------------------------- Wallet top-up
+  /wallet/topup/initialize:
+    post:
+      tags: [Wallet]
+      summary: Start a Paystack checkout to fund a brand's wallet (brand only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [amount, email], properties: { amount: { type: number }, email: { type: string } } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      authorization_url: { type: string }
+                      access_code: { type: string }
+                      reference: { type: string }
+                      amount: { type: number }
+                      currency: { type: string }
+
+  /wallet/topup/verify/{reference}:
+    get:
+      tags: [Wallet]
+      summary: Confirm a wallet top-up payment and credit the balance (brand only)
+      parameters: [{ name: reference, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+                  transaction: { type: object, properties: { reference: { type: string }, amount: { type: number }, status: { type: string } } }
+
+  # -------------------------------------------------------- Business KYC
+  /kyc/submit:
+    post:
+      tags: [BusinessKYC]
+      summary: Submit a business for CAC verification (brand only, multipart) — always lands on pending_review, never auto-verified
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [rcNumber, legalBusinessName]
+              properties:
+                rcNumber: { type: string }
+                businessType: { type: string, enum: [RC, BN, IT] }
+                legalBusinessName: { type: string }
+                repIdType: { type: string }
+                cacCertificate: { type: string, format: binary }
+                repId: { type: string, format: binary }
+      responses:
+        "201": { description: Created, content: { application/json: { schema: { type: object, properties: { success: { type: boolean }, kyc: { $ref: "#/components/schemas/BusinessKyc" } } } } } }
+        "409": { $ref: "#/components/responses/Error" }
+
+  /kyc/me:
+    get:
+      tags: [BusinessKYC]
+      summary: The calling business's most recent KYC submission, if any (brand only)
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: object, properties: { success: { type: boolean }, kyc: { $ref: "#/components/schemas/BusinessKyc" } } } } } }
+
+  /kyc/resubmit:
+    post:
+      tags: [BusinessKYC]
+      summary: Resubmit after a rejection (brand only, multipart) — 400 KYC_RESUBMIT_NOT_ALLOWED unless current status is rejected
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [rcNumber, legalBusinessName]
+              properties:
+                rcNumber: { type: string }
+                businessType: { type: string, enum: [RC, BN, IT] }
+                legalBusinessName: { type: string }
+                repIdType: { type: string }
+                cacCertificate: { type: string, format: binary }
+                repId: { type: string, format: binary }
+      responses:
+        "201": { description: Created, content: { application/json: { schema: { type: object, properties: { success: { type: boolean }, kyc: { $ref: "#/components/schemas/BusinessKyc" } } } } } }
+
+  /admin/kyc/queue:
+    get:
+      tags: [BusinessKYC]
+      summary: Pending KYC submissions, oldest first (admin only)
+      responses: { "200": { description: OK } }
+
+  /admin/kyc/{id}:
+    get:
+      tags: [BusinessKYC]
+      summary: Full detail of one KYC submission, including the automated check's raw response (admin only)
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses: { "200": { description: OK } }
+
+  /admin/kyc/{id}/approve:
+    post:
+      tags: [BusinessKYC]
+      summary: Verify a pending KYC submission (admin only, no body)
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses: { "200": { description: OK } }
+
+  /admin/kyc/{id}/reject:
+    post:
+      tags: [BusinessKYC]
+      summary: Reject a pending KYC submission (admin only)
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [reason], properties: { reason: { type: string } } }
+      responses: { "200": { description: OK } }
+
+  /admin/brands/{brandId}/kyc/revoke:
+    post:
+      tags: [BusinessKYC]
+      summary: Pull a previously-verified business back to revoked (admin only)
+      parameters: [{ name: brandId, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [reason], properties: { reason: { type: string } } }
+      responses:
+        "200": { description: OK }
+        "404": { $ref: "#/components/responses/Error" }
+
+  # -------------------------------------------------------- Projects & Quotations
+  /projects:
+    post:
+      tags: [Projects]
+      summary: Post a project (brand only, KYC-verified only — 403 KYC_REQUIRED otherwise)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, description]
+              properties:
+                title: { type: string }
+                description: { type: string }
+                budgetMin: { type: number }
+                budgetMax: { type: number }
+                currency: { type: string }
+                category: { type: string }
+                deadline: { type: string, format: date-time }
+      responses:
+        "201": { description: Created, content: { application/json: { schema: { type: object, properties: { success: { type: boolean }, project: { $ref: "#/components/schemas/Project" } } } } } }
+        "403": { $ref: "#/components/responses/Error" }
+    get:
+      tags: [Projects]
+      summary: Browse open projects (brand only)
+      parameters: [{ name: category, in: query, schema: { type: string } }]
+      responses: { "200": { description: OK } }
+
+  /projects/mine:
+    get:
+      tags: [Projects]
+      summary: The poster's own projects, any status (brand only)
+      responses: { "200": { description: OK } }
+
+  /projects/{id}:
+    get:
+      tags: [Projects]
+      summary: One project's detail (brand or admin)
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses: { "200": { description: OK } }
+
+  /projects/{id}/close:
+    post:
+      tags: [Projects]
+      summary: Close a project to new quotations (brand only, poster only, no body)
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses: { "200": { description: OK } }
+
+  /projects/{id}/cancel:
+    post:
+      tags: [Projects]
+      summary: Cancel a project (brand only, poster only, no body)
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses: { "200": { description: OK } }
+
+  /projects/{id}/quotations:
+    get:
+      tags: [Projects]
+      summary: The paywall-filtered quotation list (brand only, poster only)
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  quotations: { type: array, items: { $ref: "#/components/schemas/Quotation" } }
+                  unlocked: { type: boolean }
+                  totalQuotationCount: { type: integer }
+    post:
+      tags: [Projects]
+      summary: Submit a quotation (brand only, KYC-verified only — 403 KYC_REQUIRED otherwise; can't quote your own project)
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount, message]
+              properties:
+                amount: { type: number }
+                message: { type: string }
+                attachmentUrls: { type: array, items: { type: string } }
+      responses:
+        "201": { description: Created, content: { application/json: { schema: { type: object, properties: { success: { type: boolean }, quotation: { $ref: "#/components/schemas/Quotation" } } } } } }
+        "403": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
+
+  /quotations/{id}/withdraw:
+    post:
+      tags: [Projects]
+      summary: Withdraw a submitted quotation (brand only, own quotation only, no body)
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses: { "200": { description: OK } }
+
+  /quotation-unlock/purchase:
+    post:
+      tags: [Projects]
+      summary: Buy (or extend) the account-wide unlock pass — debits the wallet (brand only, no body)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { type: object, properties: { success: { type: boolean }, expiresAt: { type: string, format: date-time } } }
+        "402": { $ref: "#/components/responses/Error" }
+
+  /quotation-unlock/status:
+    get:
+      tags: [Projects]
+      summary: Whether the calling business currently has an active unlock pass (brand only)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { type: object, properties: { success: { type: boolean }, active: { type: boolean }, expiresAt: { type: string, format: date-time } } }
+
+  /admin/projects/{id}/quotations:
+    get:
+      tags: [Projects]
+      summary: Every quotation on a project, unfiltered by the paywall (admin only)
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses: { "200": { description: OK } }
+
+  # -------------------------------------------------------- Business contact & ratings
+  /business-contact/threads:
+    post:
+      tags: [Projects]
+      summary: Open (or return the existing) private thread on a quotation (brand only, poster or quoter, quotation must be visible — 403 QUOTATION_NOT_VISIBLE otherwise)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [projectId, quotationId], properties: { projectId: { type: string }, quotationId: { type: string } } }
+      responses:
+        "200": { description: OK }
+        "403": { $ref: "#/components/responses/Error" }
+    get:
+      tags: [Projects]
+      summary: Every contact thread the calling business participates in (brand only)
+      responses: { "200": { description: OK } }
+
+  /business-contact/threads/{id}/messages:
+    get:
+      tags: [Projects]
+      summary: Messages in a thread (brand only, participant only)
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses: { "200": { description: OK } }
+    post:
+      tags: [Projects]
+      summary: Send a message in a thread (brand only, participant only)
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [body], properties: { body: { type: string } } }
+      responses: { "201": { description: Created } }
+
+  /business-ratings:
+    post:
+      tags: [Projects]
+      summary: Rate a business after contact (brand only — 403 CONTACT_REQUIRED without an existing thread; 409 on a repeat rating for the same project+direction)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [projectId, quotationId, ratedBrandId, score]
+              properties:
+                projectId: { type: string }
+                quotationId: { type: string }
+                ratedBrandId: { type: string }
+                score: { type: integer, minimum: 1, maximum: 5 }
+                comment: { type: string }
+      responses:
+        "201": { description: Created, content: { application/json: { schema: { type: object, properties: { success: { type: boolean }, rating: { $ref: "#/components/schemas/BusinessRating" } } } } } }
+        "403": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
+
+  /business-ratings/business/{brandId}:
+    get:
+      tags: [Projects]
+      summary: A business's public rating summary + list (public, no auth)
+      security: []
+      parameters: [{ name: brandId, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  averageScore: { type: number }
+                  count: { type: integer }
+                  ratings: { type: array, items: { $ref: "#/components/schemas/BusinessRating" } }
+
+  /business-ratings/{id}/report:
+    post:
+      tags: [Projects]
+      summary: Report a rating as false — idempotent per reporter (brand only)
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [reason], properties: { reason: { type: string } } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { type: object, properties: { success: { type: boolean }, reported: { type: boolean }, flagged: { type: boolean } } }
+
+  /admin/business-ratings/moderation/flags:
+    get:
+      tags: [Projects]
+      summary: Ratings currently over the auto-flag report threshold, not yet hidden (admin only)
+      responses: { "200": { description: OK } }
+
+  /admin/business-ratings/{id}/hide:
+    post:
+      tags: [Projects]
+      summary: Hide a rating from public view — never deleted (admin only)
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [reason], properties: { reason: { type: string } } }
+      responses: { "200": { description: OK } }
+
+  /admin/business-ratings/reports/{id}/dismiss:
+    post:
+      tags: [Projects]
+      summary: Log that an admin reviewed a report and judged the rating fine — no data mutation (admin only, no body)
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses: { "200": { description: OK } }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: >
+        The accessToken returned in the JSON body of any auth response.
+        access_token/refresh_token httpOnly cookies are also set but every
+        protected route in practice reads this header, not the cookie.
+
+  responses:
+    Error:
+      description: Standard error envelope
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        success: { type: boolean, example: false }
+        message: { type: string }
+        code: { type: string, description: "Machine-readable — branch on this, not on message text" }
+        details: { type: object }
+
+    AuthResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        user: { type: object }
+        accessToken: { type: string }
+        refreshToken: { type: string }
+
+    ActivationPending:
+      type: object
+      properties:
+        success: { type: boolean }
+        message: { type: string }
+        activationToken: { type: string }
+
+    BillboardSlot:
+      type: object
+      description: "Shape depends on type. AD/HOUSE carry campaignId/brandName/title/videoUrl; AD additionally carries clickUrl; FREEBIE carries codeId/publicCode/valueLabel/freebieType/liveUntil instead — a live freebie code taking over this slot full-screen, exactly like a real ad. See UI_CONTRACT.md."
+      properties:
+        slotId: { type: string }
+        type: { type: string, enum: [AD, HOUSE, FREEBIE] }
+        durationSec: { type: number }
+        # AD / HOUSE only
+        campaignId: { type: string }
+        brandName: { type: string }
+        title: { type: string }
+        videoUrl: { type: string }
+        # AD only — campaign's campaignUrl, else brandUrl, else null
+        clickUrl: { type: string, nullable: true }
+        # FREEBIE only
+        codeId: { type: string }
+        publicCode: { type: string }
+        valueLabel: { type: string }
+        freebieType: { type: string, enum: [AIRTIME, CASH] }
+        liveUntil: { type: string, format: date-time }
+
+    StripFeedItem:
+      type: object
+      properties:
+        kind: { type: string, enum: [FREEBIE, PROMO] }
+        display: { type: string, enum: [PINNED, SCROLLING] }
+        positionHint: { type: string, enum: [TOP, BOTTOM, LEFT, RIGHT] }
+        codeId: { type: string }
+        publicCode: { type: string }
+        valueLabel: { type: string }
+        type: { type: string, enum: [AIRTIME, CASH] }
+        state: { type: string, enum: [AVAILABLE, TAKEN] }
+        liveUntil: { type: string, format: date-time }
+        text: { type: string }
+
+    StripFeed:
+      type: object
+      properties:
+        serverTime: { type: string, format: date-time }
+        items: { type: array, items: { $ref: "#/components/schemas/StripFeedItem" } }
+
+    ClaimedResult:
+      type: object
+      properties:
+        success: { type: boolean }
+        action: { type: string, enum: [CLAIMED] }
+        claimId: { type: string }
+        type: { type: string, enum: [AIRTIME, CASH] }
+        valueLabel: { type: string }
+        secretCode: { type: string }
+
+    RedeemedCashResult:
+      type: object
+      properties:
+        success: { type: boolean }
+        action: { type: string, enum: [REDEEMED] }
+        claimId: { type: string }
+        type: { type: string, enum: [CASH] }
+        walletBalance: { type: number }
+        redeemedAt: { type: string, format: date-time }
+
+    RedeemedAirtimeResult:
+      type: object
+      properties:
+        success: { type: boolean }
+        action: { type: string, enum: [REDEEMED] }
+        claimId: { type: string }
+        type: { type: string, enum: [AIRTIME] }
+        display: { type: string }
+        rechargeString: { type: string }
+        redeemedAt: { type: string, format: date-time }
+
+    ClaimHistoryItem:
+      type: object
+      properties:
+        claimId: { type: string }
+        type: { type: string, enum: [AIRTIME, CASH] }
+        value: { type: number }
+        currency: { type: string }
+        publicCode: { type: string, description: "The board code as it appeared when won" }
+        secretCode: { type: string, description: "Always visible to the owner — never has a deadline" }
+        status: { type: string, enum: [ISSUED, REDEEMED, VOID] }
+        issuedAt: { type: string, format: date-time }
+        redeemedAt: { type: string, format: date-time }
+
+    WalletBalance:
+      type: object
+      properties:
+        success: { type: boolean }
+        balance: { type: number }
+        currency: { type: string }
+        payoutThreshold: { type: number }
+        amountToThreshold: { type: number }
+        nextPayoutDate: { type: string, format: date-time }
+
+    AdminDashboard:
+      type: object
+      properties:
+        success: { type: boolean }
+        dashboard:
+          type: object
+          properties:
+            liveViewers: { type: integer }
+            verifiedViews:
+              type: object
+              properties:
+                total: { type: integer }
+                today: { type: integer }
+            activeCampaigns: { type: integer }
+            codesLiveNow: { type: integer }
+            prizesDistributedToday: { type: integer }
+            outstandingWalletLiability: { type: number }
+            nextPayoutRun:
+              type: object
+              properties:
+                userCount: { type: integer }
+                totalAmount: { type: number }
+            profileCompletionFunnel:
+              type: object
+              properties:
+                total: { type: integer }
+                verified: { type: integer }
+                profileComplete: { type: integer }
+            codesDroppedVsClaimed:
+              type: object
+              properties:
+                dropped: { type: integer }
+                claimed: { type: integer }
+                rotatedUnclaimed: { type: integer }
+            averageTimeToClaimSeconds: { type: number, nullable: true }
+            airtimeRedemptionRate: { type: number }
+            unredeemedClaimsByAge:
+              type: object
+              properties:
+                "<1d": { type: integer }
+                "1-7d": { type: integer }
+                "7-30d": { type: integer }
+                ">30d": { type: integer }
+
+    AdCampaign:
+      type: object
+      properties:
+        success: { type: boolean }
+        campaign:
+          type: object
+          properties:
+            _id: { type: string }
+            brandId: { type: string }
+            tier: { type: string, enum: [basic, premium] }
+            title: { type: string }
+            description: { type: string }
+            videoUrl: { type: string }
+            videoDurationSeconds: { type: number }
+            status: { type: string, enum: [DRAFT, PENDING_PAYMENT, ACTIVE, PAUSED, EXPIRED, REJECTED] }
+            paymentStatus: { type: string, enum: [unpaid, paid] }
+            moderationStatus: { type: string, enum: [PENDING, APPROVED, REJECTED] }
+            flagged: { type: boolean }
+            flaggedAt: { type: string, format: date-time }
+            flagReasons: { type: array, items: { type: string } }
+            activatedAt: { type: string, format: date-time }
+            expiresAt: { type: string, format: date-time }
+            playsToday: { type: integer, description: "GET /ad-campaigns/mine only" }
+            completionRateToday: { type: number, nullable: true, description: "GET /ad-campaigns/mine only" }
+            reportCount: { type: integer, description: "GET /ad-campaigns (admin) only" }
+            reportCountLastHour: { type: integer, description: "GET /ad-campaigns (admin) only" }
+            brandStrikeCount: { type: integer, description: "GET /ad-campaigns (admin) only" }
+            brandSuspended: { type: boolean, description: "GET /ad-campaigns (admin) only" }
+
+    BusinessSocialLinks:
+      type: object
+      properties:
+        website: { type: string }
+        instagram: { type: string }
+        facebook: { type: string }
+        twitter: { type: string }
+        tiktok: { type: string }
+        linkedin: { type: string }
+        youtube: { type: string }
+
+    BusinessProfile:
+      type: object
+      description: "brandId is always the brand's User _id, matching AdCampaign.brandId's convention elsewhere in the API."
+      properties:
+        brandId: { type: string }
+        businessName: { type: string }
+        businessDescription: { type: string }
+        logoUrl: { type: string }
+        coverImageUrl: { type: string }
+        category: { type: array, items: { type: string } }
+        contactEmail: { type: string }
+        contactPhone: { type: string }
+        whatsappNumber: { type: string }
+        address: { type: string }
+        country: { type: string }
+        state: { type: string }
+        city: { type: string }
+        socialLinks: { $ref: "#/components/schemas/BusinessSocialLinks" }
+        isListed: { type: boolean }
+
+    BusinessProfileResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        profile:
+          allOf:
+            - $ref: "#/components/schemas/BusinessProfile"
+            - type: object
+              properties:
+                isListable: { type: boolean, description: "Only present on the brand's own profile reads" }
+
+    MarketplaceProduct:
+      type: object
+      description: A catalogue showcase item, not a purchasable SKU — no price/checkout fields.
+      properties:
+        _id: { type: string }
+        brandId: { type: string }
+        name: { type: string }
+        description: { type: string }
+        category: { type: string }
+        images: { type: array, items: { type: string } }
+        priceLabel: { type: string, description: 'Free display text, e.g. "From ₦5,000" — never a charged amount' }
+        isActive: { type: boolean }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    PromoCampaign:
+      type: object
+      description: A free Promote & Earn posting — no payment, no pre-publish moderation queue.
+      properties:
+        _id: { type: string }
+        brandId: { type: string }
+        brandName: { type: string }
+        title: { type: string }
+        description: { type: string }
+        mediaUrl: { type: string }
+        mediaType: { type: string, enum: [image, video] }
+        videoDurationSeconds: { type: number, description: "video only" }
+        status: { type: string, enum: [ACTIVE, PAUSED] }
+        likeCount: { type: integer, description: "All-time, informational — not a prize-period total" }
+        clickCount: { type: integer, description: "GET /promote/campaigns/mine and admin only — not on the public detail read" }
+        signupCount: { type: integer, description: "GET /promote/campaigns/mine and admin only — not on the public detail read" }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    PromoLink:
+      type: object
+      description: A viewer's personal, reusable share link for one campaign.
+      properties:
+        linkId: { type: string }
+        campaignId: { type: string }
+        slug: { type: string }
+        shareUrl: { type: string }
+        clickCount: { type: integer, description: "GET /promote/links/mine only — distinct browsers that followed this link" }
+        signupCount: { type: integer, description: "GET /promote/links/mine only — of those, how many created an account" }
+        likeCount: { type: integer, description: "Likes attributed to THIS link specifically" }
+        createdAt: { type: string, format: date-time }
+
+    PromoPrizePeriod:
+      type: object
+      nullable: true
+      description: The platform-wide grand-prize window. Null when no period is currently OPEN.
+      properties:
+        _id: { type: string }
+        periodStart: { type: string, format: date-time }
+        periodEnd: { type: string, format: date-time }
+        prizeDescription: { type: string }
+        prizeAmount: { type: number, description: "Unset = non-cash prize, admin fulfills manually" }
+        currency: { type: string }
+        status: { type: string, enum: [OPEN, SETTLED, CANCELLED] }
+        winnerUserId: { type: string }
+        winningLikeTotal: { type: integer }
+        settledAt: { type: string, format: date-time }
+
+    PromoLeaderboardEntry:
+      type: object
+      description: >-
+        One promoter's CUMULATIVE like total across every campaign they've shared within the
+        period's window — this, not any single campaign's likeCount, decides the grand prize.
+      properties:
+        rank: { type: integer }
+        promoterUserId: { type: string }
+        displayName: { type: string }
+        likeCount: { type: integer }
+
+    BusinessKyc:
+      type: object
+      nullable: true
+      description: A business's most recent CAC verification submission. Null when never submitted.
+      properties:
+        _id: { type: string }
+        brandId: { type: string }
+        rcNumber: { type: string }
+        businessType: { type: string, enum: [RC, BN, IT] }
+        legalBusinessName: { type: string }
+        automatedCheck:
+          type: object
+          description: "Informational pre-filter only — never determines status on its own."
+          properties:
+            result: { type: string, enum: [not_run, match, no_match, provider_error] }
+            checkedAt: { type: string, format: date-time }
+            providerError: { type: string }
+        documents:
+          type: object
+          properties:
+            cacCertificateUrl: { type: string }
+            repIdUrl: { type: string }
+            repIdType: { type: string }
+            uploadedAt: { type: string, format: date-time }
+        status: { type: string, enum: [not_submitted, pending_review, verified, rejected, revoked] }
+        reviewedBy: { type: string }
+        reviewedAt: { type: string, format: date-time }
+        rejectionReason: { type: string }
+        revokedReason: { type: string }
+        submittedAt: { type: string, format: date-time }
+        attemptNumber: { type: integer }
+
+    Project:
+      type: object
+      properties:
+        _id: { type: string }
+        brandId: { type: string, description: "Poster" }
+        title: { type: string }
+        description: { type: string }
+        budgetMin: { type: number }
+        budgetMax: { type: number }
+        currency: { type: string }
+        category: { type: string }
+        deadline: { type: string, format: date-time }
+        status: { type: string, enum: [open, closed, cancelled] }
+        quotationCount: { type: integer, description: "Total ever submitted, regardless of paywall visibility" }
+        freeQuotationId: { type: string, description: "Internal bookkeeping — read GET /projects/{id}/quotations instead of resolving this client-side" }
+        createdAt: { type: string, format: date-time }
+
+    Quotation:
+      type: object
+      properties:
+        _id: { type: string }
+        projectId: { type: string }
+        brandId: { type: string, description: "Quoter" }
+        amount: { type: number }
+        currency: { type: string }
+        message: { type: string }
+        attachmentUrls: { type: array, items: { type: string } }
+        status: { type: string, enum: [submitted, withdrawn] }
+        withdrawnAt: { type: string, format: date-time }
+        createdAt: { type: string, format: date-time }
+
+    BusinessRating:
+      type: object
+      properties:
+        _id: { type: string }
+        projectId: { type: string }
+        quotationId: { type: string }
+        raterBrandId: { type: string }
+        ratedBrandId: { type: string }
+        score: { type: integer, minimum: 1, maximum: 5 }
+        comment: { type: string }
+        hidden: { type: boolean, description: "Always false in public reads — hidden ratings are excluded entirely, not flagged" }
+        createdAt: { type: string, format: date-time }
