@@ -2,13 +2,13 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { LogoIcon } from "@/components/ui/logo-icon";
+import { Button } from "@/components/ui/freebiz-button";
+import { LogoMark, Wordmark } from "@/components/shell/logo-mark";
 import { User, Menu, LogOut, X, Settings, Wallet, Gift } from "lucide-react";
 import { routes } from "@/app/_utils/routes";
 import { useAtomValue, useSetAtom } from "jotai/react";
 import { userAtom } from "@/atom/user";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,11 +18,45 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+interface NavLink {
+  href: string;
+  label: string;
+}
+
+// Public-site chrome only. The signed-in app has its own shell
+// (src/components/shell/app-shell.tsx) with the sidebar/tab-bar nav — this
+// Header is what wraps the marketing pages (/, /about) and the public
+// Brands directory. Restyled onto tokens.css + the Freebiz wordmark as the
+// Phase E follow-up; "Marketplace" renamed to "Brands" to match the
+// §Marketplace ruling in design/DECISIONS.md.
+const VIEWER_LINKS: NavLink[] = [
+  { href: routes.WATCH, label: "Billboard" },
+  { href: routes.USER.CLAIMS, label: "My freebies" },
+  { href: routes.USER.WALLET, label: "Wallet" },
+  { href: routes.MARKETPLACE, label: "Brands" },
+  { href: routes.USER.PROMOTE, label: "Promote & earn" },
+  { href: routes.FORUM, label: "Forum" },
+];
+
+const BRAND_LINKS: NavLink[] = [
+  { href: routes.BRAND.DASHBOARD, label: "Dashboard" },
+  { href: routes.BRAND.CAMPAIGNS, label: "Campaigns" },
+  { href: routes.BRAND.PRODUCTS, label: "Products" },
+  { href: routes.MARKETPLACE, label: "Brands" },
+];
+
+const ADMIN_LINKS: NavLink[] = [{ href: routes.ADMIN.CAMPAIGNS, label: "Live monitor" }];
+
+const GUEST_LINKS: NavLink[] = [
+  { href: routes.WATCH, label: "Billboard" },
+  { href: routes.HOME, label: "Home" },
+  { href: routes.MARKETPLACE, label: "Brands" },
+];
+
 export function Header() {
   const user = useAtomValue(userAtom);
   const setUser = useSetAtom(userAtom);
   const router = useRouter();
-  const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   const userType = user?.userType;
@@ -31,397 +65,196 @@ export function Header() {
     setIsMounted(true);
   }, []);
 
-  // Enable real-time notifications via WebSocket
-  // NOTE: Disabled until notification system is fully configured
-  // useNotificationSocket(user?._id)
-
   const handleLogout = () => {
     setUser(null);
     router.push(routes.HOME);
     setMobileMenuOpen(false);
   };
 
-  const closeMobileMenu = () => {
-    setMobileMenuOpen(false);
-  };
+  const closeMobileMenu = () => setMobileMenuOpen(false);
+
+  // Until mounted, render the guest set so the server and first client
+  // render agree — userAtom reads localStorage synchronously on the client
+  // (same hydration guard used in ProtectedRoute and /watch).
+  const links = !isMounted
+    ? GUEST_LINKS
+    : userType === "viewer"
+      ? VIEWER_LINKS
+      : userType === "brand"
+        ? BRAND_LINKS
+        : userType === "admin"
+          ? ADMIN_LINKS
+          : GUEST_LINKS;
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-none">
+    <header
+      className="fixed top-0 left-0 right-0 z-50 backdrop-blur-sm"
+      style={{ background: "color-mix(in srgb, var(--ink-900) 95%, transparent)" }}>
       <div className="px-[5%]">
-        <div className="flex h-24 items-center justify-between">
-          <div className="flex items-center">
-            <Link
-              href={routes.HOME}
-              className="flex items-center gap-2 text-2xl font-bold text-white font-fredoka">
-              <LogoIcon />
-              Pazzell
-            </Link>
-          </div>
+        <div className="flex h-20 items-center justify-between">
+          <Link href={routes.HOME} className="flex items-center gap-2">
+            <LogoMark />
+            <Wordmark />
+          </Link>
 
-          <nav className="hidden lg:flex items-center space-x-8">
-            {isMounted && userType === "gamer" ? (
-              <>
-                <Link
-                  href={routes.WATCH}
-                  className="text-white hover:text-secondary font-medium transition-colors">
-                  Watch &amp; Earn
-                </Link>
-                <Link
-                  href={routes.USER.DASHBOARD}
-                  className="text-white hover:text-secondary font-medium transition-colors">
-                  Dashboard
-                </Link>
-                <Link
-                  href={routes.MARKETPLACE}
-                  className="text-white hover:text-secondary font-medium transition-colors">
-                  Marketplace
-                </Link>
-                <Link
-                  href={routes.USER.REFERRALS}
-                  className="text-white hover:text-secondary font-medium transition-colors">
-                  Referrals
-                </Link>
-                <Link
-                  href={routes.USER.WALLET}
-                  className="text-white hover:text-secondary font-medium transition-colors">
-                  Wallet
-                </Link>
-                <Link
-                  href={routes.USER.CLAIMS}
-                  className="text-white hover:text-secondary font-medium transition-colors">
-                  Claims
-                </Link>
-              </>
-            ) : isMounted && userType === "brand" ? (
-              <>
-                <Link
-                  href={routes.BRAND.DASHBOARD}
-                  className="text-white hover:text-secondary font-medium transition-colors">
-                  Dashboard
-                </Link>
-                <Link
-                  href={routes.BRAND.CAMPAIGNS}
-                  className="text-white hover:text-secondary font-medium transition-colors">
-                  Campaigns
-                </Link>
-                <Link
-                  href={routes.BRAND.PRODUCTS}
-                  className="text-white hover:text-secondary font-medium transition-colors">
-                  Products
-                </Link>
-                <Link
-                  href={routes.MARKETPLACE}
-                  className="text-white hover:text-secondary font-medium transition-colors">
-                  Marketplace
-                </Link>
-              </>
-            ) : isMounted && userType === "admin" ? (
+          <nav className="hidden lg:flex items-center gap-7">
+            {links.map((link) => (
               <Link
-                href={routes.ADMIN.CAMPAIGNS}
-                className="text-white hover:text-secondary font-medium transition-colors">
-                Campaigns
+                key={link.label}
+                href={link.href}
+                className="transition-colors hover:opacity-80"
+                style={{ color: "var(--muted)", fontSize: 13.5, fontWeight: 600 }}>
+                {link.label}
               </Link>
-            ) : (
-              <>
-                <Link
-                  href={routes.WATCH}
-                  className="text-white hover:text-secondary font-medium transition-colors">
-                  Watch &amp; Earn
-                </Link>
-                <Link
-                  href={routes.HOME}
-                  className="text-white hover:text-secondary font-medium transition-colors">
-                  Home
-                </Link>
-                <Link
-                  href={routes.MARKETPLACE}
-                  className="text-white hover:text-secondary font-medium transition-colors">
-                  Marketplace
-                </Link>
-              </>
-            )}
+            ))}
           </nav>
 
-          <div className="flex items-center space-x-2 sm:space-x-4">
+          <div className="flex items-center gap-2">
             {isMounted && userType ? (
-              <div className="flex items-center space-x-1 sm:space-x-2">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="relative hover:bg-transparent">
-                      {user?.avatar ? (
-                        <div className="w-8 h-8 rounded-full overflow-hidden">
-                          <img
-                            src={user.avatar}
-                            alt="Profile"
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                      ) : (
-                        <User className="h-4 w-4" />
-                      )}
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuLabel>
-                      <div className="flex flex-col">
-                        <span className="font-medium">
-                          {user?.fullName || user?.email || "Account"}
-                        </span>
-                        {user?.username && (
-                          <span className="text-sm text-muted-foreground font-normal">
-                            @{user.username}
-                          </span>
-                        )}
-                      </div>
-                    </DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    {userType === "gamer" && (
-                      <>
-                        <DropdownMenuItem asChild>
-                          <Link href={routes.USER.PROFILE}>Profile</Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem asChild>
-                          <Link href={routes.USER.WALLET}>
-                            <Wallet className="h-4 w-4 mr-2" />
-                            Wallet
-                          </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem asChild>
-                          <Link href={routes.USER.CLAIMS}>
-                            <Gift className="h-4 w-4 mr-2" />
-                            Claims
-                          </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem asChild>
-                          <Link href={routes.USER.SETTINGS}>
-                            <Settings className="h-4 w-4 mr-2" />
-                            Settings
-                          </Link>
-                        </DropdownMenuItem>
-                      </>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    aria-label="Account"
+                    className="w-9 h-9 rounded-full flex items-center justify-center overflow-hidden"
+                    style={{ border: "1px solid var(--line-2)", color: "var(--txt)" }}>
+                    {user?.avatar ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={user.avatar} alt="Profile" className="w-full h-full object-cover" />
+                    ) : (
+                      <User className="h-4 w-4" />
                     )}
-                    <DropdownMenuItem
-                      onClick={handleLogout}
-                      className="text-red-600">
-                      <LogOut className="h-4 w-4 mr-2" />
-                      Logout
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuLabel>
+                    <div className="flex flex-col">
+                      <span className="font-medium">{user?.fullName || user?.email || "Account"}</span>
+                      {user?.username && (
+                        <span className="text-sm text-muted-foreground font-normal">@{user.username}</span>
+                      )}
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {userType === "viewer" && (
+                    <>
+                      <DropdownMenuItem asChild>
+                        <Link href={routes.USER.PROFILE}>Profile</Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href={routes.USER.WALLET}>
+                          <Wallet className="h-4 w-4 mr-2" />
+                          Wallet
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href={routes.USER.CLAIMS}>
+                          <Gift className="h-4 w-4 mr-2" />
+                          My freebies
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href={routes.USER.SETTINGS}>
+                          <Settings className="h-4 w-4 mr-2" />
+                          Settings
+                        </Link>
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                  <DropdownMenuItem onClick={handleLogout} style={{ color: "var(--spent)" }}>
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Log out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             ) : (
-              <div className="lg:flex items-center space-x-2 hidden ">
+              <div className="hidden lg:flex items-center gap-2">
                 <Link href={routes.LOGIN}>
-                  <Button
-                    variant="ghost"
-                    className="text-white hover:text-secondary hover:bg-transparent font-semibold text-base font-fredoka py-5 px-5">
-                    Login
-                  </Button>
+                  <Button variant="ghost">Log in</Button>
                 </Link>
                 <Link href={`${routes.REGISTER}?type=user`}>
-                  <Button
-                    variant="outline"
-                    className="border-2 border-secondary text-white hover:bg-secondary hover:text-secondary-foreground font-semibold rounded-full text-base font-fredoka py-5 px-7">
-                    Watch Now
-                  </Button>
+                  <Button variant="primary">Start watching</Button>
                 </Link>
                 <Link href={`${routes.REGISTER}?type=brand`}>
-                  <Button className="bg-gradient-to-r from-[#6C5CE7] to-[#FF6B9D] text-white font-semibold rounded-full hover:shadow-lg hover:-translate-y-1 transition-all duration-300 text-base font-fredoka py-5 px-7">
-                    Create Campaign
-                  </Button>
+                  <Button>Create campaign</Button>
                 </Link>
               </div>
             )}
 
-            <div
-              // variant="ghost"
-              className="lg:hidden text-white"
+            <button
+              type="button"
+              aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
+              className="lg:hidden p-2"
+              style={{ color: "var(--txt)" }}
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
-              {mobileMenuOpen ? (
-                <X className="h-8 w-8" />
-              ) : (
-                <Menu className="h-8 w-8" />
-              )}
-            </div>
+              {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            </button>
           </div>
         </div>
       </div>
 
       {/* Mobile Navigation Menu */}
       {mobileMenuOpen && (
-        <div className="lg:hidden bg-background/95 backdrop-blur-sm border-b border-white/10">
+        <div
+          className="lg:hidden backdrop-blur-sm"
+          style={{
+            background: "color-mix(in srgb, var(--ink-900) 95%, transparent)",
+            borderBottom: "1px solid var(--line)",
+          }}>
           <div className="px-[5%] py-4">
             <nav className="space-y-1">
-              {isMounted && userType === "gamer" ? (
+              {links.map((link) => (
+                <Link
+                  key={link.label}
+                  href={link.href}
+                  className="block py-3 px-2 rounded-md transition-colors"
+                  style={{ color: "var(--txt)", fontSize: 14 }}
+                  onClick={closeMobileMenu}>
+                  {link.label}
+                </Link>
+              ))}
+
+              {isMounted && userType === "viewer" && (
                 <>
                   <Link
-                    href={routes.WATCH}
-                    className="block text-white hover:text-secondary hover:bg-white/5 py-3 px-2 rounded-md transition-colors"
-                    onClick={closeMobileMenu}>
-                    Watch &amp; Earn
-                  </Link>
-                  <Link
-                    href={routes.USER.DASHBOARD}
-                    className="block text-white hover:text-secondary hover:bg-white/5 py-3 px-2 rounded-md transition-colors"
-                    onClick={closeMobileMenu}>
-                    Dashboard
-                  </Link>
-                  <Link
-                    href={routes.MARKETPLACE}
-                    className="block text-white hover:text-secondary hover:bg-white/5 py-3 px-2 rounded-md transition-colors"
-                    onClick={closeMobileMenu}>
-                    Marketplace
-                  </Link>
-                  <Link
-                    href={routes.USER.REFERRALS}
-                    className="block text-white hover:text-secondary hover:bg-white/5 py-3 px-2 rounded-md transition-colors"
-                    onClick={closeMobileMenu}>
-                    Referrals
-                  </Link>
-                  <Link
-                    href={routes.USER.WALLET}
-                    className="block text-white hover:text-secondary hover:bg-white/5 py-3 px-2 rounded-md transition-colors"
-                    onClick={closeMobileMenu}>
-                    Wallet
-                  </Link>
-                  <Link
-                    href={routes.USER.CLAIMS}
-                    className="block text-white hover:text-secondary hover:bg-white/5 py-3 px-2 rounded-md transition-colors"
-                    onClick={closeMobileMenu}>
-                    Claims
-                  </Link>
-                  <Link
                     href={routes.USER.PROFILE}
-                    className="block text-white hover:text-secondary hover:bg-white/5 py-3 px-2 rounded-md transition-colors"
+                    className="block py-3 px-2 rounded-md transition-colors"
+                    style={{ color: "var(--txt)", fontSize: 14 }}
                     onClick={closeMobileMenu}>
                     Profile
                   </Link>
                   <Link
                     href={routes.USER.SETTINGS}
-                    className="block text-white hover:text-secondary hover:bg-white/5 py-3 px-2 rounded-md transition-colors"
+                    className="block py-3 px-2 rounded-md transition-colors"
+                    style={{ color: "var(--txt)", fontSize: 14 }}
                     onClick={closeMobileMenu}>
                     Settings
                   </Link>
-                  {userType && (
-                    <div className="border-t border-white/10 pt-4 space-y-2">
-                      <button
-                        onClick={handleLogout}
-                        className="flex items-center text-red-400 hover:text-red-300 hover:bg-red-500/10 py-3 px-2 rounded-md transition-colors w-full">
-                        <LogOut className="h-4 w-4 mr-2" />
-                        Logout
-                      </button>
-                    </div>
-                  )}
                 </>
-              ) : isMounted && userType === "brand" ? (
-                <>
-                  <Link
-                    href={routes.BRAND.DASHBOARD}
-                    className="block text-white hover:text-secondary hover:bg-white/5 py-3 px-2 rounded-md transition-colors"
-                    onClick={closeMobileMenu}>
-                    Dashboard
-                  </Link>
-                  <Link
-                    href={routes.BRAND.CAMPAIGNS}
-                    className="block text-white hover:text-secondary hover:bg-white/5 py-3 px-2 rounded-md transition-colors"
-                    onClick={closeMobileMenu}>
-                    Campaigns
-                  </Link>
-                  <Link
-                    href={routes.BRAND.PRODUCTS}
-                    className="block text-white hover:text-secondary hover:bg-white/5 py-3 px-2 rounded-md transition-colors"
-                    onClick={closeMobileMenu}>
-                    Products
-                  </Link>
-                  <Link
-                    href={routes.MARKETPLACE}
-                    className="block text-white hover:text-secondary hover:bg-white/5 py-3 px-2 rounded-md transition-colors"
-                    onClick={closeMobileMenu}>
-                    Marketplace
-                  </Link>
-                  {userType && (
-                    <div className="border-t border-white/10 pt-4 space-y-2">
-                      <button
-                        onClick={handleLogout}
-                        className="flex items-center text-red-400 hover:text-red-300 hover:bg-red-500/10 py-3 px-2 rounded-md transition-colors w-full">
-                        <LogOut className="h-4 w-4 mr-2" />
-                        Logout
-                      </button>
-                    </div>
-                  )}
-                </>
-              ) : isMounted && userType === "admin" ? (
-                <>
-                  <Link
-                    href={routes.ADMIN.CAMPAIGNS}
-                    className="block text-white hover:text-secondary hover:bg-white/5 py-3 px-2 rounded-md transition-colors"
-                    onClick={closeMobileMenu}>
-                    Campaigns
-                  </Link>
-                  <div className="border-t border-white/10 pt-4 space-y-2">
-                    <button
-                      onClick={handleLogout}
-                      className="flex items-center text-red-400 hover:text-red-300 hover:bg-red-500/10 py-3 px-2 rounded-md transition-colors w-full">
-                      <LogOut className="h-4 w-4 mr-2" />
-                      Logout
-                    </button>
-                  </div>
-                </>
+              )}
+
+              {isMounted && userType ? (
+                <div className="pt-3" style={{ borderTop: "1px solid var(--line)" }}>
+                  <button
+                    onClick={handleLogout}
+                    className="flex items-center w-full py-3 px-2 rounded-md transition-colors"
+                    style={{ color: "var(--spent)", fontSize: 14 }}>
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Log out
+                  </button>
+                </div>
               ) : (
-                <>
-                  <Link
-                    href={routes.WATCH}
-                    className="block py-3 px-2 rounded-md transition-colors text-white hover:text-secondary hover:bg-white/5"
-                    onClick={closeMobileMenu}>
-                    Watch &amp; Earn
+                <div className="pt-3 flex flex-col gap-2" style={{ borderTop: "1px solid var(--line)" }}>
+                  <Link href={routes.LOGIN} onClick={closeMobileMenu}>
+                    <Button variant="ghost" className="w-full justify-center">Log in</Button>
                   </Link>
-                  <a
-                    href="#for-brands"
-                    className="block py-3 px-2 rounded-md transition-colors text-white hover:text-secondary hover:bg-white/5"
-                    onClick={closeMobileMenu}>
-                    For Brands
-                  </a>
-                  <a
-                    href="#for-viewers"
-                    className="block py-3 px-2 rounded-md transition-colors text-white hover:text-secondary hover:bg-white/5"
-                    onClick={closeMobileMenu}>
-                    For Viewers
-                  </a>
-                  <Link
-                    href={routes.MARKETPLACE}
-                    className="block py-3 px-2 rounded-md transition-colors text-white hover:text-secondary hover:bg-white/5"
-                    onClick={closeMobileMenu}>
-                    Marketplace
+                  <Link href={`${routes.REGISTER}?type=user`} onClick={closeMobileMenu}>
+                    <Button variant="primary" className="w-full justify-center">Start watching</Button>
                   </Link>
-                  <div className="border-t border-white/10 pt-4 flex flex-col space-y-2">
-                    <Link href={routes.LOGIN} onClick={closeMobileMenu}>
-                      <Button
-                        variant="ghost"
-                        className="w-full text-white hover:text-secondary hover:bg-white/5 font-fredoka justify-start">
-                        Login
-                      </Button>
-                    </Link>
-                    <Link
-                      href={`${routes.REGISTER}?type=user`}
-                      onClick={closeMobileMenu}>
-                      <Button
-                        variant="outline"
-                        className="w-full border-secondary text-white hover:bg-secondary hover:text-secondary-foreground font-fredoka">
-                        Watch Now
-                      </Button>
-                    </Link>
-                    <Link
-                      href={`${routes.REGISTER}?type=brand`}
-                      onClick={closeMobileMenu}>
-                      <Button className="w-full bg-gradient-to-r from-[#6C5CE7] to-[#FF6B9D] text-white font-fredoka">
-                        Create Campaign
-                      </Button>
-                    </Link>
-                  </div>
-                </>
+                  <Link href={`${routes.REGISTER}?type=brand`} onClick={closeMobileMenu}>
+                    <Button className="w-full justify-center">Create campaign</Button>
+                  </Link>
+                </div>
               )}
             </nav>
           </div>

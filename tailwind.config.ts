@@ -39,12 +39,15 @@ export default {
           DEFAULT: "hsl(var(--destructive))",
           foreground: "hsl(var(--destructive-foreground))",
         },
+        // --ui-muted/--ui-accent, not --muted/--accent: those two names are
+        // also owned by tokens.css (as hex) and it wins the cascade. See the
+        // note in globals.css.
         muted: {
-          DEFAULT: "hsl(var(--muted))",
+          DEFAULT: "hsl(var(--ui-muted))",
           foreground: "hsl(var(--muted-foreground))",
         },
         accent: {
-          DEFAULT: "hsl(var(--accent))",
+          DEFAULT: "hsl(var(--ui-accent))",
           foreground: "hsl(var(--accent-foreground))",
         },
         popover: {
@@ -54,16 +57,6 @@ export default {
         card: {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
-        },
-        // Reserved semantic colors — spin machine + win/error states only,
-        // never used for general branding (see design direction in the plan).
-        "spin-inactive": {
-          DEFAULT: "hsl(var(--spin-inactive))",
-          foreground: "hsl(var(--spin-inactive-foreground))",
-        },
-        "spin-active": {
-          DEFAULT: "hsl(var(--spin-active))",
-          foreground: "hsl(var(--spin-active-foreground))",
         },
         success: {
           DEFAULT: "hsl(var(--success))",
@@ -84,15 +77,10 @@ export default {
           from: { height: "var(--radix-accordion-content-height)" },
           to: { height: "0" },
         },
-        "pulse-glow": {
-          "0%, 100%": { boxShadow: "0 0 0 0 hsl(var(--spin-active) / 0.5)" },
-          "50%": { boxShadow: "0 0 0 16px hsl(var(--spin-active) / 0)" },
-        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
-        "pulse-glow": "pulse-glow 1.8s ease-in-out infinite",
       },
     },
   },

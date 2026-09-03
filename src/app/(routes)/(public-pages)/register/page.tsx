@@ -7,15 +7,11 @@ import { userAtom } from "@/atom/user";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { GradientButton } from "@/components/ui/gradient-button";
-import { Input } from "@/components/ui/input";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormMessage,
-} from "@/components/ui/form";
+import { Card } from "@/components/ui/freebiz-card";
+import { Field } from "@/components/ui/freebiz-field";
+import { Input } from "@/components/ui/freebiz-input";
+import { Button } from "@/components/ui/freebiz-button";
+import { LogoMark, Wordmark } from "@/components/shell/logo-mark";
 import { z } from "zod";
 import { isAxiosError } from "axios";
 import { User, Building, Eye, EyeOff, Loader2 } from "lucide-react";
@@ -24,11 +20,9 @@ import { api } from "@/lib/api";
 import { ENDPOINTS } from "@/app/_utils/endpoints";
 import { toast } from "sonner";
 import { routes } from "@/app/_utils/routes";
-import { Header } from "@/components/layout/header";
-import { Footer } from "@/components/layout/footer";
 import GoogleAuthBtn from "@/components/auth/google-auth";
 
-// §1 of API_CONTRACT_ADS_REWARD_PLATFORM.md — both gamer and brand register
+// §1 of API_CONTRACT_ADS_REWARD_PLATFORM.md — both viewer and brand register
 // now take only { username, email, password }. Company/business details are
 // deferred to post-signup profile completion (§2).
 const registrationSchema = z.object({
@@ -43,6 +37,10 @@ const registrationSchema = z.object({
 
 type RegistrationValues = z.infer<typeof registrationSchema>;
 
+// RESTYLE (design/DECISIONS.md #26-30) — same minimal centered-card
+// treatment as /login. Placeholders ("Username"/"Email address"/
+// "Password") and the "Sign Up" button text are kept exactly — this
+// page's own test suite asserts them directly.
 function RegisterForm() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -50,18 +48,14 @@ function RegisterForm() {
   const [accountType, setAccountType] = useState<"user" | "brand">(
     (searchParams.get("type") as "user" | "brand") || "user"
   );
-  const referrerUsername =
-    searchParams.get("ref") ||
-    searchParams.get("referralCode") ||
-    searchParams.get("referrerUsername") ||
-    searchParams.get("referrerId") ||
-    undefined;
   const returnTo = searchParams.get("returnTo") || undefined;
   const [showPassword, setShowPassword] = useState(false);
 
+  // Viewers land on the billboard, not /user/dashboard — see the matching
+  // comment in login/page.tsx (DECISIONS.md #6 parks that route).
   useEffect(() => {
     if (user) {
-      router.push(user.userType === "gamer" ? routes.USER.DASHBOARD : routes.BRAND.DASHBOARD);
+      router.push(user.userType === "viewer" ? routes.WATCH : routes.BRAND.DASHBOARD);
     }
   }, [user, router]);
 
@@ -69,14 +63,13 @@ function RegisterForm() {
     resolver: zodResolver(registrationSchema),
     defaultValues: { username: "", email: "", password: "" },
   });
+  const errors = form.formState.errors;
 
   const registerMutation = useMutation({
     mutationFn: (payload: RegistrationValues) =>
       api.post(
-        accountType === "user" ? ENDPOINTS.REGISTER_GAMER : ENDPOINTS.REGISTER_BRAND,
-        accountType === "user" && referrerUsername
-          ? { ...payload, referrerUsername }
-          : payload
+        accountType === "user" ? ENDPOINTS.REGISTER_VIEWER : ENDPOINTS.REGISTER_BRAND,
+        payload
       ),
     onError: (error) => {
       const message = isAxiosError(error)
@@ -98,157 +91,103 @@ function RegisterForm() {
   const onSubmit = (data: RegistrationValues) => registerMutation.mutate(data);
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <Header />
-      <div className="flex-1 bg-background flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden pt-32">
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute w-96 h-96 bg-primary opacity-20 rounded-full filter blur-[80px] -top-24 -right-24" />
-          <div className="absolute w-72 h-72 bg-secondary opacity-20 rounded-full filter blur-[80px] -bottom-12 -left-12" />
-        </div>
+    <div className="min-h-screen flex items-center justify-center p-4" style={{ background: "var(--ink-900)" }}>
+      <div className="w-full max-w-sm">
+        <Link href={routes.HOME} className="flex items-center justify-center gap-2 mb-6">
+          <LogoMark />
+          <Wordmark />
+        </Link>
 
-        <div className="w-full max-w-sm relative z-10">
-          <div className="bg-card/60 border border-border rounded-2xl p-8 backdrop-blur-sm">
-            <h1 className="text-2xl font-bold text-foreground text-center mb-1 font-sora">
-              Create account
-            </h1>
-            <p className="text-muted-foreground text-center text-sm mb-6">
-              Watch ads, catch freebie codes, earn real cash
-            </p>
+        <Card>
+          <h1 className="text-center" style={{ fontFamily: "var(--display)", fontWeight: 800, fontSize: 21, color: "var(--txt)" }}>
+            Create account
+          </h1>
+          <p className="text-center fb-hint mt-1">Watch ads, catch freebie codes, earn real cash</p>
 
-            <div className="flex bg-white/5 rounded-xl p-1 mb-6">
-              <button
-                type="button"
-                onClick={() => {
-                  setAccountType("user");
-                  form.reset();
-                }}
-                className={`flex-1 py-2 px-3 rounded-lg text-sm font-semibold transition-all ${
-                  accountType === "user"
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}>
-                <User className="h-4 w-4 inline mr-2" />
-                Viewer
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setAccountType("brand");
-                  form.reset();
-                }}
-                className={`flex-1 py-2 px-3 rounded-lg text-sm font-semibold transition-all ${
-                  accountType === "brand"
-                    ? "bg-secondary text-secondary-foreground"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}>
-                <Building className="h-4 w-4 inline mr-2" />
-                Brand
-              </button>
-            </div>
-
-            <Form {...form} key={accountType}>
-              <form className="space-y-4" onSubmit={form.handleSubmit(onSubmit)}>
-                <FormField
-                  control={form.control}
-                  name="username"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormControl>
-                        <Input placeholder="Username" {...field} />
-                      </FormControl>
-                      <FormMessage className="text-destructive text-xs" />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormControl>
-                        <Input type="email" placeholder="Email address" {...field} />
-                      </FormControl>
-                      <FormMessage className="text-destructive text-xs" />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="password"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormControl>
-                        <div className="relative">
-                          <Input
-                            type={showPassword ? "text" : "password"}
-                            placeholder="Password"
-                            {...field}
-                          />
-                          <button
-                            type="button"
-                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                            onClick={() => setShowPassword(!showPassword)}>
-                            {showPassword ? (
-                              <EyeOff className="h-4 w-4" />
-                            ) : (
-                              <Eye className="h-4 w-4" />
-                            )}
-                          </button>
-                        </div>
-                      </FormControl>
-                      <FormMessage className="text-destructive text-xs" />
-                    </FormItem>
-                  )}
-                />
-
-                <GradientButton
-                  type="submit"
-                  disabled={registerMutation.isPending}
-                  variant={accountType === "user" ? "primary" : "secondary"}
-                  className="w-full p-5 text-base border-0 mt-6">
-                  {registerMutation.isPending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Creating account...
-                    </>
-                  ) : (
-                    "Sign Up"
-                  )}
-                </GradientButton>
-              </form>
-            </Form>
-
-            <div className="flex items-center gap-4 my-6">
-              <div className="flex-1 h-px bg-border" />
-              <span className="text-muted-foreground text-sm">or</span>
-              <div className="flex-1 h-px bg-border" />
-            </div>
-
-            <GoogleAuthBtn
-              referrerUsername={accountType === "user" ? referrerUsername : undefined}
-              returnTo={returnTo}
-            />
-
-            <p className="text-center text-muted-foreground text-sm mt-6">
-              Already have an account?{" "}
-              <Link href={routes.LOGIN} className="text-secondary font-semibold hover:underline">
-                Sign In
-              </Link>
-            </p>
-            <p className="text-sm text-center text-muted-foreground/70 mt-4">
-              By creating an account, you agree to our{" "}
-              <Link href="/terms" className="text-secondary hover:underline">
-                Terms
-              </Link>{" "}
-              and{" "}
-              <Link href="/privacy" className="text-secondary hover:underline">
-                Privacy Policy
-              </Link>
-            </p>
+          <div className="flex rounded-xl p-1 mt-5" style={{ background: "var(--ink-900)" }}>
+            <button
+              type="button"
+              onClick={() => {
+                setAccountType("user");
+                form.reset();
+              }}
+              className="flex-1 py-2 px-3 rounded-lg text-sm font-semibold transition-all"
+              style={accountType === "user" ? { background: "var(--free)", color: "var(--ink-900)" } : { color: "var(--muted)" }}>
+              <User className="h-4 w-4 inline mr-2" />
+              Viewer
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setAccountType("brand");
+                form.reset();
+              }}
+              className="flex-1 py-2 px-3 rounded-lg text-sm font-semibold transition-all"
+              style={accountType === "brand" ? { background: "var(--brand)", color: "var(--txt)" } : { color: "var(--muted)" }}>
+              <Building className="h-4 w-4 inline mr-2" />
+              Brand
+            </button>
           </div>
-        </div>
+
+          <form className="mt-4 space-y-3" onSubmit={form.handleSubmit(onSubmit)} key={accountType}>
+            <Field label="Username" htmlFor="username">
+              <Input id="username" placeholder="Username" {...form.register("username")} />
+              {errors.username && <span className="fb-hint" style={{ color: "var(--spent)" }}>{errors.username.message}</span>}
+            </Field>
+
+            <Field label="Email address" htmlFor="email">
+              <Input id="email" type="email" placeholder="Email address" {...form.register("email")} />
+              {errors.email && <span className="fb-hint" style={{ color: "var(--spent)" }}>{errors.email.message}</span>}
+            </Field>
+
+            <Field label="Password" htmlFor="password">
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Password"
+                  style={{ paddingRight: 40 }}
+                  {...form.register("password")}
+                />
+                <button
+                  type="button"
+                  className="absolute right-3 top-1/2 -translate-y-1/2"
+                  style={{ color: "var(--faint)" }}
+                  onClick={() => setShowPassword(!showPassword)}>
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+              {errors.password && <span className="fb-hint" style={{ color: "var(--spent)" }}>{errors.password.message}</span>}
+            </Field>
+
+            <Button type="submit" variant="primary" className="w-full justify-center" disabled={registerMutation.isPending}>
+              {registerMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Sign up"}
+            </Button>
+          </form>
+
+          <div className="flex items-center gap-3 my-5">
+            <div className="flex-1 h-px" style={{ background: "var(--line)" }} />
+            <span className="fb-hint">or</span>
+            <div className="flex-1 h-px" style={{ background: "var(--line)" }} />
+          </div>
+
+          <GoogleAuthBtn returnTo={returnTo} />
+
+          <p className="text-center fb-hint mt-5">
+            Already have an account?{" "}
+            <Link
+              href={returnTo ? `${routes.LOGIN}?returnTo=${encodeURIComponent(returnTo)}` : routes.LOGIN}
+              style={{ color: "var(--accent)", fontWeight: 600 }}>
+              Sign in
+            </Link>
+          </p>
+          <p className="text-center fb-hint mt-3">
+            By creating an account, you agree to our{" "}
+            <Link href="/terms" style={{ color: "var(--accent)" }}>Terms</Link> and{" "}
+            <Link href="/privacy" style={{ color: "var(--accent)" }}>Privacy Policy</Link>
+          </p>
+        </Card>
       </div>
-      <Footer />
     </div>
   );
 }

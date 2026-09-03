@@ -1,10 +1,19 @@
 "use client";
 
 import { useMemo } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Activity, Ban, Clock, FileEdit, Package, Plus, Target } from "lucide-react";
+import { Stat } from "@/components/ui/freebiz-stat";
+import { Card, CardNote } from "@/components/ui/freebiz-card";
+import { Pill } from "@/components/ui/freebiz-pill";
+import { Button } from "@/components/ui/freebiz-button";
+import {
+  Table,
+  TableHead,
+  TableBody,
+  TableRow,
+  TableHeadCell,
+  TableCell,
+} from "@/components/ui/freebiz-table";
+import { Plus } from "lucide-react";
 import Link from "next/link";
 import { routes } from "@/app/_utils/routes";
 import { useQuery } from "@tanstack/react-query";
@@ -15,8 +24,32 @@ import { useAtomValue } from "jotai";
 import { userAtom } from "@/atom/user";
 import { PageLoader } from "@/components/ui/page-loader";
 import { PageError } from "@/components/ui/page-error";
-import { STATUS_STYLES, formatStatusLabel, statusStyle } from "../campaigns/campaign-status";
+import { formatStatusLabel, STATUS_TONE } from "../campaigns/campaign-status";
 
+function formatDuration(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+// design/freebiz-mockup.html data-screen="b-dash". Per DECISIONS.md #12,
+// this route gets the stats grid + first 4 table rows, truncated with a
+// "See all campaigns" link to /brand/campaigns (the full, filterable
+// version of the same table — DECISIONS.md #13).
+//
+// The mockup's own 4 stats (Plays today, Watched to the end %, Spend
+// today, In review) and its table's "Plays" column all need a per-day
+// analytics rollup this endpoint doesn't return — GET /ad-campaigns/mine
+// is just the raw campaign list, and per-campaign play/completion numbers
+// only exist behind the Premium-gated analytics endpoint. Rather than fake
+// numbers, the stats here are the ones actually derivable from the list
+// (Active/Draft/Deactivated/Total/Products), matching what the dashboard
+// already computed before this rebuild. The mockup's "In review" status
+// and its whole reviewer-note/"Reply to reviewer" flow are also gone —
+// BUSINESS_RULES.md is explicit that campaigns go live immediately on
+// payment and there's no single-campaign approve/reject step anymore;
+// moderation is only a reactive admin takedown, surfaced here as
+// "Deactivated" (moderationStatus REJECTED).
 export default function BrandDashboard() {
   const user = useAtomValue(userAtom);
 
@@ -53,149 +86,140 @@ export default function BrandDashboard() {
     () =>
       [...(campaigns ?? [])]
         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-        .slice(0, 5),
+        .slice(0, 4),
     [campaigns]
   );
 
-  if (isLoading) return <PageLoader message="Loading dashboard..." />;
+  if (isLoading) return <PageLoader withLayout={false} message="Loading dashboard..." />;
 
   if (error) {
     return (
-      <PageError title="Failed to Load Dashboard" message="Unable to load dashboard data. Please try again." />
+      <PageError withLayout={false} title="Failed to Load Dashboard" message="Unable to load dashboard data. Please try again." />
     );
   }
 
   return (
-    <div className="space-y-8">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold text-foreground font-sora">Dashboard</h1>
-          <p className="text-muted-foreground">Track your ad campaigns and product listings</p>
+          <p
+            style={{
+              fontFamily: "var(--mono)",
+              fontSize: 10.5,
+              letterSpacing: "0.1em",
+              textTransform: "uppercase",
+              color: "var(--faint)",
+            }}>
+            Brands / Dashboard
+          </p>
+          <h1
+            className="mt-1"
+            style={{ fontFamily: "var(--display)", fontWeight: 800, fontSize: 27, letterSpacing: "-0.02em", color: "var(--txt)" }}>
+            {user?.companyName || "Your dashboard"}
+          </h1>
+          <p className="mt-1" style={{ color: "var(--muted)", fontSize: 13.5 }}>
+            Sixty seconds of attention, bought by the day. Here&apos;s how your ads are doing.
+          </p>
         </div>
         <Link href={routes.BRAND.CAMPAIGNS_CREATE}>
-          <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">
-            <Plus className="h-4 w-4 mr-2" />
-            Create Campaign
+          <Button variant="primary">
+            <Plus className="h-4 w-4" />
+            New campaign
           </Button>
         </Link>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
-        <Card className="bg-card/50 backdrop-blur-sm border-border">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-success/20 rounded-lg">
-                <Activity className="h-5 w-5 text-success" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-foreground font-sora">{stats.active}</p>
-                <p className="text-xs text-muted-foreground uppercase tracking-wider">Active</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-card/50 backdrop-blur-sm border-border">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-white/10 rounded-lg">
-                <FileEdit className="h-5 w-5 text-muted-foreground" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-foreground font-sora">{stats.draft}</p>
-                <p className="text-xs text-muted-foreground uppercase tracking-wider">Draft</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-card/50 backdrop-blur-sm border-border">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-destructive/20 rounded-lg">
-                <Ban className="h-5 w-5 text-destructive" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-foreground font-sora">{stats.rejected}</p>
-                <p className="text-xs text-muted-foreground uppercase tracking-wider">Deactivated</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-card/50 backdrop-blur-sm border-border">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-primary/20 rounded-lg">
-                <Target className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-foreground font-sora">{stats.total}</p>
-                <p className="text-xs text-muted-foreground uppercase tracking-wider">Total</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-card/50 backdrop-blur-sm border-border">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-secondary/20 rounded-lg">
-                <Package className="h-5 w-5 text-secondary" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-foreground font-sora">{myProductCount}</p>
-                <p className="text-xs text-muted-foreground uppercase tracking-wider">Products</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+        <Stat label="Active" value={stats.active} valueColor="var(--live)" />
+        <Stat label="Draft" value={stats.draft} />
+        <Stat label="Deactivated" value={stats.rejected} valueColor="var(--spent)" />
+        <Stat label="Total" value={stats.total} />
+        <Stat label="Products" value={myProductCount} />
       </div>
 
-      <Card className="bg-card/50 backdrop-blur-sm border-border">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-foreground font-sora text-lg flex items-center gap-2">
-              <Clock className="h-5 w-5 text-secondary" />
-              Recent Campaigns
-            </CardTitle>
-            <Link href={routes.BRAND.CAMPAIGNS}>
-              <Button variant="outline" size="sm" className="border-border text-foreground hover:bg-white/10">
-                View All
-              </Button>
-            </Link>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {recentCampaigns.length > 0 ? (
-              recentCampaigns.map((campaign) => (
+      <Card tight>
+        <div className="flex items-center justify-between px-3 pt-2">
+          <h3 style={{ fontFamily: "var(--display)", fontSize: 15, color: "var(--txt)" }}>Recent campaigns</h3>
+          <Link href={routes.BRAND.CAMPAIGNS}>
+            <Button size="sm" variant="ghost">See all campaigns</Button>
+          </Link>
+        </div>
+
+        {recentCampaigns.length > 0 ? (
+          <>
+            <div className="hidden md:block mt-2">
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableHeadCell>Campaign</TableHeadCell>
+                    <TableHeadCell>Video</TableHeadCell>
+                    <TableHeadCell>Slot</TableHeadCell>
+                    <TableHeadCell>Created</TableHeadCell>
+                    <TableHeadCell>Status</TableHeadCell>
+                    <TableHeadCell />
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {recentCampaigns.map((campaign) => (
+                    <TableRow key={campaign._id}>
+                      <TableCell>
+                        <b style={{ color: "var(--txt)" }}>{campaign.title}</b>
+                      </TableCell>
+                      <TableCell className="fb-hint" style={{ fontFamily: "var(--mono)" }}>
+                        {formatDuration(campaign.videoDurationSeconds)}
+                      </TableCell>
+                      <TableCell>
+                        <Pill tone={campaign.tier === "premium" ? "brandish" : "default"}>
+                          {campaign.tier === "premium" ? "Premium" : "Basic"}
+                        </Pill>
+                      </TableCell>
+                      <TableCell className="fb-hint">{new Date(campaign.createdAt).toLocaleDateString()}</TableCell>
+                      <TableCell>
+                        <Pill tone={STATUS_TONE[campaign.status]} dot>
+                          {formatStatusLabel(campaign.status)}
+                        </Pill>
+                      </TableCell>
+                      <TableCell style={{ textAlign: "right" }}>
+                        <Link href={`${routes.BRAND.CAMPAIGNS}/${campaign._id}`}>
+                          <Button size="sm" variant="ghost">View</Button>
+                        </Link>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+
+            <div className="md:hidden mt-2 space-y-2 px-2 pb-2">
+              {recentCampaigns.map((campaign) => (
                 <Link
                   key={campaign._id}
                   href={`${routes.BRAND.CAMPAIGNS}/${campaign._id}`}
-                  className="flex items-center justify-between p-4 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
-                  <div>
-                    <h4 className="text-foreground font-semibold">{campaign.title}</h4>
-                    <div className="flex items-center gap-3 mt-1">
-                      <Badge className={`${statusStyle(STATUS_STYLES, campaign.status)} text-xs`}>
-                        {formatStatusLabel(campaign.status)}
-                      </Badge>
-                      <span className="text-muted-foreground text-sm capitalize">{campaign.tier}</span>
-                    </div>
+                  className="block p-2.5 rounded-lg"
+                  style={{ border: "1px solid var(--line)" }}>
+                  <div className="flex items-start justify-between gap-2">
+                    <b style={{ fontSize: 13.5, color: "var(--txt)" }}>{campaign.title}</b>
+                    <Pill tone={STATUS_TONE[campaign.status]} dot>{formatStatusLabel(campaign.status)}</Pill>
                   </div>
-                  <span className="text-muted-foreground text-sm">
+                  <p className="fb-hint mt-1">
+                    {campaign.tier === "premium" ? "Premium" : "Basic"} · {formatDuration(campaign.videoDurationSeconds)} ·{" "}
                     {new Date(campaign.createdAt).toLocaleDateString()}
-                  </span>
+                  </p>
                 </Link>
-              ))
-            ) : (
-              <div className="text-center py-8">
-                <p className="text-muted-foreground">No campaigns found</p>
-                <Link href={routes.BRAND.CAMPAIGNS_CREATE}>
-                  <Button className="mt-3 bg-primary hover:bg-primary/90 text-primary-foreground">
-                    Create Your First Campaign
-                  </Button>
-                </Link>
-              </div>
-            )}
+              ))}
+            </div>
+          </>
+        ) : (
+          <div className="px-3 pb-3">
+            <CardNote>No campaigns yet.</CardNote>
+            <Link href={routes.BRAND.CAMPAIGNS_CREATE} className="inline-block mt-3">
+              <Button variant="primary">
+                <Plus className="h-4 w-4" />
+                Create your first campaign
+              </Button>
+            </Link>
           </div>
-        </CardContent>
+        )}
       </Card>
     </div>
   );

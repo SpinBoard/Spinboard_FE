@@ -3,11 +3,13 @@
 import { useEffect, useRef, useState } from "react";
 import { Gift } from "lucide-react";
 import { PlayingBar, PLAYING_BAR_WINDOW_SEC } from "./playing-bar";
+import { VoucherChip } from "@/components/ui/freebiz-voucher-chip";
+import { Pill } from "@/components/ui/freebiz-pill";
+import { Button } from "@/components/ui/freebiz-button";
 
 interface FreebieTakeoverProps {
   publicCode: string;
   valueLabel?: string;
-  freebieType?: "AIRTIME" | "CASH";
   durationSec: number;
   onEnded?: () => void;
   onTimeUpdate?: (watchedMs: number, durationMs: number) => void;
@@ -21,11 +23,11 @@ const TICK_MS = 200;
 // once per session per code, and plays through the exact same
 // heartbeat/complete loop as an AD/HOUSE video slot — there's just no
 // videoUrl to drive it, so a client-side timer stands in for the <video>
-// element's own timeupdate/ended events.
+// element's own timeupdate/ended events. Styled to match VideoPlayer's
+// .screenface frame so both slot types read as one continuous board.
 export function FreebieTakeover({
   publicCode,
   valueLabel,
-  freebieType,
   durationSec,
   onEnded,
   onTimeUpdate,
@@ -60,26 +62,37 @@ export function FreebieTakeover({
 
   return (
     <div
-      className={`relative aspect-video rounded-lg border border-border bg-gradient-to-br from-primary/40 via-secondary/30 to-success/30 overflow-hidden flex flex-col items-center justify-center gap-4 px-6 text-center ${
+      className={`relative aspect-video rounded-lg border overflow-hidden flex flex-col items-center justify-center gap-4 px-6 text-center ${
         className ?? ""
-      }`}>
-      <PlayingBar progress={progress} />
-      <div className="w-16 h-16 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center">
-        <Gift className="h-8 w-8 text-white" />
+      }`}
+      style={{
+        background: "radial-gradient(120% 90% at 50% 15%, var(--ink-600), var(--ink-700) 62%, var(--ink-900))",
+        borderColor: "var(--line)",
+      }}>
+      <div
+        className="w-16 h-16 rounded-full flex items-center justify-center"
+        style={{ background: "var(--accent-soft)" }}>
+        <Gift className="h-8 w-8" style={{ color: "var(--accent)" }} />
       </div>
-      <div>
-        <p className="text-xs uppercase tracking-wider text-white/70 mb-2">
-          A {freebieType === "CASH" ? "cash" : "freebie"} code just took over the screen
-        </p>
-        <p className="font-mono text-3xl sm:text-4xl font-bold text-white break-all">{publicCode}</p>
-        {valueLabel && <p className="text-white/80 mt-1">{valueLabel}</p>}
+
+      <div className="space-y-3">
+        <Pill tone="live" dot>
+          Cash code · live now
+        </Pill>
+        <div>
+          <VoucherChip code={publicCode} value={valueLabel} />
+        </div>
       </div>
-      <button
-        type="button"
-        onClick={() => onClaim?.(publicCode)}
-        className="px-5 py-2.5 rounded-full bg-white text-black font-semibold text-sm hover:bg-white/90 transition-colors">
+
+      <Button type="button" variant="primary" onClick={() => onClaim?.(publicCode)}>
         Type it below before someone else does
-      </button>
+      </Button>
+
+      <div
+        className="absolute bottom-0 inset-x-0 px-4 pt-6 pb-3"
+        style={{ background: "linear-gradient(to top, rgba(0,0,0,.55), transparent)" }}>
+        <PlayingBar progress={progress} />
+      </div>
     </div>
   );
 }

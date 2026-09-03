@@ -1,7 +1,7 @@
 "use client";
 
 import { Phone, Mail, MessageCircle, Globe, Instagram, Facebook, Twitter, Linkedin, Youtube } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/freebiz-button";
 import { BusinessProfile } from "@/types";
 
 // A business only needed one contact method to get listed — hide whichever
@@ -38,16 +38,16 @@ export function ContactLinks({ business }: { business: BusinessProfile }) {
     <div className="flex flex-wrap gap-2">
       {links.map((link) => (
         <a key={link.label} href={link.href} target="_blank" rel="noreferrer">
-          <Button variant="outline" size="sm" className="border-border text-foreground hover:bg-white/10">
-            <link.icon className="h-3.5 w-3.5 mr-1.5" />
+          <Button variant="ghost" size="sm">
+            <link.icon className="h-3.5 w-3.5" />
             {link.label}
           </Button>
         </a>
       ))}
       {socialLinks.map((link) => (
         <a key={link.label} href={link.href} target="_blank" rel="noreferrer">
-          <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground hover:bg-white/5">
-            <link.icon className="h-3.5 w-3.5 mr-1.5" />
+          <Button variant="ghost" size="sm" style={{ color: "var(--faint)" }}>
+            <link.icon className="h-3.5 w-3.5" />
             {link.label}
           </Button>
         </a>

@@ -8,13 +8,15 @@ import { userAtom } from "@/atom/user";
 import { api } from "@/lib/api";
 import { ENDPOINTS } from "@/app/_utils/endpoints";
 import { routes } from "@/app/_utils/routes";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/freebiz-button";
+import { Card, CardNote } from "@/components/ui/freebiz-card";
+import { Pill } from "@/components/ui/freebiz-pill";
 import { PageLoader } from "@/components/ui/page-loader";
 import { PageError } from "@/components/ui/page-error";
 import { MarketplaceProduct, MarketplaceProductsResponse } from "@/types";
 
+// RESTYLE (design/DECISIONS.md §Marketplace) — showcase products on the
+// brand's directory listing. Fetch unchanged.
 export default function BrandProductsPage() {
   const user = useAtomValue(userAtom);
 
@@ -25,74 +27,70 @@ export default function BrandProductsPage() {
     enabled: !!user?.accessToken,
   });
 
-  if (isLoading) return <PageLoader message="Loading products..." />;
+  if (isLoading) return <PageLoader withLayout={false} message="Loading products..." />;
   if (error) {
     return (
-      <PageError title="Failed to Load Products" message="Unable to load your product listings. Please try again." />
+      <PageError withLayout={false} title="Failed to Load Products" message="Unable to load your product listings. Please try again." />
     );
   }
 
   return (
-    <div className="space-y-8">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-3xl font-bold text-foreground font-sora">Showcase Products</h1>
-          <p className="text-muted-foreground">
+          <h1 style={{ fontFamily: "var(--display)", fontWeight: 800, fontSize: 27, letterSpacing: "-0.02em", color: "var(--txt)" }}>
+            Showcase products
+          </h1>
+          <p className="mt-1" style={{ color: "var(--muted)", fontSize: 13.5 }}>
             Products &amp; services shown on your directory listing — no prices are charged in-app.
           </p>
         </div>
         <Link href={routes.BRAND.PRODUCTS_NEW}>
-          <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">
-            <Plus className="h-4 w-4 mr-2" />
-            New Product
+          <Button variant="primary">
+            <Plus className="h-4 w-4" />
+            New product
           </Button>
         </Link>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {(myProducts ?? []).map((product) => (
-          <Card key={product._id} className="bg-card/50 backdrop-blur-sm border-border overflow-hidden">
-            <div className="aspect-video bg-white/5 flex items-center justify-center">
-              {product.images?.[0] ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover" />
-              ) : (
-                <ImageOff className="h-8 w-8 text-muted-foreground" />
-              )}
-            </div>
-            <CardHeader>
-              <div className="flex items-center justify-between gap-2">
-                <Badge variant="secondary" className="flex items-center gap-1">
-                  <Tag className="h-3 w-3" />
-                  {product.category}
-                </Badge>
-                {!product.isActive && <Badge variant="outline">Inactive</Badge>}
-              </div>
-              <CardTitle className="text-foreground font-sora text-lg mt-2">{product.name}</CardTitle>
-              {product.priceLabel && (
-                <p className="text-primary font-semibold text-sm">{product.priceLabel}</p>
-              )}
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground line-clamp-3">{product.description}</p>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {(!myProducts || myProducts.length === 0) && (
-        <div className="text-center py-12">
-          <div className="w-16 h-16 bg-primary/20 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Package className="h-8 w-8 text-primary" />
+      {(!myProducts || myProducts.length === 0) ? (
+        <Card>
+          <div className="text-center py-8">
+            <Package className="h-8 w-8 mx-auto mb-3" style={{ color: "var(--faint)" }} />
+            <CardNote>Showcase your first product or service on your directory listing.</CardNote>
+            <Link href={routes.BRAND.PRODUCTS_NEW} className="inline-block mt-3">
+              <Button variant="primary">
+                <Plus className="h-4 w-4" />
+                New product
+              </Button>
+            </Link>
           </div>
-          <h3 className="text-xl font-semibold text-foreground mb-2">No products yet</h3>
-          <p className="text-muted-foreground mb-6">Showcase your first product or service on your directory listing</p>
-          <Link href={routes.BRAND.PRODUCTS_NEW}>
-            <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">
-              <Plus className="h-4 w-4 mr-2" />
-              New Product
-            </Button>
-          </Link>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {myProducts.map((product) => (
+            <Card key={product._id} tight>
+              <div className="aspect-video flex items-center justify-center" style={{ background: "var(--ink-900)" }}>
+                {product.images?.[0] ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover" />
+                ) : (
+                  <ImageOff className="h-8 w-8" style={{ color: "var(--faint)" }} />
+                )}
+              </div>
+              <div className="p-3.5">
+                <div className="flex items-center justify-between gap-2">
+                  <Pill><Tag className="h-3 w-3" /><span style={{ textTransform: "capitalize" }}>{product.category}</span></Pill>
+                  {!product.isActive && <Pill tone="default">Inactive</Pill>}
+                </div>
+                <h3 className="mt-2" style={{ fontFamily: "var(--display)", fontSize: 15, color: "var(--txt)" }}>{product.name}</h3>
+                {product.priceLabel && (
+                  <p style={{ color: "var(--accent)", fontSize: 13, fontWeight: 600 }}>{product.priceLabel}</p>
+                )}
+                <p className="mt-1.5 line-clamp-3" style={{ fontSize: 12.5, color: "var(--muted)" }}>{product.description}</p>
+              </div>
+            </Card>
+          ))}
         </div>
       )}
     </div>

@@ -10,17 +10,11 @@ import { isAxiosError } from "axios";
 import { useMutation } from "@tanstack/react-query";
 import { Loader2, Sparkles } from "lucide-react";
 import { toast } from "sonner";
-import { MainLayout } from "@/components/layout/main-layout";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
+import { Card } from "@/components/ui/freebiz-card";
+import { Field } from "@/components/ui/freebiz-field";
+import { Input } from "@/components/ui/freebiz-input";
+import { Button } from "@/components/ui/freebiz-button";
+import { Progress } from "@/components/ui/freebiz-progress";
 import {
   Select,
   SelectContent,
@@ -43,6 +37,14 @@ const profileCompletionSchema = z.object({
 
 type ProfileCompletionValues = z.infer<typeof profileCompletionSchema>;
 
+// RESTYLE (design/DECISIONS.md #7) — onboarding flow, kept exactly as-is:
+// same fields, same validation, same submit behaviour. The "Sex" field
+// keeps the existing shadcn Select rather than a native <select> — this
+// page's own test suite drives it via the Radix combobox/listbox
+// interaction pattern (getByRole("combobox") / getByRole("option")), which
+// a native select doesn't produce the same way. Also drops "you're all set
+// to spin" — a SpinBoard-era leftover phrase per CLAUDE.md's warning about
+// stale copy; there's no spin wheel in this product.
 function ProfileCompleteForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -72,7 +74,7 @@ function ProfileCompleteForm() {
   }, [values]);
 
   const mutation = useMutation({
-    mutationFn: (payload: ProfileCompletionValues) => api.put(ENDPOINTS.GAMER_PROFILE, payload),
+    mutationFn: (payload: ProfileCompletionValues) => api.put(ENDPOINTS.VIEWER_PROFILE, payload),
     onError: (error) => {
       const message = isAxiosError(error)
         ? (error.response?.data as { message?: string } | undefined)?.message
@@ -81,144 +83,80 @@ function ProfileCompleteForm() {
     },
     onSuccess: () => {
       if (user) setUser({ ...user, profileComplete: true });
-      toast.success("Profile complete!", { description: "You're all set to spin." });
+      toast.success("Profile complete!", { description: "You're all set to catch freebie codes." });
       router.push(returnTo);
     },
   });
 
   const onSubmit = (values: ProfileCompletionValues) => mutation.mutate(values);
+  const errors = form.formState.errors;
 
   return (
-    <MainLayout maxWidth="md">
-      <div className="space-y-6">
-        <div className="text-center space-y-2">
-          <Sparkles className="h-8 w-8 text-primary mx-auto" />
-          <h1 className="font-sora text-2xl font-bold text-foreground">
+    <div className="min-h-screen flex items-center justify-center p-4" style={{ background: "var(--ink-900)" }}>
+      <Card className="w-full max-w-md">
+        <div className="text-center">
+          <Sparkles className="h-7 w-7 mx-auto" style={{ color: "var(--accent)" }} />
+          <h1 className="mt-2" style={{ fontFamily: "var(--display)", fontWeight: 800, fontSize: 21, color: "var(--txt)" }}>
             Complete your profile
           </h1>
-          <p className="text-sm text-muted-foreground">
-            A complete, verified profile is required to spin. It only takes a minute.
+          <p className="mt-1 fb-hint">
+            A complete, verified profile is required to claim freebie codes. It only takes a minute.
           </p>
         </div>
 
-        <div className="space-y-1">
-          <div className="h-2 rounded-full bg-white/10 overflow-hidden">
-            <div
-              className="h-full bg-primary transition-all duration-300"
-              style={{ width: `${(fieldsDone / 5) * 100}%` }}
-              data-testid="profile-progress-bar"
-            />
-          </div>
-          <p className="text-xs text-muted-foreground text-right" data-testid="profile-progress-label">
+        <div className="mt-4 space-y-1">
+          <Progress value={(fieldsDone / 5) * 100} data-testid="profile-progress-bar" />
+          <p className="fb-hint text-right" data-testid="profile-progress-label">
             {fieldsDone} of 5 fields complete
           </p>
         </div>
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="age"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Age</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      placeholder="Age"
-                      value={field.value || ""}
-                      onChange={(e) =>
-                        field.onChange(e.target.value === "" ? 0 : Number(e.target.value))
-                      }
-                    />
-                  </FormControl>
-                  <FormMessage className="text-destructive text-xs" />
-                </FormItem>
-              )}
+        <form onSubmit={form.handleSubmit(onSubmit)} className="mt-4 space-y-3">
+          <Field label="Age" htmlFor="age">
+            <Input
+              id="age"
+              type="number"
+              placeholder="Age"
+              {...form.register("age", { setValueAs: (v) => (v === "" ? 0 : Number(v)) })}
             />
+            {errors.age && <span className="fb-hint" style={{ color: "var(--spent)" }}>{errors.age.message}</span>}
+          </Field>
 
-            <FormField
-              control={form.control}
-              name="sex"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Sex</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="man">Man</SelectItem>
-                      <SelectItem value="woman">Woman</SelectItem>
-                      <SelectItem value="prefer_not_to_say">Prefer not to say</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage className="text-destructive text-xs" />
-                </FormItem>
-              )}
-            />
+          <Field label="Sex">
+            <Select onValueChange={(v) => form.setValue("sex", v as ProfileCompletionValues["sex"], { shouldValidate: true })} value={form.watch("sex")}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="man">Man</SelectItem>
+                <SelectItem value="woman">Woman</SelectItem>
+                <SelectItem value="prefer_not_to_say">Prefer not to say</SelectItem>
+              </SelectContent>
+            </Select>
+            {errors.sex && <span className="fb-hint" style={{ color: "var(--spent)" }}>{errors.sex.message}</span>}
+          </Field>
 
-            <FormField
-              control={form.control}
-              name="country"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Country</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Country" {...field} />
-                  </FormControl>
-                  <FormMessage className="text-destructive text-xs" />
-                </FormItem>
-              )}
-            />
+          <Field label="Country" htmlFor="country">
+            <Input id="country" placeholder="Country" {...form.register("country")} />
+            {errors.country && <span className="fb-hint" style={{ color: "var(--spent)" }}>{errors.country.message}</span>}
+          </Field>
 
-            <FormField
-              control={form.control}
-              name="state"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>State</FormLabel>
-                  <FormControl>
-                    <Input placeholder="State" {...field} />
-                  </FormControl>
-                  <FormMessage className="text-destructive text-xs" />
-                </FormItem>
-              )}
-            />
+          <Field label="State" htmlFor="state">
+            <Input id="state" placeholder="State" {...form.register("state")} />
+            {errors.state && <span className="fb-hint" style={{ color: "var(--spent)" }}>{errors.state.message}</span>}
+          </Field>
 
-            <FormField
-              control={form.control}
-              name="city"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>City</FormLabel>
-                  <FormControl>
-                    <Input placeholder="City" {...field} />
-                  </FormControl>
-                  <FormMessage className="text-destructive text-xs" />
-                </FormItem>
-              )}
-            />
+          <Field label="City" htmlFor="city">
+            <Input id="city" placeholder="City" {...form.register("city")} />
+            {errors.city && <span className="fb-hint" style={{ color: "var(--spent)" }}>{errors.city.message}</span>}
+          </Field>
 
-            <Button
-              type="submit"
-              disabled={mutation.isPending}
-              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">
-              {mutation.isPending ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                "Save & continue"
-              )}
-            </Button>
-          </form>
-        </Form>
-      </div>
-    </MainLayout>
+          <Button type="submit" variant="primary" className="w-full justify-center" disabled={mutation.isPending}>
+            {mutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save & continue"}
+          </Button>
+        </form>
+      </Card>
+    </div>
   );
 }
 

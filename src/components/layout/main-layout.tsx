@@ -30,10 +30,11 @@ export function MainLayout({
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen flex flex-col" style={{ background: 'var(--ink-900)' }}>
       <Header/>
-      
-      <main className={`flex-1 pt-32 pb-12 px-[5%] ${className}`}>
+
+      {/* pt-24 clears the h-20 fixed header (was pt-32 for the old h-24). */}
+      <main className={`flex-1 pt-24 pb-12 px-[5%] ${className}`}>
         <div className={`${maxWidthClasses[maxWidth]} mx-auto`}>
           {children}
         </div>

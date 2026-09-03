@@ -6,25 +6,18 @@ import { useState, useEffect, Suspense } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Button } from "@/components/ui/button";
-import { GradientButton } from "@/components/ui/gradient-button";
-import { Input } from "@/components/ui/input";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormMessage,
-} from "@/components/ui/form";
+import { Card } from "@/components/ui/freebiz-card";
+import { Field } from "@/components/ui/freebiz-field";
+import { Input } from "@/components/ui/freebiz-input";
+import { Button } from "@/components/ui/freebiz-button";
+import { LogoMark, Wordmark } from "@/components/shell/logo-mark";
 import { Eye, EyeOff, Loader2, CheckCircle2, ArrowLeft } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
-import axios from "axios";
+import axios, { isAxiosError } from "axios";
 import { endpointUrl } from "@/app/_utils/helper";
 import { ENDPOINTS } from "@/app/_utils/endpoints";
 import { toast } from "sonner";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Header } from "@/components/layout/header";
-import { Footer } from "@/components/layout/footer";
 
 type ResetPasswordPayload = {
   new_password: string;
@@ -45,6 +38,8 @@ const resetPasswordSchema = z.object({
 
 type ResetPasswordValues = z.infer<typeof resetPasswordSchema>;
 
+// RESTYLE (design/DECISIONS.md #26-30) — same minimal centered-card
+// treatment as the other auth screens.
 function ResetPasswordContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -60,15 +55,16 @@ function ResetPasswordContent() {
       confirmPassword: "",
     },
   });
-
-  console.log(token)
+  const errors = form.formState.errors;
 
   const resetPasswordMutation = useMutation({
     mutationFn: async (payload: ResetPasswordPayload) => {
       return axios.post(endpointUrl(ENDPOINTS.RESET_PASSWORD), payload);
     },
-    onError: (error: any) => {
-      const errorMessage = error.response?.data?.message || error.message || 'Failed to reset password'
+    onError: (error: unknown) => {
+      const errorMessage = isAxiosError(error)
+        ? (error.response?.data as { message?: string } | undefined)?.message || error.message
+        : 'Failed to reset password'
       toast.error('Error', {
         description: errorMessage,
       })
@@ -87,7 +83,7 @@ function ResetPasswordContent() {
   });
 
   function onSubmit(values: ResetPasswordValues) {
-    resetPasswordMutation.mutate({ 
+    resetPasswordMutation.mutate({
       new_password: values.password,
       token: token as string
     });
@@ -104,161 +100,97 @@ function ResetPasswordContent() {
   }, [token, router]);
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <Header />
-      <div className="flex-1 bg-background flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden pt-32">
-        {/* Background decoration */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute w-96 h-96 bg-[#6C5CE7] opacity-30 rounded-full filter blur-[80px] -top-24 -right-24" />
-          <div className="absolute w-72 h-72 bg-[#00E676] opacity-30 rounded-full filter blur-[80px] -bottom-12 -left-12" />
-        </div>
+    <div className="min-h-screen flex items-center justify-center p-4" style={{ background: "var(--ink-900)" }}>
+      <div className="w-full max-w-sm">
+        <Link href={routes.HOME} className="flex items-center justify-center gap-2 mb-6">
+          <LogoMark />
+          <Wordmark />
+        </Link>
 
-        <div className="w-full max-w-sm relative z-10">
-          {/* Card */}
-          <div className="bg-white/5 border border-white/10 rounded-2xl p-8 backdrop-blur-sm">
-            {passwordReset ? (
-              <>
-                <div className="flex flex-col items-center mb-6">
-                  <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mb-4">
-                    <CheckCircle2 className="h-8 w-8 text-green-500" />
-                  </div>
-                  <h1 className="text-2xl font-semibold text-white text-center font-fredoka">
-                    Password reset!
-                  </h1>
-                  <p className="text-white/50 text-center text-sm mt-2">
-                    Your password has been reset successfully
-                  </p>
+        <Card>
+          {passwordReset ? (
+            <>
+              <div className="flex flex-col items-center mb-6">
+                <div className="w-16 h-16 rounded-full flex items-center justify-center mb-4" style={{ background: "rgba(61,220,151,.15)" }}>
+                  <CheckCircle2 className="h-8 w-8" style={{ color: "var(--live)" }} />
                 </div>
+                <h1 className="text-center" style={{ fontFamily: "var(--display)", fontWeight: 800, fontSize: 21, color: "var(--txt)" }}>
+                  Password reset!
+                </h1>
+                <p className="fb-hint text-center mt-2">Your password has been reset successfully</p>
+              </div>
 
-                <p className="text-white/40 text-center text-xs mb-6">
-                  Redirecting to login page...
-                </p>
+              <p className="fb-hint text-center mb-4">Redirecting to login page...</p>
+
+              <Link href={routes.LOGIN} className="block">
+                <Button variant="primary" className="w-full justify-center">Go to sign in</Button>
+              </Link>
+            </>
+          ) : (
+            <>
+              <h1 className="text-center" style={{ fontFamily: "var(--display)", fontWeight: 800, fontSize: 21, color: "var(--txt)" }}>
+                Reset password
+              </h1>
+              <p className="fb-hint text-center mt-1">Enter your new password below</p>
+
+              <form onSubmit={form.handleSubmit(onSubmit)} className="mt-5 space-y-3">
+                <Field label="New password" htmlFor="password">
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      placeholder="New password"
+                      style={{ paddingRight: 40 }}
+                      {...form.register("password")}
+                    />
+                    <button
+                      type="button"
+                      className="absolute right-3 top-1/2 -translate-y-1/2"
+                      style={{ color: "var(--faint)" }}
+                      onClick={() => setShowPassword(!showPassword)}>
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                  {errors.password && <span className="fb-hint" style={{ color: "var(--spent)" }}>{errors.password.message}</span>}
+                </Field>
+
+                <Field label="Confirm new password" htmlFor="confirmPassword">
+                  <div className="relative">
+                    <Input
+                      id="confirmPassword"
+                      type={showConfirmPassword ? "text" : "password"}
+                      placeholder="Confirm new password"
+                      style={{ paddingRight: 40 }}
+                      {...form.register("confirmPassword")}
+                    />
+                    <button
+                      type="button"
+                      className="absolute right-3 top-1/2 -translate-y-1/2"
+                      style={{ color: "var(--faint)" }}
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}>
+                      {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                  {errors.confirmPassword && <span className="fb-hint" style={{ color: "var(--spent)" }}>{errors.confirmPassword.message}</span>}
+                </Field>
+
+                <p className="fb-hint">Password must be at least 8 characters</p>
+
+                <Button type="submit" variant="primary" className="w-full justify-center" disabled={resetPasswordMutation.isPending}>
+                  {resetPasswordMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Reset password"}
+                </Button>
 
                 <Link href={routes.LOGIN} className="block">
-                  <GradientButton
-                    variant="secondary"
-                    className="w-full p-5 text-base border-0"
-                  >
-                    Go to sign in
-                  </GradientButton>
+                  <Button type="button" variant="ghost" className="w-full justify-center">
+                    <ArrowLeft className="h-4 w-4" />
+                    Back to sign in
+                  </Button>
                 </Link>
-              </>
-            ) : (
-              <>
-                <h1 className="text-2xl font-semibold text-white text-center mb-1 font-fredoka">
-                  Reset password
-                </h1>
-                <p className="text-white/50 text-center text-sm mb-6">
-                  Enter your new password below
-                </p>
-
-                <Form {...form}>
-                  <form
-                    onSubmit={form.handleSubmit(onSubmit)}
-                    className="space-y-4"
-                  >
-                    <FormField
-                      control={form.control}
-                      name="password"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormControl>
-                            <div className="relative">
-                              <Input
-                                placeholder="New password"
-                                type={showPassword ? "text" : "password"}
-                                className="w-full p-4 bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-white/40 text-sm focus:border-secondary focus:ring-1 focus:ring-secondary pr-12"
-                                {...field}
-                              />
-                              <button
-                                type="button"
-                                className="absolute right-3 top-1/2 -translate-y-1/2 text-white/50 hover:text-white transition-colors"
-                                onClick={() => setShowPassword(!showPassword)}
-                              >
-                                {showPassword ? (
-                                  <EyeOff className="h-4 w-4" />
-                                ) : (
-                                  <Eye className="h-4 w-4" />
-                                )}
-                              </button>
-                            </div>
-                          </FormControl>
-                          <FormMessage className="text-red-400 text-xs" />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="confirmPassword"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormControl>
-                            <div className="relative">
-                              <Input
-                                placeholder="Confirm new password"
-                                type={showConfirmPassword ? "text" : "password"}
-                                className="w-full p-4 bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-white/40 text-sm focus:border-secondary focus:ring-1 focus:ring-secondary pr-12"
-                                {...field}
-                              />
-                              <button
-                                type="button"
-                                className="absolute right-3 top-1/2 -translate-y-1/2 text-white/50 hover:text-white transition-colors"
-                                onClick={() =>
-                                  setShowConfirmPassword(!showConfirmPassword)
-                                }
-                              >
-                                {showConfirmPassword ? (
-                                  <EyeOff className="h-4 w-4" />
-                                ) : (
-                                  <Eye className="h-4 w-4" />
-                                )}
-                              </button>
-                            </div>
-                          </FormControl>
-                          <FormMessage className="text-red-400 text-xs" />
-                        </FormItem>
-                      )}
-                    />
-
-                    <p className="text-white/40 text-xs">
-                      Password must be at least 8 characters
-                    </p>
-
-                    <GradientButton
-                      type="submit"
-                      disabled={resetPasswordMutation.isPending}
-                      variant="secondary"
-                      className="w-full p-5 text-base border-0"
-                    >
-                      {resetPasswordMutation.isPending ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Resetting...
-                        </>
-                      ) : (
-                        "Reset password"
-                      )}
-                    </GradientButton>
-
-                    <Link href={routes.LOGIN} className="block">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        className="w-full text-white/50 hover:text-white hover:bg-white/5"
-                      >
-                        <ArrowLeft className="mr-2 h-4 w-4" />
-                        Back to sign in
-                      </Button>
-                    </Link>
-                  </form>
-                </Form>
-              </>
-            )}
-          </div>
-        </div>
+              </form>
+            </>
+          )}
+        </Card>
       </div>
-      <Footer />
     </div>
   );
 }

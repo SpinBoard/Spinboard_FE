@@ -14,7 +14,7 @@ const loggedInUser = {
   id: "user1",
   fullName: "Test User",
   email: "user@test.com",
-  userType: "gamer" as const,
+  userType: "viewer" as const,
   isVerified: true,
   createdAt: "2026-01-01",
   accessToken: "test-token",

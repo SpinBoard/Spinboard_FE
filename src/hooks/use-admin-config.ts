@@ -20,9 +20,13 @@ export const ADMIN_CONFIG_DEFAULTS = {
   "billboard.completionWatchFraction": 0.95,
   "billboard.heartbeatToleranceMs": 3000,
   "billboard.defaultQueueSize": 5,
-  "freebie.dailyAirtimeCount": 5,
+  // Freebies simplified to cash-only 2026-08-29 — live server value is 0
+  // and stays 0 going forward; kept in the map since GET /admin/config
+  // still returns the key.
+  "freebie.dailyAirtimeCount": 0,
   "freebie.dailyCashCount": 5,
   "freebie.dailyClaimCap": { AIRTIME: 1, CASH: 1 } as Record<"AIRTIME" | "CASH", number>,
+  "freebie.activeHours": { start: "08:00", end: "23:00", timeZone: "Africa/Lagos" },
   "freebie.minGapMinutes": 20,
   "freebie.liveWindowMinutes": { AIRTIME: 10, CASH: 10 } as Record<"AIRTIME" | "CASH", number>,
   "freebie.redDisplaySeconds": 60,
@@ -36,9 +40,17 @@ export const ADMIN_CONFIG_DEFAULTS = {
   "payout.threshold": 1500,
   "payout.weekday": 5,
   "analytics.minCohort": 10,
-  "referral.qualifiedThresholds": { "20": 1000, "40": 2500 } as Record<string, number>,
-  "referral.pointsThreshold": 21,
-  "referral.referrerBonusPoints": 5,
+  "freebie.recentCatchesFeedSize": 8,
+  "adModeration.autoFlagReportThreshold": 3,
+  "adModeration.autoFlagWindowMinutes": 60,
+  "adModeration.suspendStrikeThreshold": 3,
+  // Live value dropped from 24 to 0 on 2026-08-31 per product direction — a
+  // fresh account can like a Promote & Earn campaign immediately now. This
+  // is only the fallback used if GET /admin/config is unreachable.
+  "promote.minAccountAgeHours": 0,
+  "promote.deviceDailyLikeCap": 20,
+  "promote.ipDailyLikeCap": 50,
+  "promote.periodDurationDays": 7,
 } as const;
 
 export type AdminConfigKey = keyof typeof ADMIN_CONFIG_DEFAULTS;

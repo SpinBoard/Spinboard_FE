@@ -1,0 +1,151 @@
+/* Freebiz app shell — top chrome, desktop sidebar, mobile bottom tab bar.
+ * Ported from design/freebiz-mockup.html's .chrome/.app/.side/.nav-item
+ * and design/freebiz-mobile.html's .tabbar/.tab. Selectors scoped under
+ * `fb-` classes (see freebiz-primitives.css for why). Breakpoint is 768px
+ * per CLAUDE-UI.md — sidebar above it, bottom tab bar below it, never both.
+ */
+
+.fb-chrome {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 14px 22px;
+  border-bottom: 1px solid var(--line);
+  background: rgba(14, 12, 22, 0.82);
+  backdrop-filter: blur(14px);
+}
+.fb-chrome__logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--txt);
+  text-decoration: none;
+}
+.fb-chrome__spacer {
+  flex: 1;
+}
+.fb-chrome__account {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.fb-chrome__email {
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.fb-app {
+  display: grid;
+  grid-template-columns: 224px 1fr;
+  min-height: calc(100vh - 61px);
+}
+
+.fb-side {
+  border-right: 1px solid var(--line);
+  padding: 20px 14px;
+  background: rgba(20, 17, 31, 0.5);
+}
+.fb-side-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--faint);
+  padding: 0 10px;
+  margin: 0 0 10px;
+}
+.fb-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.fb-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 9px 11px;
+  border-radius: 10px;
+  color: var(--muted);
+  font-family: var(--body);
+  font-size: 13.5px;
+  font-weight: 500;
+  text-align: left;
+  text-decoration: none;
+  transition: 0.15s;
+}
+.fb-nav-item:hover {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--txt);
+}
+.fb-nav-item[aria-current="true"] {
+  background: var(--accent-soft);
+  color: var(--txt);
+  font-weight: 600;
+}
+.fb-nav-item[aria-current="true"] .fb-ic {
+  color: var(--accent);
+}
+.fb-ic {
+  width: 17px;
+  height: 17px;
+  flex: 0 0 17px;
+  color: var(--faint);
+}
+
+.fb-stage {
+  padding: 26px 30px 70px;
+  max-width: 1180px;
+}
+
+.fb-tabbar {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .fb-app {
+    grid-template-columns: 1fr;
+  }
+  .fb-side {
+    display: none;
+  }
+  .fb-stage {
+    padding: 18px 16px 90px;
+  }
+  .fb-tabbar {
+    display: grid;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 40;
+    gap: 2px;
+    padding: 9px 8px calc(12px + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid var(--line);
+    background: rgba(14, 12, 22, 0.94);
+    backdrop-filter: blur(12px);
+  }
+  .fb-tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    font-family: var(--body);
+    font-size: 9px;
+    color: var(--faint);
+    background: none;
+    border: 0;
+    text-decoration: none;
+    min-height: 44px;
+    justify-content: center;
+  }
+  .fb-tab svg {
+    width: 19px;
+    height: 19px;
+  }
+  .fb-tab--on {
+    color: var(--accent);
+  }
+}

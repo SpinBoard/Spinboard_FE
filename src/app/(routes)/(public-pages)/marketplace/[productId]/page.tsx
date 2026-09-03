@@ -5,9 +5,9 @@ import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { ArrowLeft, ImageOff, Store, Tag } from "lucide-react";
 import { MainLayout } from "@/components/layout/main-layout";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/freebiz-button";
+import { Pill } from "@/components/ui/freebiz-pill";
+import { Card } from "@/components/ui/freebiz-card";
 import { PageLoader } from "@/components/ui/page-loader";
 import { PageError } from "@/components/ui/page-error";
 import { ContactLinks } from "@/components/marketplace/contact-links";
@@ -16,6 +16,10 @@ import { ENDPOINTS } from "@/app/_utils/endpoints";
 import { routes } from "@/app/_utils/routes";
 import { MarketplaceProductResponse } from "@/types";
 
+// RESTYLE + rename (design/DECISIONS.md §Marketplace) — see the browse
+// page's note on the "Brands" rename. Fetch unchanged; this page's own
+// test suite (no checkout, priceLabel as-is, tappable contact links) is
+// unaffected by the copy/styling change.
 export default function ProductDetailPage() {
   const params = useParams();
   const productId = params.productId as string;
@@ -40,48 +44,41 @@ export default function ProductDetailPage() {
   return (
     <MainLayout maxWidth="2xl">
       <Link href={routes.MARKETPLACE}>
-        <Button variant="outline" className="border-border text-foreground hover:bg-white/10 mb-5">
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Marketplace
+        <Button variant="ghost" className="mb-4">
+          <ArrowLeft className="h-4 w-4" />
+          Back to Brands
         </Button>
       </Link>
 
-      <div className="space-y-6">
-        <div className="aspect-video bg-white/5 rounded-lg border border-border flex items-center justify-center overflow-hidden">
+      <div className="space-y-4">
+        <div className="aspect-video rounded-lg flex items-center justify-center overflow-hidden" style={{ background: "var(--ink-900)", border: "1px solid var(--line)" }}>
           {product.images?.[0] ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover" />
           ) : (
-            <ImageOff className="h-10 w-10 text-muted-foreground" />
+            <ImageOff className="h-10 w-10" style={{ color: "var(--faint)" }} />
           )}
         </div>
 
         <div className="flex items-center justify-between">
-          <Badge variant="secondary" className="flex items-center gap-1 capitalize">
-            <Tag className="h-3 w-3" />
-            {product.category}
-          </Badge>
+          <Pill><Tag className="h-3 w-3" /><span style={{ textTransform: "capitalize" }}>{product.category}</span></Pill>
           {product.priceLabel && (
-            <span className="text-xl font-bold text-primary font-sora">{product.priceLabel}</span>
+            <span style={{ fontFamily: "var(--display)", fontSize: 20, fontWeight: 800, color: "var(--accent)" }}>{product.priceLabel}</span>
           )}
         </div>
-        <h1 className="font-sora text-2xl font-bold text-foreground">{product.name}</h1>
-        <p className="text-muted-foreground">{product.description}</p>
+        <h1 style={{ fontFamily: "var(--display)", fontWeight: 800, fontSize: 22, color: "var(--txt)" }}>{product.name}</h1>
+        <p style={{ color: "var(--muted)", fontSize: 13.5 }}>{product.description}</p>
 
         {business && (
-          <Card className="bg-card/50 backdrop-blur-sm border-border">
-            <CardHeader>
-              <CardTitle className="text-foreground font-sora text-base flex items-center gap-2">
-                <Store className="h-4 w-4 text-secondary" />
-                <Link href={routes.MARKETPLACE_BUSINESS(business.brandId)} className="hover:underline">
-                  {business.businessName}
-                </Link>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <p className="text-sm text-muted-foreground">Contact the seller directly about this item.</p>
-              <ContactLinks business={business} />
-            </CardContent>
+          <Card>
+            <h3 className="flex items-center gap-2" style={{ fontFamily: "var(--display)", fontSize: 15, color: "var(--txt)" }}>
+              <Store className="h-4 w-4" style={{ color: "var(--accent)" }} />
+              <Link href={routes.MARKETPLACE_BUSINESS(business.brandId)} className="hover:underline">
+                {business.businessName}
+              </Link>
+            </h3>
+            <p className="mt-2 mb-2 fb-hint">Contact the seller directly about this item.</p>
+            <ContactLinks business={business} />
           </Card>
         )}
       </div>

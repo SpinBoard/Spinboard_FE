@@ -13,25 +13,39 @@ import {
   BankAccountsResponse,
   BankAccount,
 } from "@/types";
-import { MainLayout } from "@/components/layout/main-layout";
 import { PageLoader } from "@/components/ui/page-loader";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Progress } from "@/components/ui/progress";
+import { Card, CardNote } from "@/components/ui/freebiz-card";
+import { Button } from "@/components/ui/freebiz-button";
+import { Field } from "@/components/ui/freebiz-field";
+import { Input } from "@/components/ui/freebiz-input";
+import { Progress } from "@/components/ui/freebiz-progress";
+import { Steps } from "@/components/ui/freebiz-steps";
 import {
-  Wallet as WalletIcon,
-  Plus,
-  Trash2,
-  Loader2,
-  AlertCircle,
-  CheckCircle2,
-  Landmark,
-  Receipt,
-  Calendar,
-} from "lucide-react";
+  Table,
+  TableHead,
+  TableBody,
+  TableRow,
+  TableHeadCell,
+  TableCell,
+} from "@/components/ui/freebiz-table";
+import { Trash2, Loader2, AlertCircle, CheckCircle2, Calendar } from "lucide-react";
 import { formatCurrency, payoutProgressPercent } from "./wallet-utils";
+import { useFreebieLimits } from "@/hooks/use-freebies";
+import { LimitRow } from "@/components/ui/freebiz-limit-row";
 
+// design/freebiz-mockup.html data-screen="v-wallet". Two pieces of the
+// mockup are deliberately left out rather than faked:
+// - The phead's "Request cash-out" button and the mockup's whole "How
+//   cash-out works" request -> secret-code -> WhatsApp flow don't exist —
+//   BUSINESS_RULES.md is explicit there is no withdrawal endpoint at all.
+//   The "How it works" card below is kept but rewritten to describe the
+//   real mechanism (automatic inclusion in the weekly run), not the
+//   mockup's fictional request flow.
+// - "Spend in marketplace" (phead) has no real data/route behind it: the
+//   marketplace is a business directory with no checkout, and there's no
+//   v-market redemption screen. "Today's limits" IS now real — GET
+//   /freebies/limits/mine (§2 Revamp 6) reports today's claim-limit usage
+//   proactively instead of only surfacing it reactively via a 403.
 export default function WalletPage() {
   const user = useAtomValue(userAtom);
   const queryClient = useQueryClient();
@@ -60,6 +74,12 @@ export default function WalletPage() {
         .then((res) => res.data.transactions),
     enabled: !!user?.accessToken,
   });
+
+  // Cash-only since 2026-08-29 — filter out any AIRTIME entry the backend
+  // still returns (moot now that no new airtime drops exist) rather than
+  // display it.
+  const { data: allLimits } = useFreebieLimits(!!user?.accessToken);
+  const limits = allLimits?.filter((limit) => limit.type === "CASH");
 
   const { data: bankAccounts, isLoading: loadingBankAccounts } = useQuery({
     queryKey: ["wallet-bank-accounts"],
@@ -113,43 +133,57 @@ export default function WalletPage() {
   };
 
   if (loadingBalance) {
-    return <PageLoader message="Loading your wallet..." />;
+    return <PageLoader withLayout={false} message="Loading your wallet..." />;
   }
 
   const progressPct = payoutProgressPercent(balance?.balance ?? 0, balance?.payoutThreshold ?? 0);
+  const currency = balance?.currency ?? "NGN";
 
   return (
-    <MainLayout maxWidth="4xl">
-      <div className="space-y-8">
-        <div>
-          <h1 className="text-3xl font-bold text-white mb-2 font-sora flex items-center gap-3">
-            <WalletIcon className="h-8 w-8 text-secondary" />
-            Wallet
-          </h1>
-          <p className="text-white/70">
-            Cash from redeemed freebie codes — paid out weekly, once your balance clears the threshold.
-          </p>
-        </div>
+    <div className="space-y-4">
+      <div>
+        <p
+          style={{
+            fontFamily: "var(--mono)",
+            fontSize: 10.5,
+            letterSpacing: "0.1em",
+            textTransform: "uppercase",
+            color: "var(--faint)",
+          }}>
+          Viewers / Wallet
+        </p>
+        <h1
+          className="mt-1"
+          style={{ fontFamily: "var(--display)", fontWeight: 800, fontSize: 27, letterSpacing: "-0.02em", color: "var(--txt)" }}>
+          Your wallet
+        </h1>
+        <p className="mt-1" style={{ color: "var(--muted)", fontSize: 13.5 }}>
+          Cash from redeemed freebie codes — paid out weekly, once your balance clears the
+          threshold.
+        </p>
+      </div>
 
-        {/* Balance + payout progress */}
-        <Card className="bg-card/50 backdrop-blur-sm border-white/10">
-          <CardContent className="pt-6 space-y-4">
-            <div>
-              <p className="text-white/60 text-xs uppercase tracking-wider mb-1">
-                Available Balance
-              </p>
-              <p className="text-4xl font-bold text-white font-sora" data-testid="wallet-balance">
-                {formatCurrency(balance?.balance ?? 0, balance?.currency ?? "NGN")}
-              </p>
+      <div className="grid grid-cols-1 lg:grid-cols-[1.55fr_1fr] gap-4 items-start">
+        <div className="space-y-4 min-w-0">
+          <Card>
+            <p
+              style={{ fontFamily: "var(--mono)", fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--faint)" }}>
+              Available balance
+            </p>
+            <div
+              className="mt-1.5"
+              data-testid="wallet-balance"
+              style={{ fontFamily: "var(--display)", fontWeight: 800, fontSize: 34, letterSpacing: "-0.03em", color: "var(--txt)" }}>
+              {formatCurrency(balance?.balance ?? 0, currency)}
             </div>
 
             {balance && (
-              <div className="space-y-2" data-testid="payout-progress">
-                <Progress value={progressPct} />
-                <div className="flex items-center justify-between text-xs text-white/60">
+              <div className="mt-3 space-y-2" data-testid="payout-progress">
+                <Progress value={progressPct} color="var(--free)" />
+                <div className="flex flex-wrap items-center justify-between gap-2" style={{ fontSize: 12, color: "var(--muted)" }}>
                   <span>
                     {balance.amountToThreshold > 0
-                      ? `${formatCurrency(balance.amountToThreshold, balance.currency)} to next payout`
+                      ? `${formatCurrency(balance.amountToThreshold, currency)} to next payout`
                       : "Threshold met — included in the next payout run"}
                   </span>
                   {balance.nextPayoutDate && (
@@ -159,148 +193,180 @@ export default function WalletPage() {
                     </span>
                   )}
                 </div>
-                <p className="text-white/40 text-xs">
-                  Cash only leaves via a manual weekly payout run to your default bank account — there&apos;s
-                  no self-serve withdrawal.
+                <p className="fb-hint">
+                  Cash only leaves via a manual weekly payout run to your default bank account —
+                  there&apos;s no self-serve withdrawal.
                 </p>
               </div>
             )}
-          </CardContent>
-        </Card>
+          </Card>
 
-        {/* Bank Accounts */}
-        <Card className="bg-card/50 backdrop-blur-sm border-white/10">
-          <CardHeader>
-            <CardTitle className="text-white font-sora flex items-center gap-2">
-              <Landmark className="h-5 w-5 text-secondary" />
-              Bank Accounts
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {loadingBankAccounts ? (
-              <Loader2 className="h-5 w-5 animate-spin text-secondary" />
-            ) : bankAccounts && bankAccounts.length > 0 ? (
-              <div className="space-y-2">
-                {bankAccounts.map((acc) => (
+          <Card tight>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableHeadCell>Entry</TableHeadCell>
+                  <TableHeadCell>Reference</TableHeadCell>
+                  <TableHeadCell>Date</TableHeadCell>
+                  <TableHeadCell style={{ textAlign: "right" }}>Amount</TableHeadCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {loadingTransactions ? (
+                  <TableRow>
+                    <TableCell colSpan={4}>
+                      <Loader2 className="h-4 w-4 animate-spin" style={{ color: "var(--muted)" }} />
+                    </TableCell>
+                  </TableRow>
+                ) : !transactionsData || transactionsData.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="fb-hint">
+                      No transactions yet.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  transactionsData.map((tx) => (
+                    <TableRow key={tx._id}>
+                      <TableCell style={{ textTransform: "capitalize", color: "var(--txt)" }}>
+                        <b>{tx.reason.replace(/_/g, " ").toLowerCase()}</b>
+                      </TableCell>
+                      <TableCell className="fb-hint" style={{ fontFamily: tx.referenceId ? "var(--mono)" : undefined }}>
+                        {tx.referenceId ?? "—"}
+                      </TableCell>
+                      <TableCell className="fb-hint">{new Date(tx.createdAt).toLocaleDateString()}</TableCell>
+                      <TableCell
+                        style={{
+                          textAlign: "right",
+                          fontFamily: "var(--mono)",
+                          fontWeight: 700,
+                          color: tx.type === "credit" ? "var(--live)" : "var(--spent)",
+                        }}>
+                        {tx.type === "credit" ? "+" : "−"}
+                        {formatCurrency(tx.amount, currency)}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </Card>
+        </div>
+
+        <div className="space-y-4">
+          {limits && limits.length > 0 && (
+            <Card>
+              <h3 style={{ fontFamily: "var(--display)", fontSize: 15, color: "var(--txt)" }}>Today&apos;s limits</h3>
+              <div className="mt-2">
+                {limits.map((limit) => (
+                  <LimitRow
+                    key={limit.type}
+                    label="Cash claims"
+                    value={
+                      <>
+                        {limit.claimedToday} of {limit.cap}
+                        {limit.remaining === 0 && limit.resetsAt && (
+                          <span className="fb-hint" style={{ marginLeft: 6 }}>
+                            resets {new Date(limit.resetsAt).toLocaleTimeString()}
+                          </span>
+                        )}
+                      </>
+                    }
+                  />
+                ))}
+              </div>
+            </Card>
+          )}
+
+          <Card>
+            <h3 style={{ fontFamily: "var(--display)", fontSize: 15, color: "var(--txt)" }}>Bank accounts</h3>
+            <div className="mt-3 space-y-2">
+              {loadingBankAccounts ? (
+                <Loader2 className="h-4 w-4 animate-spin" style={{ color: "var(--muted)" }} />
+              ) : bankAccounts && bankAccounts.length > 0 ? (
+                bankAccounts.map((acc) => (
                   <div
                     key={acc._id}
                     data-testid="bank-account-row"
-                    className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/10">
+                    className="flex items-center justify-between gap-3 p-2.5 rounded-lg"
+                    style={{ background: "var(--ink-900)", border: "1px solid var(--line)" }}>
                     <div>
-                      <p className="text-white font-medium text-sm">{acc.accountName}</p>
-                      <p className="text-white/50 text-xs">
-                        {acc.bankName} &bull; ****{acc.accountNumber.slice(-4)}
+                      <p style={{ fontSize: 13, color: "var(--txt)" }}>{acc.accountName}</p>
+                      <p className="fb-hint">
+                        {acc.bankName} · ****{acc.accountNumber.slice(-4)}
                       </p>
                     </div>
                     <Button
-                      size="icon"
+                      size="sm"
                       variant="ghost"
+                      aria-label="Remove bank account"
                       disabled={deleteBankAccountMutation.isPending}
                       onClick={() => deleteBankAccountMutation.mutate(acc._id)}
-                      className="text-red-400 hover:bg-red-500/10 hover:text-red-300">
-                      <Trash2 className="h-4 w-4" />
+                      style={{ color: "var(--spent)" }}>
+                      <Trash2 className="h-3.5 w-3.5" />
                     </Button>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-white/50 text-sm">No bank accounts added yet.</p>
-            )}
+                ))
+              ) : (
+                <CardNote>No bank accounts added yet.</CardNote>
+              )}
+            </div>
 
-            <form onSubmit={handleAddBankAccount} className="space-y-3 pt-2 border-t border-white/10">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <form onSubmit={handleAddBankAccount} className="mt-3.5 pt-3.5 space-y-2.5" style={{ borderTop: "1px solid var(--line)" }}>
+              <Field label="Account number">
                 <Input
                   placeholder="Account number"
                   value={bankForm.accountNumber}
                   onChange={(e) => setBankForm({ ...bankForm, accountNumber: e.target.value })}
-                  className="bg-white/5 border-white/10 text-white placeholder:text-white/40"
                   required
                 />
+              </Field>
+              <Field label="Bank name">
                 <Input
                   placeholder="Bank name"
                   value={bankForm.bankName}
                   onChange={(e) => setBankForm({ ...bankForm, bankName: e.target.value })}
-                  className="bg-white/5 border-white/10 text-white placeholder:text-white/40"
                   required
                 />
+              </Field>
+              <Field label="Bank code">
                 <Input
                   placeholder="Bank code"
                   value={bankForm.bankCode}
                   onChange={(e) => setBankForm({ ...bankForm, bankCode: e.target.value })}
-                  className="bg-white/5 border-white/10 text-white placeholder:text-white/40"
                   required
                 />
-              </div>
-              <Button
-                type="submit"
-                disabled={addBankAccountMutation.isPending}
-                variant="outline"
-                className="border-white/20 text-white hover:bg-white/10">
-                {addBankAccountMutation.isPending ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <Plus className="h-4 w-4 mr-2" />
-                )}
-                Add Bank Account
+              </Field>
+              <Button type="submit" variant="primary" disabled={addBankAccountMutation.isPending} className="w-full justify-center">
+                {addBankAccountMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Add Bank Account"}
               </Button>
               {addBankMessage && (
                 <p
-                  className={`text-sm flex items-start gap-2 ${
-                    addBankMessage.type === "success" ? "text-green-400" : "text-red-400"
-                  }`}>
+                  className="flex items-start gap-2"
+                  style={{ fontSize: 12.5, color: addBankMessage.type === "success" ? "var(--live)" : "var(--spent)" }}>
                   {addBankMessage.type === "success" ? (
-                    <CheckCircle2 className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                    <CheckCircle2 className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
                   ) : (
-                    <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                    <AlertCircle className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
                   )}
                   {addBankMessage.text}
                 </p>
               )}
             </form>
-          </CardContent>
-        </Card>
+          </Card>
 
-        {/* Transaction history */}
-        <Card className="bg-card/50 backdrop-blur-sm border-white/10">
-          <CardHeader>
-            <CardTitle className="text-white font-sora flex items-center gap-2">
-              <Receipt className="h-5 w-5 text-secondary" />
-              Transaction History
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            {loadingTransactions ? (
-              <div className="p-6">
-                <Loader2 className="h-5 w-5 animate-spin text-secondary" />
-              </div>
-            ) : transactionsData && transactionsData.length > 0 ? (
-              <div className="space-y-1">
-                {transactionsData.map((tx) => (
-                  <div
-                    key={tx._id}
-                    className="flex items-center justify-between p-4 border-b border-white/5 last:border-b-0">
-                    <div>
-                      <p className="text-white text-sm capitalize">{tx.reason.replace(/_/g, " ").toLowerCase()}</p>
-                      <p className="text-white/50 text-xs">
-                        {new Date(tx.createdAt).toLocaleDateString()}
-                      </p>
-                    </div>
-                    <span
-                      className={`font-mono font-semibold ${
-                        tx.type === "credit" ? "text-green-400" : "text-red-400"
-                      }`}>
-                      {tx.type === "credit" ? "+" : "-"}
-                      {formatCurrency(tx.amount)}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="p-6 text-white/50 text-sm">No transactions yet.</p>
-            )}
-          </CardContent>
-        </Card>
+          <Card>
+            <h3 style={{ fontFamily: "var(--display)", fontSize: 15, color: "var(--txt)" }}>How it works</h3>
+            <Steps
+              className="mt-2.5"
+              items={[
+                { title: "Redeem a cash code.", description: "It credits your wallet immediately — nothing here ever expires." },
+                { title: "Your balance builds up.", description: "Keep watching, keep applying codes." },
+                { title: "Get paid on the weekly run.", description: "Once you clear the threshold, admin includes you and transfers to your saved bank account." },
+              ]}
+            />
+          </Card>
+        </div>
       </div>
-    </MainLayout>
+    </div>
   );
 }

@@ -3,16 +3,11 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Card } from "@/components/ui/freebiz-card";
+import { Field } from "@/components/ui/freebiz-field";
+import { Input } from "@/components/ui/freebiz-input";
+import { Button } from "@/components/ui/freebiz-button";
+import { LimitRow } from "@/components/ui/freebiz-limit-row";
 import {
   Dialog,
   DialogContent,
@@ -21,17 +16,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  Lock,
   Eye,
   EyeOff,
-  Shield,
   Trash2,
   Loader2,
   AlertTriangle,
   Mail,
   Megaphone,
-  Zap,
-  UserCog,
 } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
@@ -47,6 +38,9 @@ import { PageLoader } from "@/components/ui/page-loader";
 import { PageError } from "@/components/ui/page-error";
 import { BrandSettings, SettingsNotificationPrefs } from "@/types";
 
+// RESTYLE (design/DECISIONS.md #22) — the mockup doesn't cover settings.
+// This is password and notifications only; billing is a separate, unbuilt
+// screen (b-billing) per that same ruling. All fetches/mutations unchanged.
 export default function BrandSettingsPage() {
   const setUser = useSetAtom(userAtom);
   const router = useRouter();
@@ -64,7 +58,6 @@ export default function BrandSettingsPage() {
   // ── Notifications ─────────────────────────────────────────────────────────
   const [notifs, setNotifs] = useState<SettingsNotificationPrefs>({
     emailNotifications: true,
-    referralBonusAlerts: true,
     leaderboardUpdates: true,
     newCampaignAlerts: true,
     weeklyDigest: false,
@@ -158,11 +151,11 @@ export default function BrandSettingsPage() {
 
   const passwordsMatch = !confirmPassword || newPassword === confirmPassword;
 
-  if (loadingSettings) return <PageLoader message="Loading settings..." />;
+  if (loadingSettings) return <PageLoader withLayout={false} message="Loading settings..." />;
 
   if (settingsError) {
     return (
-      <PageError
+      <PageError withLayout={false}
         title="Failed to Load Settings"
         message="Unable to load your settings. Please check your connection and try again."
       />
@@ -170,235 +163,177 @@ export default function BrandSettingsPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="space-y-4 max-w-2xl">
       <div>
-        <h1 className="text-3xl font-bold text-foreground mb-2 font-sora flex items-center gap-3">
-          <Shield className="h-8 w-8 text-secondary" />
+        <h1 style={{ fontFamily: "var(--display)", fontWeight: 800, fontSize: 27, letterSpacing: "-0.02em", color: "var(--txt)" }}>
           Settings
         </h1>
-        <p className="text-muted-foreground">Manage your account, security, and notifications.</p>
+        <p className="mt-1" style={{ color: "var(--muted)", fontSize: 13.5 }}>
+          Manage your account, security, and notifications.
+        </p>
       </div>
 
       {/* ── Account ────────────────────────────────────────────────────────── */}
-      <Card className="bg-card/50 backdrop-blur-sm border-border">
-        <CardHeader>
-          <CardTitle className="text-foreground font-sora flex items-center gap-2">
-            <UserCog className="h-5 w-5 text-secondary" />
-            Account
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Email</span>
-            <span className="text-foreground">{brandSettings?.email}</span>
-          </div>
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Company</span>
-            <span className="text-foreground">{brandSettings?.account.companyName || "—"}</span>
-          </div>
-          <Link href={routes.BRAND.PROFILE}>
-            <Button variant="outline" size="sm" className="w-full border-border text-foreground hover:bg-white/10 mt-2">
-              Edit Profile
-            </Button>
-          </Link>
-        </CardContent>
+      <Card>
+        <h3 style={{ fontFamily: "var(--display)", fontSize: 15, color: "var(--txt)" }}>Account</h3>
+        <div className="mt-3">
+          <LimitRow label="Email" value={brandSettings?.email ?? "—"} />
+          <LimitRow label="Company" value={brandSettings?.account.companyName || "—"} />
+        </div>
+        <Link href={routes.BRAND.PROFILE} className="inline-block mt-3">
+          <Button variant="ghost" size="sm">Edit profile</Button>
+        </Link>
       </Card>
 
       {/* ── Security ───────────────────────────────────────────────────────── */}
       {brandSettings?.hasPassword !== false && (
-        <Card className="bg-card/50 backdrop-blur-sm border-border">
-          <CardHeader>
-            <CardTitle className="text-foreground font-sora flex items-center gap-2">
-              <Lock className="h-5 w-5 text-secondary" />
-              Change Password
-            </CardTitle>
-            <CardDescription className="text-muted-foreground">
-              Use a strong password you don&apos;t use anywhere else.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-1.5">
-              <Label className="text-foreground/80 text-sm">Current Password</Label>
+        <Card>
+          <h3 style={{ fontFamily: "var(--display)", fontSize: 15, color: "var(--txt)" }}>Change password</h3>
+          <p className="fb-hint mt-1">Use a strong password you don&apos;t use anywhere else.</p>
+
+          <div className="mt-3 space-y-2.5">
+            <Field label="Current password">
               <div className="relative">
                 <Input
                   type={showCurrent ? "text" : "password"}
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
                   placeholder="Enter current password"
-                  className="pr-10"
+                  style={{ paddingRight: 36 }}
                 />
                 <button
                   type="button"
                   onClick={() => setShowCurrent((v) => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                  className="absolute right-3 top-1/2 -translate-y-1/2"
+                  style={{ color: "var(--faint)" }}>
                   {showCurrent ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
-            </div>
+            </Field>
 
-            <div className="space-y-1.5">
-              <Label className="text-foreground/80 text-sm">New Password</Label>
+            <Field label="New password">
               <div className="relative">
                 <Input
                   type={showNew ? "text" : "password"}
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   placeholder="At least 8 characters"
-                  className="pr-10"
+                  style={{ paddingRight: 36 }}
                 />
                 <button
                   type="button"
                   onClick={() => setShowNew((v) => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                  className="absolute right-3 top-1/2 -translate-y-1/2"
+                  style={{ color: "var(--faint)" }}>
                   {showNew ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
-            </div>
+            </Field>
 
-            <div className="space-y-1.5">
-              <Label className="text-foreground/80 text-sm">Confirm New Password</Label>
+            <Field label="Confirm new password" hint={!passwordsMatch ? "Passwords do not match." : undefined}>
               <div className="relative">
                 <Input
                   type={showConfirm ? "text" : "password"}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="Re-enter new password"
-                  className="pr-10"
+                  style={{ paddingRight: 36, borderColor: !passwordsMatch ? "var(--spent)" : undefined }}
                 />
                 <button
                   type="button"
                   onClick={() => setShowConfirm((v) => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                  className="absolute right-3 top-1/2 -translate-y-1/2"
+                  style={{ color: "var(--faint)" }}>
                   {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
-              {!passwordsMatch && (
-                <p className="text-destructive text-xs">Passwords do not match.</p>
-              )}
-            </div>
+            </Field>
 
-            <Button
-              onClick={handleChangePassword}
-              disabled={changePasswordMutation.isPending}
-              className="bg-secondary hover:bg-secondary/80 text-secondary-foreground">
-              {changePasswordMutation.isPending ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Updating...
-                </>
-              ) : (
-                "Change Password"
-              )}
+            <Button variant="primary" onClick={handleChangePassword} disabled={changePasswordMutation.isPending}>
+              {changePasswordMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Change password"}
             </Button>
-          </CardContent>
+          </div>
         </Card>
       )}
 
       {/* ── Notifications ──────────────────────────────────────────────────── */}
-      <Card className="bg-card/50 backdrop-blur-sm border-border">
-        <CardHeader>
-          <CardTitle className="text-foreground font-sora">Notifications</CardTitle>
-          <CardDescription className="text-muted-foreground">
-            Choose what you want to hear about.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+      <Card>
+        <h3 style={{ fontFamily: "var(--display)", fontSize: 15, color: "var(--txt)" }}>Notifications</h3>
+        <p className="fb-hint mt-1">Choose what you want to hear about.</p>
+
+        <div className="mt-2">
           <NotifRow
             icon={Mail}
-            label="Email Notifications"
+            label="Email notifications"
             description="General account and activity emails."
             checked={notifs.emailNotifications}
             onChange={(v) => updateNotif("emailNotifications", v)}
           />
           <NotifRow
-            icon={Zap}
-            label="Referral Bonus Alerts"
-            description="Get notified when a referral converts."
-            checked={notifs.referralBonusAlerts}
-            onChange={(v) => updateNotif("referralBonusAlerts", v)}
-          />
-          <NotifRow
             icon={Megaphone}
-            label="New Campaign Alerts"
+            label="New campaign alerts"
             description="Updates on your campaigns' status."
             checked={notifs.newCampaignAlerts}
             onChange={(v) => updateNotif("newCampaignAlerts", v)}
           />
           <NotifRow
             icon={Mail}
-            label="Weekly Digest"
+            label="Weekly digest"
             description="A weekly summary email."
             checked={notifs.weeklyDigest}
             onChange={(v) => updateNotif("weeklyDigest", v)}
           />
-          {notifsDirty && (
-            <Button
-              onClick={() => saveNotifsMutation.mutate(notifs)}
-              disabled={saveNotifsMutation.isPending}
-              className="mt-4 bg-secondary hover:bg-secondary/80 text-secondary-foreground">
-              {saveNotifsMutation.isPending ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : null}
-              Save Preferences
+        </div>
+
+        {notifsDirty && (
+          <div className="mt-3 pt-3" style={{ borderTop: "1px solid var(--line)" }}>
+            <Button variant="primary" onClick={() => saveNotifsMutation.mutate(notifs)} disabled={saveNotifsMutation.isPending}>
+              {saveNotifsMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save preferences"}
             </Button>
-          )}
-        </CardContent>
+          </div>
+        )}
       </Card>
 
       {/* ── Danger zone ────────────────────────────────────────────────────── */}
-      <Card className="bg-destructive/5 backdrop-blur-sm border-destructive/30">
-        <CardHeader>
-          <CardTitle className="text-destructive font-sora flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5" />
-            Danger Zone
-          </CardTitle>
-          <CardDescription className="text-muted-foreground">
-            Deleting your account is permanent and cannot be undone.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Button
-            onClick={() => setShowDeleteModal(true)}
-            variant="outline"
-            className="border-destructive/40 text-destructive hover:bg-destructive/10">
-            <Trash2 className="h-4 w-4 mr-2" />
-            Delete Account
-          </Button>
-        </CardContent>
+      <Card style={{ borderColor: "rgba(255,77,94,.3)" }}>
+        <h3 className="flex items-center gap-2" style={{ fontFamily: "var(--display)", fontSize: 15, color: "var(--spent)" }}>
+          <AlertTriangle className="h-4 w-4" />
+          Danger zone
+        </h3>
+        <p className="fb-hint mt-1">Deleting your account is permanent and cannot be undone.</p>
+        <Button variant="danger" className="mt-3" onClick={() => setShowDeleteModal(true)}>
+          <Trash2 className="h-4 w-4" />
+          Delete account
+        </Button>
       </Card>
 
       <Dialog open={showDeleteModal} onOpenChange={(open) => !deleteAccountMutation.isPending && setShowDeleteModal(open)}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle className="font-sora text-xl text-destructive">Delete Account</DialogTitle>
+            <DialogTitle style={{ color: "var(--spent)" }}>Delete account</DialogTitle>
             <DialogDescription>
               This will permanently delete your brand account and all associated campaigns. Enter
               your password to confirm.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 pt-2">
-            <Input
-              type="password"
-              value={deletePassword}
-              onChange={(e) => setDeletePassword(e.target.value)}
-              placeholder="Enter your password"
-            />
-            <div className="flex gap-3">
-              <Button
-                onClick={handleDeleteAccount}
-                disabled={deleteAccountMutation.isPending}
-                variant="destructive"
-                className="flex-1">
-                {deleteAccountMutation.isPending ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : null}
-                Delete Permanently
+          <div className="space-y-3 pt-2">
+            <Field label="Password">
+              <Input
+                type="password"
+                value={deletePassword}
+                onChange={(e) => setDeletePassword(e.target.value)}
+                placeholder="Enter your password"
+              />
+            </Field>
+            <div className="flex gap-2">
+              <Button variant="danger" className="flex-1 justify-center" onClick={handleDeleteAccount} disabled={deleteAccountMutation.isPending}>
+                {deleteAccountMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Delete permanently"}
               </Button>
               <Button
+                variant="ghost"
+                className="flex-1 justify-center"
                 onClick={() => setShowDeleteModal(false)}
-                disabled={deleteAccountMutation.isPending}
-                variant="outline"
-                className="flex-1 border-border text-foreground hover:bg-white/10">
+                disabled={deleteAccountMutation.isPending}>
                 Cancel
               </Button>
             </div>
