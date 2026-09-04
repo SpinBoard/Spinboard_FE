@@ -27,8 +27,11 @@ streakDays: number
 ```
 Consecutive calendar days (platform timezone, `Config: freebie.activeHours.timeZone`) up to and including today or yesterday with at least one server-verified COMPLETED, non-house-filler, non-freebie-slot billboard impression. Doesn't reset to 0 just because today has no completed view yet — it only breaks on an actual gap day.
 
+### Queue response — changed
+`GET /billboard/queue` returns `{ slots: [...], sponsoredAd }` — `sponsoredAd` (new) is documented separately below.
+
 ### Queue slot — changed
-One item in the array returned by `GET /billboard/queue`. Shape depends on `type`.
+One item in the `slots` array. Shape depends on `type`. Brand campaigns switched from video to a static banner image (`bannerImageUrl`, was `videoUrl`) to cut hosting costs — see MIGRATION_NOTES.md. `durationSec` for `AD`/`HOUSE` is now a fixed `Config: billboard.bannerDisplaySeconds` (15s), not a probed video length.
 ```
 slotId: string           // opaque, single-use — pass back verbatim to heartbeat/complete
 type: "AD" | "HOUSE" | "FREEBIE"
@@ -38,20 +41,47 @@ durationSec: number
 campaignId?: string
 brandName?: string
 title?: string
-videoUrl?: string
+bannerImageUrl?: string
 clickUrl?: string | null   // campaign's campaignUrl, else brandUrl, else null — navigate immediately on tap, report via POST /billboard/impressions/click afterward (fire-and-forget)
 
 // HOUSE only
 title?: string
-videoUrl?: string
+bannerImageUrl?: string
 
 // FREEBIE only — a live freebie code taking over this slot full-screen, exactly
 // like a real ad. See UI_CONTRACT.md's "Freebie takeover slots" section.
+// Entirely unchanged by the video->banner revamp.
 codeId?: string
 publicCode?: string
 valueLabel?: string
 freebieType?: "AIRTIME" | "CASH"   // named freebieType, not type, so it can't collide with the slot's own "type": "FREEBIE"
 liveUntil?: string
+```
+
+### Sponsored ad panel — new
+The `sponsoredAd` field on the `GET /billboard/queue` response — `null`, or:
+```
+id: string
+imageUrl: string          // image or GIF, never video/audio
+clickUrl: string | null
+```
+A small, persistent side placement, not part of the rotating `slots` array — admin-curated (any advertiser negotiates a deal off-platform, or submits their own creative directly via `POST /sponsored-ads/submit`), starts `null` until something goes `ACTIVE`. See `UI_CONTRACT.md`'s "Sponsored ad panel" section.
+
+### SponsoredAd — new (admin-only model; not returned to non-admin callers except via the `GET /billboard/queue` projection above and the `{submissionId}` confirmation on `POST /sponsored-ads/submit`)
+```
+_id: string
+imageUrl: string
+widthPx: number
+heightPx: number
+advertiserName: string     // informational only
+clickUrl?: string
+contactEmail?: string      // set only on a brand's own submission (POST /sponsored-ads/submit) — how the admin team follows up
+contactPhone?: string      // submission only, optional
+message?: string           // submission only — free text from the advertiser
+status: "PENDING" | "ACTIVE" | "INACTIVE"   // PENDING = a brand's own submission awaiting admin review; never shown on the billboard until activated
+clickCount: number
+createdBy?: string         // admin userId — unset on a PENDING submission until an admin acts on it
+createdAt, updatedAt: string
 ```
 
 ### Impression — changed (never returned directly; internal analytics record)
@@ -297,6 +327,8 @@ method?: string                 // e.g. "bank_transfer", informational only
 
 ## Ad campaigns (brand side) — changed
 
+Brand upload switched from video to a static banner image (1200x675px, 16:9) to cut hosting costs — see MIGRATION_NOTES.md. `videoUrl`/`videoDurationSeconds`/`videoSizeBytes`/`videoMimeType` are legacy-only: kept on the schema for campaigns created before the cutover, never set on a new campaign, and cleared (along with the underlying file) by the one-time video-retirement pass. Every campaign, both tiers, uploads a banner now.
+
 ```
 _id: string
 brandId: string
@@ -305,10 +337,15 @@ title: string
 description: string
 brandUrl?: string
 campaignUrl?: string
-videoUrl: string
-videoDurationSeconds: number
-videoSizeBytes: number
-videoMimeType: string
+bannerImageUrl?: string
+bannerWidthPx?: number
+bannerHeightPx?: number
+bannerSizeBytes?: number
+bannerMimeType?: string
+videoUrl?: string                // legacy — pre-cutover campaigns only, see note above
+videoDurationSeconds?: number    // legacy
+videoSizeBytes?: number          // legacy
+videoMimeType?: string           // legacy
 priceUSD?: number               // flat tier price, snapshotted at go-live
 exchangeRateSnapshot?: number
 priceLocal?: number
@@ -777,7 +814,7 @@ See `CONFIG.md` for the full key list. A few shapes worth calling out because th
 "freebie.dailyClaimCap" -> { AIRTIME: number, CASH: number }
 "freebie.liveWindowMinutes" -> { AIRTIME: number, CASH: number }
 "freebie.activeHours"   -> { start: "HH:MM", end: "HH:MM", timeZone: "Africa/Lagos" }
-"billboard.houseFillers"-> [{ title, videoUrl, durationSec, filler }]
+"billboard.houseFillers"-> [{ title, bannerImageUrl, durationSec, filler }]
 ```
 
 ---

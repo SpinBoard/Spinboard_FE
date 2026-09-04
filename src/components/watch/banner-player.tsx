@@ -1,70 +1,76 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ExternalLink, Volume2, VolumeX } from "lucide-react";
+import { ExternalLink } from "lucide-react";
 import { PlayingBar, PLAYING_BAR_WINDOW_SEC } from "./playing-bar";
 
-interface VideoPlayerProps {
+interface BannerPlayerProps {
   src?: string;
-  autoPlay?: boolean;
   onEnded?: () => void;
   onTimeUpdate?: (watchedMs: number, durationMs: number) => void;
-  // Expected duration hint from the queue slot, used to size the playing
-  // bar before the video's own metadata has loaded.
-  expectedDurationSec?: number;
+  // Fixed platform-wide display length (Config: billboard.bannerDisplaySeconds,
+  // 15s) — every AD/HOUSE slot uses the same value, but this is still passed
+  // in from the queue slot rather than hardcoded, same as VideoPlayer took
+  // expectedDurationSec.
+  durationSec: number;
   // "Now playing — Brand · Title" overlay, matching
-  // design/freebiz-mockup.html's .screenface .face-top. Data the caller
-  // already has from the queue slot — just moved into the frame instead of
-  // rendered as a caption underneath it.
+  // design/freebiz-mockup.html's .screenface .face-top.
   brandLabel?: string;
   title?: string;
   className?: string;
-  // AD-only click-through (2026-09-02) — present iff the slot carried a
-  // clickUrl. The caller (watch/page.tsx) owns navigation + the
-  // fire-and-forget click-tracking call; this component just renders the
-  // affordance and invokes the callback, it never navigates itself.
+  // AD-only click-through — present iff the slot carried a clickUrl.
   clickUrl?: string | null;
   onClickThrough?: () => void;
 }
 
-// Billboard playback surface: autoplaying, muted-by-default (so autoplay
-// isn't blocked by the browser), no native scrub controls — just a mute
-// toggle. Reports watch progress via onTimeUpdate for heartbeat/complete
-// calls; the caller decides when a slot counts as "watched."
-export function VideoPlayer({
+const TICK_MS = 200;
+
+// Renamed from VideoPlayer (2026-09-03) — ad campaigns moved from video to
+// a static banner image, consuming too much hosting cost. There's no
+// <video> element to drive timing anymore, so this mirrors
+// FreebieTakeover's client-side interval timer against a known
+// durationSec instead of listening for onTimeUpdate/onEnded DOM events.
+// No mute button — a static image has no audio track.
+export function BannerPlayer({
   src,
-  autoPlay = true,
   onEnded,
   onTimeUpdate,
-  expectedDurationSec,
+  durationSec,
   brandLabel,
   title,
   className,
   clickUrl,
   onClickThrough,
-}: VideoPlayerProps) {
-  const videoRef = useRef<HTMLVideoElement>(null);
+}: BannerPlayerProps) {
   const [failed, setFailed] = useState(false);
-  const [muted, setMuted] = useState(true);
   const [progress, setProgress] = useState(0);
+  const endedRef = useRef(false);
 
   useEffect(() => {
     setFailed(false);
     setProgress(0);
-  }, [src]);
+    endedRef.current = false;
 
-  const handleTimeUpdate = () => {
-    const video = videoRef.current;
-    if (!video) return;
+    if (!src) return;
 
-    const durationSec =
-      video.duration && isFinite(video.duration) ? video.duration : expectedDurationSec;
-    const barWindow = Math.min(durationSec || PLAYING_BAR_WINDOW_SEC, PLAYING_BAR_WINDOW_SEC);
-    setProgress(barWindow > 0 ? Math.min(video.currentTime / barWindow, 1) : 0);
+    const durationMs = durationSec * 1000;
+    const barWindow = Math.min(durationSec, PLAYING_BAR_WINDOW_SEC);
+    const start = Date.now();
 
-    if (!onTimeUpdate) return;
-    onTimeUpdate(video.currentTime * 1000, (video.duration || 0) * 1000);
-  };
+    const interval = setInterval(() => {
+      const elapsedMs = Math.min(Date.now() - start, durationMs);
+      setProgress(barWindow > 0 ? Math.min(elapsedMs / 1000 / barWindow, 1) : 0);
+      onTimeUpdate?.(elapsedMs, durationMs);
+
+      if (elapsedMs >= durationMs && !endedRef.current) {
+        endedRef.current = true;
+        onEnded?.();
+      }
+    }, TICK_MS);
+
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [src, durationSec]);
 
   const screenfaceStyle = {
     background: "radial-gradient(120% 90% at 50% 12%, var(--ink-600), var(--ink-700) 62%, var(--ink-900))",
@@ -75,7 +81,7 @@ export function VideoPlayer({
       <div
         className={`relative aspect-video rounded-lg border overflow-hidden flex flex-col items-center justify-center gap-2 ${className ?? ""}`}
         style={{ ...screenfaceStyle, borderColor: "var(--line)", color: "var(--muted)" }}>
-        <span className="text-sm">Video unavailable — moving on shortly</span>
+        <span className="text-sm">Banner unavailable — moving on shortly</span>
       </div>
     );
   }
@@ -89,21 +95,17 @@ export function VideoPlayer({
           className="absolute top-0 inset-x-0 px-4 py-2.5 z-10"
           style={{ background: "linear-gradient(to bottom, rgba(0,0,0,.55), transparent)" }}>
           <span className="text-xs sm:text-[13px]" style={{ color: "var(--muted)" }}>
-            Now playing — <b style={{ color: "var(--txt)" }}>{brandLabel}</b>
+            Now showing — <b style={{ color: "var(--txt)" }}>{brandLabel}</b>
             {title && <> · &quot;{title}&quot;</>}
           </span>
         </div>
       )}
 
-      <video
-        ref={videoRef}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
         src={src}
-        autoPlay={autoPlay}
-        muted={muted}
-        playsInline
-        onEnded={onEnded}
+        alt={title ?? brandLabel ?? "Sponsored banner"}
         onError={() => setFailed(true)}
-        onTimeUpdate={handleTimeUpdate}
         className="w-full h-full object-contain"
       />
 
@@ -112,15 +114,6 @@ export function VideoPlayer({
         style={{ background: "linear-gradient(to top, rgba(0,0,0,.55), transparent)" }}>
         <PlayingBar progress={progress} />
       </div>
-
-      <button
-        type="button"
-        onClick={() => setMuted((m) => !m)}
-        aria-label={muted ? "Unmute" : "Mute"}
-        className="absolute top-2.5 right-3 p-2 rounded-full z-10 transition-colors"
-        style={{ background: "rgba(0,0,0,.5)", color: "var(--txt)" }}>
-        {muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
-      </button>
 
       {clickUrl && (
         <button

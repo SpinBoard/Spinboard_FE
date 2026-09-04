@@ -18,6 +18,7 @@ import {
   RatingsIcon,
   ForumIcon,
   PayoutsIcon,
+  SponsoredAdsIcon,
 } from "./nav-icons";
 
 export type AppRoute = "viewer" | "brands" | "admin";
@@ -101,6 +102,7 @@ export const NAV_ITEMS: Record<AppRoute, NavItem[]> = {
     // moderation queues below.
     { label: "Payout desk", href: routes.ADMIN.PAYOUTS, icon: PayoutsIcon, primary: true },
     { label: "Ratings moderation", href: routes.ADMIN.BUSINESS_RATINGS, icon: RatingsIcon },
+    { label: "Sponsored ads", href: routes.ADMIN.SPONSORED_ADS, icon: SponsoredAdsIcon },
   ],
 };
 

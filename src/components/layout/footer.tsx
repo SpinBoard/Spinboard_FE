@@ -41,6 +41,12 @@ export function Footer() {
               className="transition-colors hover:opacity-80">
               Billboard
             </Link>
+            <Link
+              href={routes.ADVERTISE}
+              style={{ color: "var(--muted)", fontSize: 13.5 }}
+              className="transition-colors hover:opacity-80">
+              Advertise
+            </Link>
           </div>
           <p
             className="text-center md:text-left"

@@ -41,8 +41,8 @@ import { AdCampaign, AdCampaignResponse } from "@/types";
 import { GoLiveDialog } from "@/components/brand/go-live-dialog";
 import {
   TIER_META,
-  getVideoDuration,
-  validateVideoFile,
+  getImageDimensions,
+  validateBannerFile,
   buildAdCampaignFormData,
 } from "./wizard-utils";
 
@@ -55,19 +55,19 @@ const wizardSchema = z.object({
     .url("Please enter a valid URL")
     .optional()
     .or(z.literal("")),
-  video: z
+  banner: z
     .any()
-    .refine((f) => f instanceof File && f.size > 0, "Please upload a campaign video"),
+    .refine((f) => f instanceof File && f.size > 0, "Please upload a campaign banner"),
   tier: z.enum(["basic", "premium"]),
 });
 
 type WizardFormData = z.infer<typeof wizardSchema>;
 
-const STEPS = ["Details", "Video", "Tier", "Review"] as const;
+const STEPS = ["Details", "Banner", "Tier", "Review"] as const;
 
 const STEP_FIELDS: (keyof WizardFormData)[][] = [
   ["title", "description", "brandUrl", "campaignUrl"],
-  ["video"],
+  ["banner"],
   ["tier"],
   [],
 ];
@@ -95,10 +95,10 @@ export default function CreateCampaignWizardPage() {
   const activeDurationDays = getConfig("campaign.activeDurationDays");
 
   const [step, setStep] = useState(0);
-  const [videoPreviewUrl, setVideoPreviewUrl] = useState<string>("");
-  const [videoDurationSeconds, setVideoDurationSeconds] = useState<number | null>(null);
-  const [videoError, setVideoError] = useState<string>("");
-  const [videoChecking, setVideoChecking] = useState(false);
+  const [bannerPreviewUrl, setBannerPreviewUrl] = useState<string>("");
+  const [bannerDimensions, setBannerDimensions] = useState<{ width: number; height: number } | null>(null);
+  const [bannerError, setBannerError] = useState<string>("");
+  const [bannerChecking, setBannerChecking] = useState(false);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [createdCampaign, setCreatedCampaign] = useState<AdCampaign | null>(null);
   const [apiError, setApiError] = useState<string>("");
@@ -112,7 +112,7 @@ export default function CreateCampaignWizardPage() {
       description: "",
       brandUrl: "",
       campaignUrl: "",
-      video: undefined,
+      banner: undefined,
       tier: "basic",
     },
   });
@@ -148,43 +148,45 @@ export default function CreateCampaignWizardPage() {
 
   const isSubmitting = createCampaignMutation.isPending;
 
-  const handleVideoChange = async (file: File) => {
-    setVideoError("");
-    setVideoChecking(true);
-    form.setValue("video", undefined, { shouldValidate: false });
-    setVideoDurationSeconds(null);
+  const handleBannerChange = async (file: File) => {
+    setBannerError("");
+    setBannerChecking(true);
+    form.setValue("banner", undefined, { shouldValidate: false });
+    setBannerDimensions(null);
     try {
-      const duration = await getVideoDuration(file);
-      const result = validateVideoFile(file, duration, {
-        maxDurationSeconds: getConfig("video.maxDurationSeconds"),
-        maxSizeBytes: getConfig("video.maxSizeBytes"),
+      const dimensions = await getImageDimensions(file);
+      const result = validateBannerFile(file, dimensions, {
+        maxSizeBytes: getConfig("banner.maxSizeBytes"),
+        targetWidthPx: getConfig("banner.targetWidthPx"),
+        targetHeightPx: getConfig("banner.targetHeightPx"),
+        aspectRatioTolerance: getConfig("banner.aspectRatioTolerance"),
       });
-      setVideoDurationSeconds(duration);
+      setBannerDimensions(dimensions);
       if (!result.valid) {
-        setVideoError(result.message ?? "Invalid video file.");
-        setVideoPreviewUrl("");
+        setBannerError(result.message ?? "Invalid banner file.");
+        setBannerPreviewUrl("");
         return;
       }
-      form.setValue("video", file, { shouldValidate: true });
-      setVideoPreviewUrl(URL.createObjectURL(file));
+      form.setValue("banner", file, { shouldValidate: true });
+      setBannerPreviewUrl(URL.createObjectURL(file));
     } catch (err) {
-      setVideoError(err instanceof Error ? err.message : "Could not read video file.");
+      setBannerError(err instanceof Error ? err.message : "Could not read image file.");
     } finally {
-      setVideoChecking(false);
+      setBannerChecking(false);
     }
   };
 
   useEffect(() => {
     return () => {
-      if (videoPreviewUrl) URL.revokeObjectURL(videoPreviewUrl);
+      if (bannerPreviewUrl) URL.revokeObjectURL(bannerPreviewUrl);
     };
-  }, [videoPreviewUrl]);
+  }, [bannerPreviewUrl]);
 
   const goNext = async () => {
     const fields = STEP_FIELDS[step];
     const valid =
       fields.length === 0 ? true : await form.trigger(fields as (keyof WizardFormData)[]);
-    if (step === 1 && (!!videoError || videoChecking || !form.getValues("video"))) return;
+    if (step === 1 && (!!bannerError || bannerChecking || !form.getValues("banner"))) return;
     if (!valid) return;
     setStep((s) => Math.min(s + 1, STEPS.length - 1));
   };
@@ -200,7 +202,7 @@ export default function CreateCampaignWizardPage() {
       description: data.description,
       brandUrl: data.brandUrl,
       campaignUrl: data.campaignUrl,
-      video: data.video,
+      banner: data.banner,
       tier: data.tier,
     });
     createCampaignMutation.mutate(formData);
@@ -225,7 +227,7 @@ export default function CreateCampaignWizardPage() {
           Put an ad on the board
         </h1>
         <p className="mt-1" style={{ color: "var(--muted)", fontSize: 13.5 }}>
-          One video, sixty seconds or less. No questions, no quiz — the board does the rest.
+          One banner image, close to 16:9. No questions, no quiz — the board does the rest.
         </p>
       </div>
 
@@ -282,15 +284,17 @@ export default function CreateCampaignWizardPage() {
 
         {step === 1 && (
           <Card>
-            <h3 style={{ fontFamily: "var(--display)", fontSize: 15, color: "var(--txt)" }}>Ad Video</h3>
+            <h3 style={{ fontFamily: "var(--display)", fontSize: 15, color: "var(--txt)" }}>Ad Banner</h3>
             <p className="fb-hint mt-1">
-              Plays continuously in the billboard rotation. Max {Math.round(getConfig("video.maxDurationSeconds"))}s,{" "}
-              {Math.round(getConfig("video.maxSizeBytes") / (1024 * 1024))}MB.
+              Shown in the billboard rotation for a fixed 15s, like a slide. Close to{" "}
+              {getConfig("banner.targetWidthPx")}×{getConfig("banner.targetHeightPx")} (16:9), max{" "}
+              {Math.round(getConfig("banner.maxSizeBytes") / (1024 * 1024))}MB, JPEG/PNG/WEBP.
             </p>
             <div className="mt-3 p-6 rounded-xl relative text-center" style={{ border: "2px dashed var(--line-2)" }}>
-              {videoPreviewUrl ? (
+              {bannerPreviewUrl ? (
                 <div className="relative">
-                  <video src={videoPreviewUrl} controls className="w-full max-h-64 rounded-lg" />
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={bannerPreviewUrl} alt="Banner preview" className="w-full max-h-64 rounded-lg object-contain" />
                   <Button
                     type="button"
                     variant="ghost"
@@ -298,44 +302,44 @@ export default function CreateCampaignWizardPage() {
                     className="absolute top-2 right-2"
                     style={{ background: "rgba(0,0,0,.6)" }}
                     onClick={() => {
-                      setVideoPreviewUrl("");
-                      setVideoDurationSeconds(null);
-                      form.setValue("video", undefined, { shouldValidate: true });
+                      setBannerPreviewUrl("");
+                      setBannerDimensions(null);
+                      form.setValue("banner", undefined, { shouldValidate: true });
                     }}>
                     <X className="h-4 w-4" />
                   </Button>
                 </div>
               ) : (
                 <div>
-                  {videoChecking ? (
+                  {bannerChecking ? (
                     <Loader2 className="mx-auto h-10 w-10 animate-spin" style={{ color: "var(--accent)" }} />
                   ) : (
                     <Upload className="mx-auto h-10 w-10" style={{ color: "var(--faint)" }} />
                   )}
-                  <p className="mt-2 fb-hint">{videoChecking ? "Checking video..." : "Click to upload your ad video"}</p>
+                  <p className="mt-2 fb-hint">{bannerChecking ? "Checking image..." : "Click to upload your ad banner"}</p>
                 </div>
               )}
               <input
                 type="file"
-                accept="video/*"
-                data-testid="video-input"
+                accept="image/jpeg,image/png,image/webp"
+                data-testid="banner-input"
                 className="absolute inset-0 opacity-0 cursor-pointer"
                 onChange={(e) => {
                   const file = e.target.files?.[0];
-                  if (file) handleVideoChange(file);
+                  if (file) handleBannerChange(file);
                 }}
               />
             </div>
-            {videoDurationSeconds !== null && !videoError && (
+            {bannerDimensions !== null && !bannerError && (
               <p className="mt-2 flex items-center gap-2" style={{ color: "var(--live)", fontSize: 13 }}>
                 <CheckCircle className="h-4 w-4" />
-                {Math.round(videoDurationSeconds)}s, looks good.
+                {bannerDimensions.width}×{bannerDimensions.height}, looks good.
               </p>
             )}
-            {videoError && (
+            {bannerError && (
               <p className="mt-2 flex items-center gap-2" style={{ color: "var(--spent)", fontSize: 13 }}>
                 <AlertCircle className="h-4 w-4" />
-                {videoError}
+                {bannerError}
               </p>
             )}
           </Card>
@@ -410,7 +414,7 @@ export default function CreateCampaignWizardPage() {
           </Button>
 
           {step < STEPS.length - 1 ? (
-            <Button type="button" variant="primary" onClick={goNext} disabled={step === 1 && (videoChecking || !!videoError)}>
+            <Button type="button" variant="primary" onClick={goNext} disabled={step === 1 && (bannerChecking || !!bannerError)}>
               Next
               <ArrowRight className="h-4 w-4" />
             </Button>

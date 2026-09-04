@@ -45,12 +45,6 @@ import {
 const CAMPAIGNS_QUERY_KEY = ["ad-campaigns-admin"];
 const FILTERS = ["all", "DRAFT", "PENDING_PAYMENT", "ACTIVE", "PAUSED", "EXPIRED", "REJECTED"] as const;
 
-function formatDuration(seconds: number): string {
-  const m = Math.floor(seconds / 60);
-  const s = Math.floor(seconds % 60);
-  return `${m}:${String(s).padStart(2, "0")}`;
-}
-
 function isToday(iso?: string): boolean {
   if (!iso) return false;
   return new Date(iso).toDateString() === new Date().toDateString();
@@ -371,7 +365,7 @@ export default function AdminCampaignsPage() {
                       {campaign.flagged && <Flag className="h-3 w-3 flex-shrink-0" style={{ color: "var(--spent)" }} />}
                     </div>
                     <span className="fb-hint">
-                      {formatDuration(campaign.videoDurationSeconds)} · {formatStatusLabel(campaign.status)}
+                      {formatStatusLabel(campaign.status)}
                       {!!campaign.reportCount && ` · ${campaign.reportCount} report${campaign.reportCount !== 1 ? "s" : ""}`}
                     </span>
                   </div>
@@ -402,11 +396,17 @@ export default function AdminCampaignsPage() {
                   </div>
                 </div>
 
-                {focused.videoUrl && (
+                {focused.bannerImageUrl ? (
+                  <div className="mt-3 rounded-xl p-2" style={{ background: "var(--ink-900)", border: "1px solid var(--line)" }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={focused.bannerImageUrl} alt={focused.title} className="w-full max-h-72 rounded-lg object-contain" />
+                  </div>
+                ) : focused.videoUrl ? (
+                  // Legacy — pre-2026-09-03 campaigns only.
                   <div className="mt-3 rounded-xl p-2" style={{ background: "var(--ink-900)", border: "1px solid var(--line)" }}>
                     <video src={focused.videoUrl} controls className="w-full max-h-72 rounded-lg" />
                   </div>
-                )}
+                ) : null}
 
                 {focused.moderationStatus === "REJECTED" && focused.moderationReason && (
                   <p className="mt-3 fb-hint" style={{ color: "var(--spent)" }}>{focused.moderationReason}</p>

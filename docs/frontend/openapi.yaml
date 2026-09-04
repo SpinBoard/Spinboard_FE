@@ -316,6 +316,33 @@ paths:
                 properties:
                   success: { type: boolean }
                   slots: { type: array, items: { $ref: "#/components/schemas/BillboardSlot" } }
+                  sponsoredAd:
+                    nullable: true
+                    type: object
+                    description: "Persistent side-panel placement, separate from slots — admin-curated, null until an admin uploads one. See UI_CONTRACT.md's Sponsored ad panel section."
+                    properties:
+                      id: { type: string }
+                      imageUrl: { type: string }
+                      clickUrl: { type: string, nullable: true }
+
+  /billboard/sponsored-ad/{id}/click:
+    post:
+      tags: [Billboard]
+      security: []
+      summary: Record a click on the sponsored-ad panel (fire-and-forget, idempotent)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { success: { type: boolean }, clicked: { type: boolean } }
 
   /billboard/impressions/heartbeat:
     post:
@@ -602,15 +629,15 @@ paths:
   /ad-campaigns:
     post:
       tags: [AdCampaigns]
-      summary: Create a campaign (brand only, multipart with a video file)
+      summary: "Create a campaign (brand only, multipart with a banner image file — was video, see MIGRATION_NOTES.md)"
       requestBody:
         content:
           multipart/form-data:
             schema:
               type: object
-              required: [title, description, tier, video]
+              required: [title, description, tier, banner]
               properties:
-                video: { type: string, format: binary }
+                banner: { type: string, format: binary, description: "jpeg/png/webp, close to 1200x675px (16:9), under Config: banner.maxSizeBytes (5MB default)." }
                 title: { type: string }
                 description: { type: string }
                 tier: { type: string, enum: [basic, premium] }
@@ -626,6 +653,26 @@ paths:
         - { name: status, in: query, schema: { type: string } }
         - { name: tier, in: query, schema: { type: string } }
       responses: { "200": { description: OK } }
+
+  /ad-campaigns/{campaignId}/banner:
+    post:
+      tags: [AdCampaigns]
+      summary: "Add or replace the banner on an already-existing campaign (brand only, own campaign) — the update path; POST /ad-campaigns only sets it at creation. Deletes the previous banner file from storage on a successful replace."
+      parameters:
+        - { name: campaignId, in: path, required: true, schema: { type: string } }
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [banner]
+              properties:
+                banner: { type: string, format: binary, description: "jpeg/png/webp, close to 1200x675px (16:9), under Config: banner.maxSizeBytes (5MB default)." }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/AdCampaign" } } } }
+        "400": { description: "Missing/invalid banner file" }
+        "403": { description: "Campaign belongs to a different brand" }
+        "404": { description: Not found }
 
   /ad-campaigns/mine:
     get:
@@ -1282,6 +1329,93 @@ paths:
       summary: "Lift a suspension — does not reset strikeCount or reactivate paused campaigns"
       parameters: [{ name: brandId, in: path, required: true, schema: { type: string } }]
       responses: { "200": { description: OK } }
+
+  /sponsored-ads/submit:
+    post:
+      tags: [Billboard]
+      security: []
+      summary: "Submit a sponsored-ad creative for review (public, no auth) — any advertiser, registered on the platform or not. Always lands PENDING; never goes live without an admin reviewing/negotiating and activating it."
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [advertiserName, contactEmail, image]
+              properties:
+                image: { type: string, format: binary, description: "jpeg/png/webp/gif, under Config: sponsoredAd.maxSizeBytes (5MB default). No aspect-ratio constraint." }
+                advertiserName: { type: string }
+                contactEmail: { type: string, description: "Required — how the team follows up to negotiate. Must look like a valid email." }
+                contactPhone: { type: string }
+                message: { type: string, description: "Free text — what they're advertising, budget expectations, etc." }
+                clickUrl: { type: string, description: "Must be a well-formed http(s) URL if set." }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+                  submissionId: { type: string }
+        "400": { description: "Missing image/advertiserName/contactEmail, or an invalid contactEmail/clickUrl" }
+        "429": { description: Too many submissions from this IP — see Config rateLimit.sponsoredAdSubmission }
+
+  /admin/sponsored-ads:
+    post:
+      tags: [Admin, Billboard]
+      summary: "Upload a sponsored-ad creative (admin only) — goes live (ACTIVE) immediately. Not a brand self-serve flow; the advertiser negotiates off-platform and an admin uploads the already-agreed creative. Contrast with the public POST /sponsored-ads/submit, which lands PENDING for review instead."
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [advertiserName, image]
+              properties:
+                image: { type: string, format: binary, description: "jpeg/png/webp/gif, under Config: sponsoredAd.maxSizeBytes (5MB default). No aspect-ratio constraint." }
+                advertiserName: { type: string }
+                clickUrl: { type: string, description: "Must be a well-formed http(s) URL if set." }
+      responses:
+        "201": { description: Created, content: { application/json: { schema: { $ref: "#/components/schemas/SponsoredAdResponse" } } } }
+        "400": { description: "Missing image/advertiserName, or an invalid creative/clickUrl" }
+        "403": { description: Not an admin }
+    get:
+      tags: [Admin, Billboard]
+      summary: "List sponsored ads (admin only) — optionally filtered by status"
+      parameters:
+        - name: status
+          in: query
+          schema: { type: string, enum: [PENDING, ACTIVE, INACTIVE] }
+          description: "Pass PENDING to pull up just the brand-submitted queue awaiting review; omit for everything."
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  sponsoredAds: { type: array, items: { $ref: "#/components/schemas/SponsoredAd" } }
+
+  /admin/sponsored-ads/{id}/activate:
+    post:
+      tags: [Admin, Billboard]
+      summary: Set a sponsored ad's status to ACTIVE (admin only)
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/SponsoredAdResponse" } } } }
+        "404": { description: Not found }
+
+  /admin/sponsored-ads/{id}/deactivate:
+    post:
+      tags: [Admin, Billboard]
+      summary: Set a sponsored ad's status to INACTIVE (admin only)
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/SponsoredAdResponse" } } } }
+        "404": { description: Not found }
 
   /admin/dashboard:
     get:
@@ -2045,16 +2179,16 @@ components:
 
     BillboardSlot:
       type: object
-      description: "Shape depends on type. AD/HOUSE carry campaignId/brandName/title/videoUrl; AD additionally carries clickUrl; FREEBIE carries codeId/publicCode/valueLabel/freebieType/liveUntil instead — a live freebie code taking over this slot full-screen, exactly like a real ad. See UI_CONTRACT.md."
+      description: "Shape depends on type. AD/HOUSE carry campaignId/brandName/title/bannerImageUrl (was videoUrl — see MIGRATION_NOTES.md); AD additionally carries clickUrl; FREEBIE carries codeId/publicCode/valueLabel/freebieType/liveUntil instead — a live freebie code taking over this slot full-screen, exactly like a real ad, entirely unchanged by the video->banner revamp. See UI_CONTRACT.md."
       properties:
         slotId: { type: string }
         type: { type: string, enum: [AD, HOUSE, FREEBIE] }
-        durationSec: { type: number }
+        durationSec: { type: number, description: "Fixed Config: billboard.bannerDisplaySeconds (15s default) for AD/HOUSE." }
         # AD / HOUSE only
         campaignId: { type: string }
         brandName: { type: string }
         title: { type: string }
-        videoUrl: { type: string }
+        bannerImageUrl: { type: string }
         # AD only — campaign's campaignUrl, else brandUrl, else null
         clickUrl: { type: string, nullable: true }
         # FREEBIE only
@@ -2194,8 +2328,9 @@ components:
             tier: { type: string, enum: [basic, premium] }
             title: { type: string }
             description: { type: string }
-            videoUrl: { type: string }
-            videoDurationSeconds: { type: number }
+            bannerImageUrl: { type: string, description: "Was videoUrl — see MIGRATION_NOTES.md." }
+            bannerWidthPx: { type: number }
+            bannerHeightPx: { type: number }
             status: { type: string, enum: [DRAFT, PENDING_PAYMENT, ACTIVE, PAUSED, EXPIRED, REJECTED] }
             paymentStatus: { type: string, enum: [unpaid, paid] }
             moderationStatus: { type: string, enum: [PENDING, APPROVED, REJECTED] }
@@ -2210,6 +2345,31 @@ components:
             reportCountLastHour: { type: integer, description: "GET /ad-campaigns (admin) only" }
             brandStrikeCount: { type: integer, description: "GET /ad-campaigns (admin) only" }
             brandSuspended: { type: boolean, description: "GET /ad-campaigns (admin) only" }
+
+    SponsoredAd:
+      type: object
+      description: "Admin-curated side-panel creative — see BUSINESS_RULES.md's 'sponsored ad panel' note. Not a brand self-serve product; can arrive via a direct admin upload (ACTIVE immediately) or a public submission via POST /sponsored-ads/submit (PENDING until an admin activates it)."
+      properties:
+        _id: { type: string }
+        imageUrl: { type: string, description: "Image or GIF — never video/audio." }
+        widthPx: { type: number }
+        heightPx: { type: number }
+        advertiserName: { type: string }
+        clickUrl: { type: string, nullable: true }
+        contactEmail: { type: string, description: "Set only on a brand's own submission." }
+        contactPhone: { type: string, description: "Submission only, optional." }
+        message: { type: string, description: "Submission only — free text from the advertiser." }
+        status: { type: string, enum: [PENDING, ACTIVE, INACTIVE] }
+        clickCount: { type: integer }
+        createdBy: { type: string, description: "Admin userId — unset on a PENDING submission." }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    SponsoredAdResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        sponsoredAd: { $ref: "#/components/schemas/SponsoredAd" }
 
     BusinessSocialLinks:
       type: object

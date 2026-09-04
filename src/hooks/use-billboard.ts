@@ -23,13 +23,16 @@ export function useBillboardSession() {
   });
 }
 
+// Returns the full response, not just `slots` — the sponsored-ad panel
+// (2026-09-03) rides along on this same call as a top-level `sponsoredAd`
+// field, separate from the rotating queue.
 export function useBillboardQueue(sessionId: string | null, size: number = 5) {
   return useQuery({
     queryKey: ["billboard-queue", sessionId, size],
     queryFn: () =>
       api
         .get<BillboardQueueResponse>(ENDPOINTS.BILLBOARD_QUEUE(sessionId as string, size))
-        .then((res) => res.data.slots),
+        .then((res) => res.data),
     enabled: !!sessionId,
     staleTime: 0,
     refetchOnWindowFocus: false,
@@ -59,6 +62,14 @@ export function useBillboardClick() {
   return useMutation({
     mutationFn: (payload: { sessionId: string; slotId: string }) =>
       api.post(ENDPOINTS.BILLBOARD_CLICK, payload),
+  });
+}
+
+// Sponsored-ad panel click tracking (2026-09-03) — public, no auth,
+// fire-and-forget, idempotent, same spirit as the AD click above.
+export function useSponsoredAdClick() {
+  return useMutation({
+    mutationFn: (id: string) => api.post(ENDPOINTS.BILLBOARD_SPONSORED_AD_CLICK(id)),
   });
 }
 

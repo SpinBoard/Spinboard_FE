@@ -8,15 +8,18 @@ Only the keys relevant to the current (post-revamp) product are listed. The old 
 
 | Key | Default | Meaning |
 |---|---|---|
-| `video.maxDurationSeconds` | `60` | Hard ceiling on an uploaded ad video's length. |
-| `video.maxSizeBytes` | `25 * 1024 * 1024` (25MB) | Upload size ceiling. |
-| `campaign.tiers` | `{ basic: {price:20, weight:1, analytics:false}, premium: {price:30, weight:2, analytics:true} }` | One object drives price (flat USD, one-time), ad-rotation weight, and analytics access together. |
+| `campaign.tiers` | `{ basic: {price:20, weight:1, analytics:false}, premium: {price:30, weight:2, analytics:true} }` | One object drives price (flat USD, one-time), ad-rotation weight, and analytics access together. Never affects media type — every tier uploads a banner. |
 | `payment.usdToNgnRate` | `1550` | FX rate applied at go-live to convert `priceUSD` to `priceLocal`. |
 | `campaign.activeDurationDays` | `30` | Flat activation window from successful payment. |
-| `billboard.houseFillers` | list of `{title, videoUrl, durationSec, filler}` | Shown when the eligible ad pool is empty — the billboard never returns nothing. |
+| `banner.targetWidthPx` / `banner.targetHeightPx` | `1200` / `675` | Target dimensions (16:9) an uploaded `POST /ad-campaigns` banner is checked against. |
+| `banner.aspectRatioTolerance` | `0.05` | How far off `targetWidthPx`/`targetHeightPx`'s ratio an upload may be before `400`. |
+| `banner.maxSizeBytes` | `5 * 1024 * 1024` (5MB) | Banner upload size ceiling. |
+| `billboard.bannerDisplaySeconds` | `15` | Fixed display duration for every `AD`/`HOUSE` slot — a static banner has no natural "length" of its own, unlike the old per-campaign video length. |
+| `billboard.houseFillers` | list of `{title, bannerImageUrl, durationSec, filler}` | Shown when the eligible ad pool is empty — the billboard never returns nothing. |
 | `billboard.completionWatchFraction` | `0.95` | Fraction of `durationSec` that must be watched for a slot to count as completed. |
 | `billboard.heartbeatToleranceMs` | `3000` | Wall-clock jitter grace window for heartbeat validation. |
 | `billboard.defaultQueueSize` | `5` | Default `GET /billboard/queue` batch size when `size` isn't passed. |
+| `sponsoredAd.maxSizeBytes` | `5 * 1024 * 1024` (5MB) | Upload size ceiling for `POST /admin/sponsored-ads`'s and `POST /sponsored-ads/submit`'s image/GIF creative — no aspect-ratio constraint. |
 
 ## Freebie prizes & drops
 
@@ -30,7 +33,7 @@ Only the keys relevant to the current (post-revamp) product are listed. The old 
 | `freebie.redDisplaySeconds` | `60` | How long a just-claimed code stays visible (red/`TAKEN`) in the strip before dropping out. |
 | `freebie.maxConcurrentLive` | `3` | Max simultaneously-`AVAILABLE` codes. |
 | `freebie.feedCacheTtlMs` | `3000` | `Cache-Control: max-age` on `GET /freebies/strip` — keep polling faster than this to see state changes promptly. |
-| `freebie.billboardSlotSeconds` | `60` | How long a live freebie code's one-time full-screen billboard takeover (`type: "FREEBIE"` in `GET /billboard/queue`) lasts — capped shorter if the code's `liveUntil` is sooner. See `UI_CONTRACT.md`. |
+| `freebie.billboardSlotSeconds` | `15` | How long a live freebie code's one-time full-screen billboard takeover (`type: "FREEBIE"` in `GET /billboard/queue`) lasts — capped shorter if the code's `liveUntil` is sooner. Kept matching `billboard.bannerDisplaySeconds` so it reads as "one of the ads," not a separate, lesser thing. See `UI_CONTRACT.md`. |
 | `freebie.recentCatchesFeedSize` | `8` | Row count for `GET /freebies/recent-catches`'s "who just won" feed. |
 
 ## Anti-abuse
@@ -42,6 +45,7 @@ Only the keys relevant to the current (post-revamp) product are listed. The old 
 | `rateLimit.claim` | `{ limit: 20, windowSeconds: 60 }` | `POST /freebies/apply`, route-level (covers both claim and redeem attempts on that endpoint). |
 | `rateLimit.redeem` | `{ limit: 5, windowSeconds: 60 }` | Tighter, enforced inside the redemption path specifically — the money-creating operation. |
 | `rateLimit.feed` | `{ limit: 30, windowSeconds: 60 }` | `GET /freebies/strip`, IP-keyed. |
+| `rateLimit.sponsoredAdSubmission` | `{ limit: 5, windowSeconds: 3600 }` | `POST /sponsored-ads/submit`, IP-keyed — deters abuse of an open, unauthenticated file-upload endpoint. |
 | `freebie.suspiciousClaimLatencyMs` | `500` | Below this many ms between a code's `liveFrom` and being claimed, the claim is flagged (not blocked) for admin review. |
 
 A `429` from any rate limit uses the standard error shape with `code: "TOO_MANY_ATTEMPTS"`. A `403` from a device/IP ceiling uses `code: "DEVICE_LIMIT_REACHED"` or `"IP_LIMIT_REACHED"` — the message never states the numeric threshold; don't try to parse one out of it.
@@ -63,6 +67,8 @@ A `429` from any rate limit uses the standard error shape with `code: "TOO_MANY_
 
 | Key | Default | Meaning |
 |---|---|---|
+| `video.maxDurationSeconds` | `60` | Hard ceiling on a `POST /promote/campaigns` video's length, when `mediaType: "video"`. Not used by ad campaigns any more — those switched to banner images, see the Billboard section above. |
+| `video.maxSizeBytes` | `25 * 1024 * 1024` (25MB) | Same upload's size ceiling. |
 | `promote.deviceDailyLikeCap` | `20` | Rolling-24h like cap per `X-Device-Id`, across accounts. No account-age gate exists any more — a brand-new account can vote immediately; the real gate is one vote per user per (promoter, campaign) pair (structural, not config-tuned) — a liker can still vote once on each distinct campaign a given promoter shares. |
 | `promote.ipDailyLikeCap` | `50` | Same, per IP. |
 | `promote.periodDurationDays` | `7` | Reference default only, for prefilling an admin "open a period" form's `periodEnd` from `periodStart` — not enforced server-side; an admin can open a period of any length. |

@@ -40,9 +40,9 @@ The starter copy the backend ships with (`scripts/seed-phrases.ts`, idempotent �
 - Welcome to Pazzell — watch, and keep an eye on the edges.
 - New here? Green codes are free. First to type it wins.
 
-## House-filler video slots (`Config: billboard.houseFillers`)
+## House-filler banner slots (`Config: billboard.houseFillers`)
 
-Two placeholder filler slots exist in `Config`, played when the real ad pool is empty. **`videoUrl` is empty (`""`) for both in every environment today** — no real hosted asset exists yet. Ops needs to upload real clips and point this config at them before launch; until then, expect `videoUrl: ""` in `type: "HOUSE"` queue slots in any environment, including production, and build a graceful empty/placeholder state for that case rather than assuming a URL is always populated.
+Two placeholder filler slots exist in `Config`, shown when the real ad pool is empty. **`bannerImageUrl` is empty (`""`) for both in every environment today** — no real hosted asset exists yet. Ops needs to upload real images and point this config at them before launch; until then, expect `bannerImageUrl: ""` in `type: "HOUSE"` queue slots in any environment, including production, and build a graceful empty/placeholder state for that case rather than assuming a URL is always populated.
 
 | title | durationSec | filler tag |
 |---|---|---|

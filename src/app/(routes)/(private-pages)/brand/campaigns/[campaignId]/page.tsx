@@ -15,7 +15,7 @@ import { Pill } from "@/components/ui/freebiz-pill";
 import { Button } from "@/components/ui/freebiz-button";
 import { Progress } from "@/components/ui/freebiz-progress";
 import { LimitRow } from "@/components/ui/freebiz-limit-row";
-import { ArrowLeft, BarChart3, Clock, Rocket, Loader2, Pause, Play } from "lucide-react";
+import { ArrowLeft, BarChart3, Clock, Rocket, Loader2, Pause, Play, Upload } from "lucide-react";
 import Link from "next/link";
 import { routes } from "@/app/_utils/routes";
 import {
@@ -28,12 +28,6 @@ import {
 } from "@/types";
 import { GoLiveDialog } from "@/components/brand/go-live-dialog";
 import { STATUS_TONE, MODERATION_TONE, daysLeft, formatStatusLabel } from "../campaign-status";
-
-function formatDuration(seconds: number): string {
-  const m = Math.floor(seconds / 60);
-  const s = Math.floor(seconds % 60);
-  return `${m}:${String(s).padStart(2, "0")}`;
-}
 
 function BreakdownBars({ title, dimension, campaignId }: { title: string; dimension: "country" | "ageBand"; campaignId: string }) {
   const { data, isLoading } = useQuery({
@@ -102,6 +96,28 @@ export default function ViewCampaignPage() {
   const campaignId = params.campaignId as string;
   const queryClient = useQueryClient();
   const [showGoLive, setShowGoLive] = useState(false);
+
+  // Add/replace a banner on this campaign (POST /ad-campaigns/:id/banner,
+  // added 2026-09-03 alongside the video→banner switch) — needed for any
+  // campaign that predates the switch (its video was deleted from storage,
+  // banner fields left empty) as well as a brand simply swapping creative.
+  // A campaign with neither shown until a banner is uploaded.
+  const uploadBannerMutation = useMutation({
+    mutationFn: (file: File) => {
+      const formData = new FormData();
+      formData.append("banner", file);
+      return api
+        .post<AdCampaignResponse>(ENDPOINTS.AD_CAMPAIGN_BANNER(campaignId), formData, {
+          headers: { "Content-Type": "multipart/form-data" },
+        })
+        .then((res) => res.data.campaign);
+    },
+    onSuccess: () => {
+      toast.success("Banner updated.");
+      queryClient.invalidateQueries({ queryKey: ["ad-campaign", campaignId] });
+    },
+    onError: (err) => toast.error(apiErrorMessage(err, "Couldn't upload this banner.")),
+  });
 
   const {
     data: campaign,
@@ -232,7 +248,6 @@ export default function ViewCampaignPage() {
           <Pill tone={STATUS_TONE[campaign.status]} dot>{formatStatusLabel(campaign.status)}</Pill>
           <Pill tone={MODERATION_TONE[campaign.moderationStatus]} dot>{formatStatusLabel(campaign.moderationStatus)}</Pill>
           <Pill tone={isPremium ? "brandish" : "default"}>{isPremium ? "Premium" : "Basic"}</Pill>
-          <span className="fb-hint" style={{ fontFamily: "var(--mono)" }}>{formatDuration(campaign.videoDurationSeconds)}</span>
           {campaign.status === "ACTIVE" && remaining !== null && (
             <span className="flex items-center gap-1.5" style={{ fontSize: 12.5, color: "var(--txt)" }}>
               <Clock className="h-3.5 w-3.5" style={{ color: "var(--accent)" }} />
@@ -254,11 +269,39 @@ export default function ViewCampaignPage() {
         )}
       </div>
 
-      {campaign.videoUrl && (
-        <div className="rounded-2xl p-2" style={{ background: "var(--ink-800)", border: "1px solid var(--line)", boxShadow: "var(--shadow)" }}>
+      <div className="rounded-2xl p-2" style={{ background: "var(--ink-800)", border: "1px solid var(--line)", boxShadow: "var(--shadow)" }}>
+        {campaign.bannerImageUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={campaign.bannerImageUrl} alt={campaign.title} className="w-full max-h-96 rounded-lg object-contain" style={{ background: "var(--ink-900)" }} />
+        ) : campaign.videoUrl ? (
+          // Legacy — pre-2026-09-03 campaigns only. New campaigns never set
+          // this; kept so historical creative still renders if a video file
+          // happens to still exist.
           <video src={campaign.videoUrl} controls className="w-full max-h-96 rounded-lg" style={{ background: "var(--ink-900)" }} />
-        </div>
-      )}
+        ) : (
+          <div className="flex flex-col items-center justify-center gap-2 py-10" style={{ color: "var(--muted)" }}>
+            <span style={{ fontSize: 13 }}>No banner yet — this campaign won&apos;t show on the billboard until you add one.</span>
+          </div>
+        )}
+        <label className="flex items-center justify-center gap-2 mt-2 p-2.5 rounded-lg cursor-pointer" style={{ border: "1px dashed var(--line-2)" }}>
+          {uploadBannerMutation.isPending ? (
+            <Loader2 className="h-4 w-4 animate-spin" style={{ color: "var(--accent)" }} />
+          ) : (
+            <Upload className="h-4 w-4" style={{ color: "var(--faint)" }} />
+          )}
+          <span className="fb-hint">{campaign.bannerImageUrl ? "Replace banner" : "Add a banner"}</span>
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            className="hidden"
+            disabled={uploadBannerMutation.isPending}
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) uploadBannerMutation.mutate(file);
+            }}
+          />
+        </label>
+      </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {isPremium && <Stat label="Plays" value={analytics?.views ?? "—"} />}

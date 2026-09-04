@@ -27,8 +27,8 @@ const queueSlot = {
   campaignId: "camp1",
   brandName: "Naija Snacks Co.",
   title: "Crunch Time",
-  videoUrl: "https://cdn.example/video.mp4",
-  durationSec: 30,
+  bannerImageUrl: "https://cdn.example/banner.jpg",
+  durationSec: 15,
 };
 
 const stripFeed = {
@@ -103,7 +103,7 @@ describe("WatchPage", () => {
     renderPage();
     await waitFor(() => expect(axiosPost).toHaveBeenCalledWith("/billboard/session"));
     expect(await screen.findByText(/Crunch Time/)).toBeInTheDocument();
-    expect(document.querySelector("video")).toBeInTheDocument();
+    expect(document.querySelector('img[src="https://cdn.example/banner.jpg"]')).toBeInTheDocument();
     // No quiz panel, no spin machine — the billboard is never gated.
     expect(screen.queryByTestId("quiz-panel")).not.toBeInTheDocument();
     expect(screen.queryByTestId("spin-machine")).not.toBeInTheDocument();

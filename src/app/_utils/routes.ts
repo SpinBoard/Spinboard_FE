@@ -13,6 +13,9 @@ export const routes = {
   CONTACT: "/contact",
   HOW_IT_WORKS: "/how-it-works",
   PAYMENT_VERIFY: "/payment/verify",
+  // Public submission form for the admin-curated sponsored-ad panel —
+  // any advertiser, on the platform or not (POST /sponsored-ads/submit)
+  ADVERTISE: "/advertise",
   WALLET_TOPUP_VERIFY: "/wallet/topup/verify",
 
   // The billboard — continuous ad playback + freebie-code strip, no gate.
@@ -99,5 +102,7 @@ export const routes = {
     FORUM: "/admin/forum",
     // Weekly payout run — open, lock, pay items, complete
     PAYOUTS: "/admin/payouts",
+    // Admin-curated sponsored ads — upload, activate/deactivate, list
+    SPONSORED_ADS: "/admin/sponsored-ads",
   },
 };

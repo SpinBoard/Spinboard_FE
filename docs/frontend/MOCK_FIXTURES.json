@@ -104,7 +104,7 @@
         "valueLabel": "₦500 Cash",
         "freebieType": "CASH",
         "liveUntil": "2026-08-25T14:22:00.000Z",
-        "durationSec": 60
+        "durationSec": 15
       },
       {
         "slotId": "slot_9f2a7c1e4b6d",
@@ -112,14 +112,15 @@
         "campaignId": "66c0a1f2b1e4a2a1b8f8d101",
         "brandName": "Naija Snacks Co.",
         "title": "Naija Snacks — Crunch Time",
-        "videoUrl": "https://cdn.pazzell.com/ad-campaign-videos/1755180000-crunch-time.mp4",
-        "durationSec": 30
+        "bannerImageUrl": "https://cdn.pazzell.com/ad-campaign-banners/1755180000-crunch-time.jpg",
+        "clickUrl": "https://naijasnacks.example",
+        "durationSec": 15
       },
       {
         "slotId": "slot_3e7b1d9a2f4c",
         "type": "HOUSE",
         "title": "Invite a friend, earn together",
-        "videoUrl": "",
+        "bannerImageUrl": "https://cdn.pazzell.com/house-fillers/invite-a-friend.jpg",
         "durationSec": 15
       },
       {
@@ -128,10 +129,30 @@
         "campaignId": "66c0a1f2b1e4a2a1b8f8d102",
         "brandName": "QuickPay",
         "title": "QuickPay — Send Money Instantly",
-        "videoUrl": "https://cdn.pazzell.com/ad-campaign-videos/1755180500-quickpay.mp4",
-        "durationSec": 45
+        "bannerImageUrl": "https://cdn.pazzell.com/ad-campaign-banners/1755180500-quickpay.jpg",
+        "clickUrl": null,
+        "durationSec": 15
       }
-    ]
+    ],
+    "sponsoredAd": {
+      "id": "66c0a1f2b1e4a2a1b8f8d300",
+      "imageUrl": "https://cdn.pazzell.com/sponsored-ads/1755180900-big-bank.gif",
+      "clickUrl": "https://bigbank.example"
+    }
+  },
+
+  "billboardQueue_noSponsoredAd": {
+    "success": true,
+    "slots": [
+      {
+        "slotId": "slot_2b5d8f1a3c7e",
+        "type": "HOUSE",
+        "title": "Invite a friend, earn together",
+        "bannerImageUrl": "https://cdn.pazzell.com/house-fillers/invite-a-friend.jpg",
+        "durationSec": 15
+      }
+    ],
+    "sponsoredAd": null
   },
 
   "applyResponse_claimed_cash": {
@@ -275,10 +296,11 @@
       "tier": "premium",
       "title": "Fresh Bites — Weekend Special",
       "description": "New weekend combo, delivered hot.",
-      "videoUrl": "https://cdn.pazzell.com/ad-campaign-videos/1755181000-fresh-bites.mp4",
-      "videoDurationSeconds": 40,
-      "videoSizeBytes": 18874368,
-      "videoMimeType": "video/mp4",
+      "bannerImageUrl": "https://cdn.pazzell.com/ad-campaign-banners/1755181000-fresh-bites.jpg",
+      "bannerWidthPx": 1200,
+      "bannerHeightPx": 675,
+      "bannerSizeBytes": 482304,
+      "bannerMimeType": "image/jpeg",
       "currency": "NGN",
       "status": "DRAFT",
       "paymentStatus": "unpaid",

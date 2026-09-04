@@ -68,7 +68,7 @@ vi.mock("./wizard-utils", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./wizard-utils")>();
   return {
     ...actual,
-    getVideoDuration: vi.fn().mockResolvedValue(30),
+    getImageDimensions: vi.fn().mockResolvedValue({ width: 1200, height: 675 }),
   };
 });
 
@@ -89,7 +89,7 @@ function renderWizard() {
 
 const makeFile = (name: string, type: string) => new File(["x".repeat(20)], name, { type });
 
-async function advanceThroughDetailsAndVideo(user: ReturnType<typeof userEvent.setup>) {
+async function advanceThroughDetailsAndBanner(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByLabelText("Campaign Title"), "Summer Splash");
   await user.type(
     screen.getByLabelText("Description"),
@@ -97,9 +97,9 @@ async function advanceThroughDetailsAndVideo(user: ReturnType<typeof userEvent.s
   );
   await user.click(screen.getByRole("button", { name: /next/i }));
 
-  await screen.findByRole("heading", { name: /ad video/i });
-  const videoInput = screen.getByTestId("video-input");
-  await user.upload(videoInput, makeFile("video.mp4", "video/mp4"));
+  await screen.findByRole("heading", { name: /ad banner/i });
+  const bannerInput = screen.getByTestId("banner-input");
+  await user.upload(bannerInput, makeFile("banner.jpg", "image/jpeg"));
   await screen.findByText(/looks good/i);
   await user.click(screen.getByRole("button", { name: /next/i }));
 
@@ -119,14 +119,14 @@ describe("CreateCampaignWizardPage", () => {
 
     await user.click(screen.getByRole("button", { name: /next/i }));
 
-    expect(screen.queryByRole("heading", { name: /ad video/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: /ad banner/i })).not.toBeInTheDocument();
     expect(await screen.findAllByText(/at least 3 characters|at least 10 characters/i)).not.toHaveLength(0);
   });
 
   it("has no quiz step anywhere in the wizard", async () => {
     const user = userEvent.setup();
     renderWizard();
-    await advanceThroughDetailsAndVideo(user);
+    await advanceThroughDetailsAndBanner(user);
     expect(screen.queryByRole("heading", { name: /quiz/i })).not.toBeInTheDocument();
     expect(screen.queryByText(/quiz-step-\d/)).not.toBeInTheDocument();
   });
@@ -134,7 +134,7 @@ describe("CreateCampaignWizardPage", () => {
   it("shows the tier comparison with flat prices, no weekly rate and no global toggle", async () => {
     const user = userEvent.setup();
     renderWizard();
-    await advanceThroughDetailsAndVideo(user);
+    await advanceThroughDetailsAndBanner(user);
 
     const basicCard = screen.getByTestId("tier-card-basic");
     const premiumCard = screen.getByTestId("tier-card-premium");
@@ -149,7 +149,7 @@ describe("CreateCampaignWizardPage", () => {
   it("creates the campaign as a draft with no quiz/global fields, then offers to go live with a flat one-time price", async () => {
     const user = userEvent.setup();
     renderWizard();
-    await advanceThroughDetailsAndVideo(user);
+    await advanceThroughDetailsAndBanner(user);
 
     await user.click(screen.getByTestId("tier-card-premium"));
     await user.click(screen.getByRole("button", { name: /next/i }));
