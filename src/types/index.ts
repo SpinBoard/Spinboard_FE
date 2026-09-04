@@ -208,13 +208,17 @@ export interface BillboardSessionResponse {
 export interface BillboardQueueSlot {
   slotId: string; // opaque, single-use — pass back verbatim to heartbeat/complete
   type: "AD" | "HOUSE" | "FREEBIE";
+  // Now always Config: billboard.bannerDisplaySeconds (15s) for AD/HOUSE —
+  // videos were retired 2026-09-03 in favor of a static banner image, "like
+  // a slide sliding away, not a video player." Still read from the slot
+  // rather than hardcoded.
   durationSec: number;
 
   // AD/HOUSE only
   campaignId?: string; // AD only
   brandName?: string; // AD only
   title?: string;
-  videoUrl?: string;
+  bannerImageUrl?: string; // was videoUrl before the 2026-09-03 banner switch
   // AD only (2026-09-02) — server-resolved campaignUrl || brandUrl || null.
   // HOUSE/FREEBIE never carry this: no campaign to click through to.
   // Navigate immediately on tap using this value; don't wait on a server
@@ -222,7 +226,7 @@ export interface BillboardQueueSlot {
   clickUrl?: string | null;
 
   // FREEBIE only — a live freebie code taking over this slot full-screen,
-  // exactly like a real ad, at most once per session per code. No videoUrl.
+  // exactly like a real ad, at most once per session per code. No banner.
   codeId?: string;
   publicCode?: string;
   valueLabel?: string;
@@ -230,8 +234,20 @@ export interface BillboardQueueSlot {
   liveUntil?: string;
 }
 
+// Admin-curated sponsored ad (2026-09-03) — a small, deliberately minimal
+// side-panel placement, entirely separate from brand self-serve AdCampaign
+// banners. An admin negotiates off-platform and uploads the already-agreed
+// creative directly; the upload IS the vetting step, no review queue.
+// null for long stretches — starts empty, render a house placeholder.
+export interface SponsoredAdSlot {
+  id: string;
+  imageUrl: string;
+  clickUrl: string | null;
+}
+
 export interface BillboardQueueResponse {
   success: boolean;
+  sponsoredAd?: SponsoredAdSlot | null;
   slots: BillboardQueueSlot[];
 }
 
@@ -628,8 +644,22 @@ export interface AdCampaign {
   description: string;
   brandUrl?: string;
   campaignUrl?: string;
-  videoUrl: string;
-  videoDurationSeconds: number;
+  // Banner image (2026-09-03) — replaced video entirely; every campaign,
+  // both tiers, now uploads a static banner instead. A campaign with
+  // neither a banner nor a legacy video simply isn't shown in rotation
+  // until the brand uploads one (POST /ad-campaigns/:campaignId/banner).
+  bannerImageUrl?: string;
+  bannerWidthPx?: number;
+  bannerHeightPx?: number;
+  bannerSizeBytes?: number;
+  bannerMimeType?: string;
+  // Legacy-only (2026-09-03) — pre-cutover campaigns only. Every existing
+  // paid campaign's video file was deleted from storage to reclaim hosting
+  // cost; these fields are now optional and never set on a new campaign.
+  // Don't build any new UI around them beyond rendering historical data if
+  // it happens to still be present.
+  videoUrl?: string;
+  videoDurationSeconds?: number;
   videoSizeBytes?: number;
   videoMimeType?: string;
   priceUSD?: number;
@@ -1494,4 +1524,51 @@ export interface PayoutItemsMarkPaidBulkRequest {
 }
 export interface PayoutItemSkipFailRequest {
   reason: string;
+}
+
+// §New (2026-09-03, extended 2026-09-04) — Admin: sponsored ads. Full
+// admin-only record; the public projection viewers actually see is the
+// lighter SponsoredAdSlot on GET /billboard/queue above. Two ways a row
+// gets created: an admin uploads already-negotiated creative directly
+// (goes ACTIVE immediately — the upload itself is the vetting step), or
+// an advertiser submits their own via the public POST /sponsored-ads/submit
+// (lands PENDING, invisible on the billboard, until an admin activates or
+// deactivates it — same admin action approves/declines either way).
+export type SponsoredAdStatus = "PENDING" | "ACTIVE" | "INACTIVE";
+export interface SponsoredAd {
+  _id: string;
+  imageUrl: string;
+  widthPx: number;
+  heightPx: number;
+  advertiserName: string;
+  clickUrl?: string;
+  // Submission-only — set only on a brand's own POST /sponsored-ads/submit,
+  // never on an admin's direct upload.
+  contactEmail?: string;
+  contactPhone?: string;
+  message?: string;
+  status: SponsoredAdStatus;
+  clickCount: number;
+  // Admin userId — unset on a PENDING submission until an admin acts on it.
+  createdBy?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+export interface SponsoredAdsResponse {
+  sponsoredAds: SponsoredAd[];
+}
+export interface SponsoredAdSubmitRequest {
+  image: File;
+  advertiserName: string;
+  contactEmail: string;
+  contactPhone?: string;
+  message?: string;
+  clickUrl?: string;
+}
+// Deliberately thin — "thanks, we'll be in touch," nothing to poll or render.
+export interface SponsoredAdSubmitResponse {
+  submissionId: string;
+}
+export interface SponsoredAdResponse {
+  sponsoredAd: SponsoredAd;
 }

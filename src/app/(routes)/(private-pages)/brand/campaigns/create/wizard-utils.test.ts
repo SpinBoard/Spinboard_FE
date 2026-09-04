@@ -1,34 +1,40 @@
 import { describe, it, expect } from "vitest";
-import { validateVideoFile, buildAdCampaignFormData, TIER_META } from "./wizard-utils";
+import { validateBannerFile, buildAdCampaignFormData, TIER_META } from "./wizard-utils";
 
-describe("validateVideoFile", () => {
-  const config = { maxDurationSeconds: 60, maxSizeBytes: 25 * 1024 * 1024 };
+describe("validateBannerFile", () => {
+  const config = {
+    maxSizeBytes: 5 * 1024 * 1024,
+    targetWidthPx: 1200,
+    targetHeightPx: 675,
+    aspectRatioTolerance: 0.05,
+  };
+  const dims = { width: 1200, height: 675 };
 
-  it("rejects non-video files", () => {
-    const file = new File(["x"], "clip.jpg", { type: "image/jpeg" });
-    const result = validateVideoFile(file, 30, config);
+  it("rejects non-image mime types", () => {
+    const file = new File(["x"], "clip.mp4", { type: "video/mp4" });
+    const result = validateBannerFile(file, dims, config);
     expect(result.valid).toBe(false);
-    expect(result.message).toMatch(/video file/i);
+    expect(result.message).toMatch(/JPEG, PNG, or WEBP/i);
   });
 
   it("rejects files over the max size", () => {
-    const file = new File([new Uint8Array(10)], "clip.mp4", { type: "video/mp4" });
+    const file = new File([new Uint8Array(10)], "banner.jpg", { type: "image/jpeg" });
     Object.defineProperty(file, "size", { value: config.maxSizeBytes + 1 });
-    const result = validateVideoFile(file, 30, config);
+    const result = validateBannerFile(file, dims, config);
     expect(result.valid).toBe(false);
     expect(result.message).toMatch(/MB/);
   });
 
-  it("rejects videos longer than the max duration", () => {
-    const file = new File([new Uint8Array(10)], "clip.mp4", { type: "video/mp4" });
-    const result = validateVideoFile(file, 90, config);
+  it("rejects a banner far off the target aspect ratio", () => {
+    const file = new File([new Uint8Array(10)], "banner.jpg", { type: "image/jpeg" });
+    const result = validateBannerFile(file, { width: 1000, height: 1000 }, config);
     expect(result.valid).toBe(false);
-    expect(result.message).toMatch(/seconds/);
+    expect(result.message).toMatch(/16:9/);
   });
 
-  it("accepts a valid video within limits", () => {
-    const file = new File([new Uint8Array(10)], "clip.mp4", { type: "video/mp4" });
-    const result = validateVideoFile(file, 30, config);
+  it("accepts a valid banner within limits", () => {
+    const file = new File([new Uint8Array(10)], "banner.jpg", { type: "image/jpeg" });
+    const result = validateBannerFile(file, dims, config);
     expect(result.valid).toBe(true);
   });
 });
@@ -56,7 +62,7 @@ describe("buildAdCampaignFormData", () => {
     description: "A fun summer campaign",
     brandUrl: "https://brand.example.com",
     campaignUrl: "",
-    video: new File(["vid"], "video.mp4", { type: "video/mp4" }),
+    banner: new File(["img"], "banner.jpg", { type: "image/jpeg" }),
     tier: "basic" as const,
   };
 
@@ -66,13 +72,13 @@ describe("buildAdCampaignFormData", () => {
     expect(fd.get("description")).toBe("A fun summer campaign");
     expect(fd.get("brandUrl")).toBe("https://brand.example.com");
     expect(fd.get("campaignUrl")).toBeNull(); // empty string omitted
-    expect(fd.get("video")).toBeInstanceOf(File);
+    expect(fd.get("banner")).toBeInstanceOf(File);
     expect(fd.get("tier")).toBe("basic");
   });
 
-  it("omits removed fields (questions, global, geoTarget, numberOfWeeks)", () => {
+  it("omits removed fields (questions, global, geoTarget, numberOfWeeks, video)", () => {
     const fd = buildAdCampaignFormData(baseData);
-    for (const removedField of ["questions", "global", "geoTarget", "numberOfWeeks"]) {
+    for (const removedField of ["questions", "global", "geoTarget", "numberOfWeeks", "video"]) {
       expect(fd.has(removedField)).toBe(false);
     }
   });

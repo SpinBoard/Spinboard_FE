@@ -47,6 +47,7 @@ export const ENDPOINTS = {
   BILLBOARD_HEARTBEAT: "/billboard/impressions/heartbeat",
   BILLBOARD_COMPLETE: "/billboard/impressions/complete",
   BILLBOARD_CLICK: "/billboard/impressions/click",
+  BILLBOARD_SPONSORED_AD_CLICK: (id: string) => `/billboard/sponsored-ad/${id}/click`,
   BILLBOARD_STATS: "/billboard/stats",
   BILLBOARD_MY_STREAK: "/billboard/my-streak",
 
@@ -93,6 +94,11 @@ export const ENDPOINTS = {
     `/ad-campaigns/${campaignId}/analytics/breakdown`,
   AD_CAMPAIGN_ANALYTICS_EXPORT: (campaignId: string) =>
     `/ad-campaigns/${campaignId}/analytics/export.csv`,
+  // Add/replace a banner on an existing campaign — added 2026-09-03
+  // alongside the video-to-banner switch, since a campaign that already
+  // exists (e.g. one that just had its video deleted) had no way to get a
+  // banner otherwise. Replacing deletes the old file from storage.
+  AD_CAMPAIGN_BANNER: (campaignId: string) => `/ad-campaigns/${campaignId}/banner`,
   AD_PAYMENTS_INITIALIZE: "/ad-payments/initialize",
   AD_PAYMENTS_VERIFY: (reference: string) =>
     `/ad-payments/verify/${reference}`,
@@ -214,4 +220,12 @@ export const ENDPOINTS = {
   ADMIN_PAYOUT_RUN_ITEM_FAIL: (runId: string, itemId: string) =>
     `/admin/payout-runs/${runId}/items/${itemId}/fail`,
   ADMIN_PAYOUT_RUN_COMPLETE: (runId: string) => `/admin/payout-runs/${runId}/complete`,
+
+  // ── Sponsored ads (small side-panel placement, not brand self-serve) ──
+  // Public — any advertiser, on the platform or not; lands PENDING.
+  SPONSORED_ADS_SUBMIT: "/sponsored-ads/submit",
+  ADMIN_SPONSORED_ADS: (status?: string) =>
+    status ? `/admin/sponsored-ads?status=${status}` : "/admin/sponsored-ads",
+  ADMIN_SPONSORED_AD_ACTIVATE: (id: string) => `/admin/sponsored-ads/${id}/activate`,
+  ADMIN_SPONSORED_AD_DEACTIVATE: (id: string) => `/admin/sponsored-ads/${id}/deactivate`,
 };

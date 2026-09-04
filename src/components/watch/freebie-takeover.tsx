@@ -21,10 +21,11 @@ const TICK_MS = 200;
 
 // A live freebie code takes over one billboard slot full-screen, at most
 // once per session per code, and plays through the exact same
-// heartbeat/complete loop as an AD/HOUSE video slot — there's just no
-// videoUrl to drive it, so a client-side timer stands in for the <video>
-// element's own timeupdate/ended events. Styled to match VideoPlayer's
-// .screenface frame so both slot types read as one continuous board.
+// heartbeat/complete loop as an AD/HOUSE banner slot — there's just no
+// image being displayed, so a client-side timer stands in for the timing
+// a real element's events would otherwise drive. Styled to match
+// BannerPlayer's .screenface frame so both slot types read as one
+// continuous board.
 export function FreebieTakeover({
   publicCode,
   valueLabel,

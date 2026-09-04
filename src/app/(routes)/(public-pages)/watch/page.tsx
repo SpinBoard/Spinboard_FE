@@ -5,8 +5,9 @@ import { useAtomValue } from "jotai";
 import Link from "next/link";
 import { Loader2 } from "lucide-react";
 import { MainLayout } from "@/components/layout/main-layout";
-import { VideoPlayer } from "@/components/watch/video-player";
+import { BannerPlayer } from "@/components/watch/banner-player";
 import { FreebieTakeover } from "@/components/watch/freebie-takeover";
+import { SponsoredAdPanel } from "@/components/watch/sponsored-ad-panel";
 import { PerimeterStrip } from "@/components/billboard/perimeter-strip";
 import { ApplyBox } from "@/components/billboard/apply-box";
 import { Card, CardNote } from "@/components/ui/freebiz-card";
@@ -21,12 +22,13 @@ import {
   useBillboardQueue,
   useBillboardSession,
   useBillboardStats,
+  useSponsoredAdClick,
 } from "@/hooks/use-billboard";
 import { useRecentCatches, useStripFeed } from "@/hooks/use-freebies";
 import { useAdminConfig } from "@/hooks/use-admin-config";
 import { userAtom } from "@/atom/user";
 import { routes } from "@/app/_utils/routes";
-import { BillboardQueueSlot } from "@/types";
+import { BillboardQueueSlot, SponsoredAdSlot } from "@/types";
 
 // design/freebiz-mockup.html data-screen="v-watch". The billboard plays
 // continuously — no quiz, no "watch 5 to unlock," nothing to gate on.
@@ -66,6 +68,7 @@ export default function WatchPage() {
   const heartbeat = useBillboardHeartbeat();
   const complete = useBillboardComplete();
   const trackClick = useBillboardClick();
+  const trackSponsoredAdClick = useSponsoredAdClick();
   const stripFeed = useStripFeed();
   const boardStats = useBillboardStats();
   const myStreak = useBillboardMyStreak(!!user?.accessToken);
@@ -98,8 +101,9 @@ export default function WatchPage() {
   }, []);
 
   useEffect(() => {
-    if (!queueQuery.data || queueQuery.data.length === 0) return;
-    const deduped = queueQuery.data.filter((slot) => {
+    const slots = queueQuery.data?.slots;
+    if (!slots || slots.length === 0) return;
+    const deduped = slots.filter((slot) => {
       if (slot.type !== "FREEBIE" || !slot.codeId) return true;
       if (shownFreebieCodeIds.current.has(slot.codeId)) return false;
       shownFreebieCodeIds.current.add(slot.codeId);
@@ -176,6 +180,13 @@ export default function WatchPage() {
     if (sessionId) trackClick.mutate({ sessionId, slotId: current.slotId });
   };
 
+  // Sponsored-ad panel click — same immediate-navigate-then-track pattern,
+  // but public/no-auth and entirely independent of the session/slot loop.
+  const handleSponsoredAdClick = (ad: SponsoredAdSlot) => {
+    if (ad.clickUrl) window.open(ad.clickUrl, "_blank", "noopener,noreferrer");
+    trackSponsoredAdClick.mutate(ad.id);
+  };
+
   const handleClaimFromTakeover = (code: string) => {
     setPrefillCode(code);
     applyBoxRef.current?.scrollIntoView({
@@ -193,12 +204,6 @@ export default function WatchPage() {
       ? current.brandName
       : "Freebiz"
     : undefined;
-
-  // The right column only has something to show for a logged-in viewer
-  // once the recent-catches feed has data — fall back to a single, wider
-  // column rather than splitting the page in two with nothing on the
-  // right side.
-  const showRightColumn = !user || (recentCatches.data && recentCatches.data.length > 0);
 
   return (
     <MainLayout maxWidth="5xl">
@@ -259,7 +264,7 @@ export default function WatchPage() {
             does that (its stat grid sits *below* the apply box, sized to
             the left column only). Fixed by matching the mockup's actual
             structure instead of the guess this screen was built from. */}
-        <div className={`grid grid-cols-1 gap-4 items-start ${showRightColumn ? "lg:grid-cols-[1.55fr_1fr]" : ""}`}>
+        <div className="grid grid-cols-1 lg:grid-cols-[1.55fr_1fr] gap-4 items-start">
           <div className="space-y-4 min-w-0">
             {/* The board — strip, screenface, and playing bar together as
                 one frame, matching design/freebiz-mockup.html's .board. */}
@@ -295,10 +300,10 @@ export default function WatchPage() {
                   onClaim={handleClaimFromTakeover}
                 />
               ) : (
-                <VideoPlayer
+                <BannerPlayer
                   key={current.slotId}
-                  src={current.videoUrl}
-                  expectedDurationSec={current.durationSec}
+                  src={current.bannerImageUrl}
+                  durationSec={current.durationSec}
                   brandLabel={brandLabel}
                   title={current.title}
                   onEnded={handleEnded}
@@ -354,14 +359,15 @@ export default function WatchPage() {
             </div>
           </div>
 
-          {/* Right column — present at lg+ whenever there's something to
-              put in it, matching the mockup's two-column .split
+          {/* Right column — matching the mockup's two-column .split
               (previously this whole column only rendered for guests, which
               is also what made the left column go full-width and push
-              everything, video included, further down the page for a
-              logged-in viewer). */}
-          {showRightColumn && (
+              everything down the page for a logged-in viewer). Now always
+              present — the sponsored-ad panel (2026-09-03) always has
+              something to show, even if it's just its own placeholder. */}
           <div className="space-y-4">
+            <SponsoredAdPanel ad={queueQuery.data?.sponsoredAd} onClick={handleSponsoredAdClick} />
+
             {recentCatches.data && recentCatches.data.length > 0 && (
               <Card>
                 <h3
@@ -409,7 +415,6 @@ export default function WatchPage() {
               </Card>
             )}
           </div>
-          )}
         </div>
       </div>
     </MainLayout>

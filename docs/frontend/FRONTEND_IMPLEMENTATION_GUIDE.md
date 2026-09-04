@@ -88,20 +88,29 @@ Moderation used to be a pre-payment gate: `POST /ad-campaigns/:campaignId/modera
 
 **New:**
 - A campaign auto-flips to `moderationStatus: "APPROVED"` the instant payment succeeds — the same moment `status` becomes `"ACTIVE"`. Paying puts a campaign live immediately.
-- `POST /ad-campaigns/deactivate` — admin only, bulk (`{campaignIds: string[], reason?}`). Pulls any of the given campaigns that are currently `ACTIVE` out of rotation (`status → "PAUSED"`, `moderationStatus → "REJECTED"`). This is how an admin now handles an inappropriate video that's already live — after the fact, not before. Build this as a multi-select action on the admin campaign list, not a one-at-a-time flow.
+- `POST /ad-campaigns/deactivate` — admin only, bulk (`{campaignIds: string[], reason?}`). Pulls any of the given campaigns that are currently `ACTIVE` out of rotation (`status → "PAUSED"`, `moderationStatus → "REJECTED"`). This is how an admin now handles an inappropriate ad that's already live — after the fact, not before. Build this as a multi-select action on the admin campaign list, not a one-at-a-time flow.
 - `POST /ad-campaigns/reactivate` — admin only, bulk (`{campaignIds: string[]}`). Undoes a deactivation (`status → "ACTIVE"`, `moderationStatus → "APPROVED"`) for any given campaign currently `PAUSED`, unless its original `expiresAt` has already passed (returned separately as `skippedExpired` — surface these distinctly, since an expired-while-paused campaign needs the brand to re-pay, not just get switched back on).
 
 `moderationStatus`/`moderationReason`/`moderatedBy`/`moderatedAt` fields on `AdCampaign` are unchanged in shape — only who sets them and when changed.
 
 ### Revamp 4 — Freebie codes now take over the billboard
 
-A live freebie code used to be visible in exactly one place: pinned in the perimeter strip. It now **also** takes over one billboard slot, full-screen, for a fixed stretch of time (`Config: freebie.billboardSlotSeconds`, default 60s) — exactly like a real ad — so the freebie moment interrupts the ad reel instead of only ever being a small pin at the edge of the screen. This is additive: the strip flow is completely unchanged, a live code is simultaneously pinned in the strip and (once, per session) a billboard takeover.
+A live freebie code used to be visible in exactly one place: pinned in the perimeter strip. It now **also** takes over one billboard slot, full-screen, for a fixed stretch of time (`Config: freebie.billboardSlotSeconds`, default 15s — kept matching the banner ad duration below) — exactly like a real ad — so the freebie moment interrupts the ad reel instead of only ever being a small pin at the edge of the screen. This is additive: the strip flow is completely unchanged, a live code is simultaneously pinned in the strip and (once, per session) a billboard takeover. **This mechanic is entirely unaffected by the video→banner change in Revamp 7 below.**
 
 **Changed shape:** `GET /billboard/queue` slots can now have `type: "FREEBIE"` alongside the existing `"AD"`/`"HOUSE"`:
 ```
 { slotId, type: "FREEBIE", codeId, publicCode, valueLabel, freebieType: "AIRTIME"|"CASH", liveUntil, durationSec }
 ```
-No `videoUrl` — there's no video file for it, build a code-announcement graphic (code, value, countdown, an Apply box or a route into one) instead of a video player for this slot type.
+No `bannerImageUrl` — there's no image/video file for it, build a code-announcement graphic (code, value, countdown, an Apply box or a route into one) instead of a media player for this slot type.
+
+### Revamp 7 — Billboard ads: video → banner image; new sponsored-ad panel
+
+Video upload/hosting was consuming too much production resources, so brand ad campaigns now upload a static banner image (1200x675px, 16:9) instead of a video — displayed for a fixed `Config: billboard.bannerDisplaySeconds` (15s), like a slide, not a video player. Every campaign, both tiers, uploads a banner now.
+
+- `POST /ad-campaigns`'s multipart file field is `banner` (was `video`).
+- `GET /billboard/queue`'s `"AD"`/`"HOUSE"` slots carry `bannerImageUrl` (was `videoUrl`); `durationSec` is now fixed, not a probed video length.
+- Existing paid video campaigns had their video files deleted from storage; the `AdCampaign` records themselves were kept (payment/moderation/analytics history preserved).
+- **New, separate, admin-curated sponsored-ad panel:** `sponsoredAd: {id, imageUrl, clickUrl} | null` on `GET /billboard/queue`, not part of the rotating `slots`. Not a brand self-serve product — any advertiser negotiates a deal off-platform, an admin uploads the agreed creative (image or GIF, never video/audio) via `POST/GET /admin/sponsored-ads`, `POST /admin/sponsored-ads/:id/activate`/`deactivate`. `null` until an admin uploads one — render your own "Your ads here" placeholder. Report a click via the public `POST /billboard/sponsored-ad/:id/click`. Freebie codes never appear here.
 
 **Build this:**
 - Play a `FREEBIE` slot through the exact same loop as `AD`/`HOUSE`: render for `durationSec`, send the same `heartbeat`/`complete` calls on the same `slotId` mechanics.
@@ -296,7 +305,7 @@ durationSec: number
 campaignId?: string      // AD only
 brandName?: string       // AD only
 title?: string
-videoUrl?: string
+bannerImageUrl?: string  // was videoUrl — see §2 Revamp 7
 clickUrl?: string | null // AD only — navigate immediately on tap, then fire POST /billboard/impressions/click (fire-and-forget)
 
 // FREEBIE only — live freebie code taking over this slot full-screen, see §2 Revamp 4
@@ -306,6 +315,12 @@ valueLabel?: string
 freebieType?: "AIRTIME" | "CASH"
 liveUntil?: string
 ```
+
+**Sponsored ad panel** — the `sponsoredAd` field on the `GET /billboard/queue` response (sibling to `slots`, not inside it):
+```
+{ id: string, imageUrl: string, clickUrl: string | null } | null
+```
+See §2 Revamp 7.
 
 **Board stats** (`GET /billboard/stats`, public): `{ watchingNow, codesToday, adsInRotation }`.
 
@@ -427,7 +442,8 @@ PayoutRunItem: _id, runId, userId, amount, status: "PENDING"|"PAID"|"SKIPPED"|"F
 
 ```
 _id, brandId, tier: "basic"|"premium", title, description, brandUrl?, campaignUrl?,
-videoUrl, videoDurationSeconds, videoSizeBytes, videoMimeType,
+bannerImageUrl?, bannerWidthPx?, bannerHeightPx?, bannerSizeBytes?, bannerMimeType?,
+videoUrl?, videoDurationSeconds?, videoSizeBytes?, videoMimeType?,  // legacy — pre-cutover campaigns only, see §2 Revamp 7
 priceUSD?, exchangeRateSnapshot?, priceLocal?, currency,
 status: "DRAFT"|"PENDING_PAYMENT"|"ACTIVE"|"PAUSED"|"EXPIRED"|"REJECTED",
 paymentStatus: "unpaid"|"paid",
@@ -527,7 +543,7 @@ rank, promoterUserId, displayName, likeCount
 "freebie.dailyClaimCap" -> { AIRTIME: number, CASH: number }
 "freebie.liveWindowMinutes" -> { AIRTIME: number, CASH: number }
 "freebie.activeHours"   -> { start: "HH:MM", end: "HH:MM", timeZone: "Africa/Lagos" }
-"billboard.houseFillers"-> [{ title, videoUrl, durationSec, filler }]
+"billboard.houseFillers"-> [{ title, bannerImageUrl, durationSec, filler }]
 ```
 
 ---
@@ -549,7 +565,8 @@ All routes are mounted under `/api/v1`. Full schema in `openapi.yaml`; this is t
 ### Billboard (watching)
 Every route works logged-in or logged-out — auth is never required to watch.
 - `POST /billboard/session` → `{ sessionId }`.
-- `GET /billboard/queue?sessionId=&size=` → `{ slots: [...] }`. `type: "AD"|"HOUSE"|"FREEBIE"` — see §2 Revamp 4 for the FREEBIE shape. `"AD"` slots carry `clickUrl: string | null`.
+- `GET /billboard/queue?sessionId=&size=` → `{ slots: [...], sponsoredAd }`. `type: "AD"|"HOUSE"|"FREEBIE"` — see §2 Revamp 4 for the FREEBIE shape. `"AD"` slots carry `clickUrl: string | null`. `sponsoredAd: {id, imageUrl, clickUrl} | null` is a separate side panel — see §2 Revamp 7.
+- `POST /billboard/sponsored-ad/:id/click` — public, no auth. Fire-and-forget click counter for the sponsored-ad panel.
 - `POST /billboard/impressions/heartbeat` — `{ sessionId, slotId, watchedMs }`.
 - `POST /billboard/impressions/complete` — `{ sessionId, slotId, watchedMs }` → `{ completed: boolean }`.
 - `POST /billboard/impressions/click` — `{ sessionId, slotId }` → `{ ok: true, clicked: true }`. Fire-and-forget click-through tracking; navigate to `clickUrl` immediately, don't wait for this call.
@@ -578,7 +595,7 @@ Every route works logged-in or logged-out — auth is never required to watch.
 Referrals: removed entirely, no `/referrals/*` endpoint exists any more (see the "Referral program — removed entirely" section above).
 
 ### Ad campaigns (brand side)
-- `POST /ad-campaigns` — brand only, multipart with `video` file + `title, description, tier ("basic"|"premium"), brandUrl?, campaignUrl?`. `brandUrl`/`campaignUrl` must be a well-formed http(s) URL if set (`400` otherwise) — they become the billboard's `clickUrl`. Succeeds even with an incomplete brand profile — stuck unable to go live until profile is complete. `403 BRAND_SUSPENDED` if suspended.
+- `POST /ad-campaigns` — brand only, multipart with a `banner` image file (was `video` — see §2 Revamp 7) + `title, description, tier ("basic"|"premium"), brandUrl?, campaignUrl?`. `brandUrl`/`campaignUrl` must be a well-formed http(s) URL if set (`400` otherwise) — they become the billboard's `clickUrl`. Succeeds even with an incomplete brand profile — stuck unable to go live until profile is complete. `403 BRAND_SUSPENDED` if suspended.
 - `GET /ad-campaigns/mine` — brand only. Items now carry `playsToday`/`completionRateToday`.
 - `GET /ad-campaigns` — admin only, `?status=&tier=`. Items now carry `reportCount`/`reportCountLastHour`/`flagged`/`flaggedAt`/`flagReasons`/`brandStrikeCount`/`brandSuspended`.
 - `GET /ad-campaigns/:campaignId` — public.
@@ -683,10 +700,11 @@ The rules that will make you build the wrong UI if you skip them.
 
 1. On page load: `POST /billboard/session` → `sessionId`. Works with or without auth automatically.
 2. `GET /billboard/queue?sessionId=...&size=5` → slots with single-use `slotId`s. Fetch a fresh batch when the queue runs low.
-3. For `AD`/`HOUSE` slots, play `videoUrl` for `durationSec`. For a `FREEBIE` slot, there's no `videoUrl` — render a code-announcement takeover (code, `valueLabel`, countdown) for `durationSec` instead; it plays through the identical loop otherwise. Send periodic `POST /billboard/impressions/heartbeat` for every slot type.
-4. On completion (or ≥95% watched): `POST /billboard/impressions/complete` — this is the "verified view" for analytics (a completed `FREEBIE` slot doesn't count — it's not a real ad).
+3. For `AD`/`HOUSE` slots, display `bannerImageUrl` (a static image, not a video) for `durationSec` — a fixed 15s, like a slide. For a `FREEBIE` slot, there's no `bannerImageUrl` — render a code-announcement takeover (code, `valueLabel`, countdown) for `durationSec` instead; it plays through the identical loop otherwise. Send periodic `POST /billboard/impressions/heartbeat` for every slot type.
+4. On completion (or ≥95% shown): `POST /billboard/impressions/complete` — this is the "verified view" for analytics (a completed `FREEBIE` slot doesn't count — it's not a real ad).
 5. Move to the next slot; refetch the queue when exhausted using the same `sessionId` (server tracks recent campaigns to avoid repeats).
 6. If an `AD` slot has a non-null `clickUrl`, render it as a tappable link. On tap, navigate immediately (don't wait for a server call), then fire `POST /billboard/impressions/click { sessionId, slotId }` fire-and-forget for tracking.
+7. Render the separate `sponsoredAd` panel (`{id, imageUrl, clickUrl} | null`) alongside the main billboard — your own "Your ads here" placeholder when `null`. On tap, navigate to `clickUrl` and fire `POST /billboard/sponsored-ad/:id/click` fire-and-forget.
 
 Render `type:"AD"` and `type:"HOUSE"` slots identically — house fillers exist so the stream is never empty, not as a distinct unit.
 
@@ -762,7 +780,7 @@ Everything here is admin-readable via `GET /admin/config`; nothing needs hardcod
 | `adModeration.autoFlagWindowMinutes` | `60` | Window the report threshold is counted within. |
 | `adModeration.suspendStrikeThreshold` | `3` | Brand strikes before automatic suspension. |
 
-`billboard.houseFillers` ships with `videoUrl: ""` in every environment today, including production, until ops uploads real clips — build a graceful placeholder for `type:"HOUSE"` slots with no URL.
+`billboard.houseFillers` ships with `bannerImageUrl: ""` in every environment today, including production, until ops uploads real images — build a graceful placeholder for `type:"HOUSE"` slots with no URL.
 
 ---
 

@@ -1,6 +1,6 @@
 # UI Contract: Billboard + Perimeter Strip
 
-The core screen of the product: a video billboard in the center, with text strips scrolling around its perimeter. This document describes what the backend guarantees so the frontend can build the screen without guessing at timing/polling behavior.
+The core screen of the product: a banner billboard in the center, with text strips scrolling around its perimeter, plus a small admin-curated sponsored-ad panel off to the side. This document describes what the backend guarantees so the frontend can build the screen without guessing at timing/polling behavior. Brand campaigns switched from video to a static banner image to cut hosting costs — see MIGRATION_NOTES.md.
 
 ## Layout concept (not prescriptive — the backend has no opinion on pixels)
 
@@ -10,25 +10,34 @@ The core screen of the product: a video billboard in the center, with text strip
 │┌───────────────────────────────────────────┐│
 ││ ↕                                       ↕  ││
 ││ L                                       R  ││
-││ E          VIDEO BILLBOARD              I  ││
+││ E          BANNER BILLBOARD             I  ││
 ││ F        (billboard/queue slots)        G  ││
 ││ T                                       H  ││
-││                                         T  ││
+││                            [sponsoredAd]T  ││
 │└───────────────────────────────────────────┘│
 │  ↕ scrolling / pinned strip (BOTTOM)          │
 └─────────────────────────────────────────────┘
 ```
 Each strip item carries `positionHint: "TOP"|"BOTTOM"|"LEFT"|"RIGHT"` (freebie items only — promo phrases have no position, they're just scrolling text wherever the design puts scrolling text). The backend picks *what* is live; the frontend decides *where on screen* each position hint renders and how it animates.
 
-## Video billboard flow
+## Banner billboard flow
 
 1. On page load: `POST /billboard/session` → get `sessionId`. Works with or without auth — `optionalAuth` resolves a logged-in user if a valid token is present, otherwise an anonymous session cookie is set automatically (nothing for the frontend to manage).
-2. `GET /billboard/queue?sessionId=...&size=5` → an array of slots, each with a **single-use** `slotId`. Fetch a fresh batch when the queue runs low; don't try to reuse a `slotId` across two different play-throughs.
-3. Play each slot's `videoUrl` for `durationSec`. Send `POST /billboard/impressions/heartbeat { sessionId, slotId, watchedMs }` periodically while playing (every few seconds is reasonable — the backend allows some wall-clock jitter, `Config: billboard.heartbeatToleranceMs`, default 3000ms).
-4. On the video ending (or the viewer skipping past 95% watched — `Config: billboard.completionWatchFraction`): `POST /billboard/impressions/complete { sessionId, slotId, watchedMs }`. This is what counts as a "verified view" for analytics — an unverified/very-short view does not count.
+2. `GET /billboard/queue?sessionId=...&size=5` → `{ slots: [...], sponsoredAd }`. `slots` is an array, each with a **single-use** `slotId`. Fetch a fresh batch when the queue runs low; don't try to reuse a `slotId` across two different play-throughs.
+3. Display each `AD`/`HOUSE` slot's `bannerImageUrl` (a static image, not a video) for `durationSec` — a fixed 15 seconds (`Config: billboard.bannerDisplaySeconds`), the same for every slot of that type, like a slide sliding away. Send `POST /billboard/impressions/heartbeat { sessionId, slotId, watchedMs }` periodically while it's showing (every few seconds is reasonable — the backend allows some wall-clock jitter, `Config: billboard.heartbeatToleranceMs`, default 3000ms).
+4. On the slot's `durationSec` elapsing (or the viewer navigating away past 95% shown — `Config: billboard.completionWatchFraction`): `POST /billboard/impressions/complete { sessionId, slotId, watchedMs }`. This is what counts as a "verified view" for analytics — an unverified/very-short view does not count.
 5. Move to the next slot in the queue. When the queue is exhausted, fetch another batch with the same `sessionId` (it accumulates `recentCampaignIds` server-side so you won't see the same ad twice in a row or within the last 5).
 
-A slot's `type` is `"AD"` (real brand campaign, has `campaignId`/`brandName`), `"HOUSE"` (a filler — no campaign metadata), or `"FREEBIE"` (see below). Render `AD` and `HOUSE` the same way visually; house fillers exist purely so the stream is never empty, not as a distinct ad unit the user needs to recognize.
+A slot's `type` is `"AD"` (real brand campaign, has `campaignId`/`brandName`), `"HOUSE"` (a filler — no campaign metadata), or `"FREEBIE"` (see below, **completely unaffected by the video→banner change**). Render `AD` and `HOUSE` the same way visually; house fillers exist purely so the stream is never empty, not as a distinct ad unit the user needs to recognize.
+
+## Sponsored ad panel (separate from the rotating queue)
+
+`GET /billboard/queue`'s top-level `sponsoredAd` field — `{ id, imageUrl, clickUrl } | null` — is a small, persistent side placement, not part of the rotating `slots` array. It's admin-curated: an advertiser either negotiates off-platform and an admin uploads the agreed creative directly, or the advertiser submits their own creative + contact details via the public `POST /sponsored-ads/submit` (see `API_GUIDE.md`) and an admin reviews/activates it afterward — either way it can be an image *or a GIF*, and `sponsoredAd` is `null` for long stretches when nothing's `ACTIVE`.
+
+- Render it in a small player/panel next to the main billboard (see layout diagram above). When `sponsoredAd` is `null`, show your own placeholder — e.g. "Your ads here" — the backend does not send any placeholder content.
+- On tap, navigate to `clickUrl` if non-`null`, and fire `POST /billboard/sponsored-ad/:id/click` (using `sponsoredAd.id`; public, no auth, fire-and-forget, same idempotent spirit as the AD slot's click tracking).
+- Freebie codes never appear here — this is a completely separate surface from the `FREEBIE` slot type.
+- If the product wants an "advertise with us" entry point somewhere in the app (e.g. a footer link, a brand-dashboard CTA), point it at `POST /sponsored-ads/submit` — multipart `image` file + `advertiserName, contactEmail, contactPhone?, message?, clickUrl?`, no auth required, works for a visitor with no account. On success it returns `{ submissionId }` only — there's nothing to render beyond a "thanks, we'll be in touch" confirmation, since the submission doesn't go live until an admin reviews it.
 
 ### Click-through link on AD slots
 
@@ -53,7 +62,7 @@ A live freebie code doesn't only sit pinned in the perimeter strip — it also t
   { slotId, type: "FREEBIE", codeId, publicCode, valueLabel, freebieType: "AIRTIME"|"CASH", liveUntil, durationSec }
   ```
   (`freebieType` is named that, not `type`, specifically so it can't be confused with the slot's own `type: "FREEBIE"`.)
-- Treat it exactly like an `AD`/`HOUSE` slot in the playback loop: render it for `durationSec` (normally `Config: freebie.billboardSlotSeconds`, default 60s — capped shorter if the code's `liveUntil` is closer than that), and still send the same `heartbeat`/`complete` calls on the same `slotId` mechanics as every other slot. There's no video file for it — build this as a graphic/animated takeover screen (code, `valueLabel`, a countdown, an Apply box or a direct route into one), not a video player.
+- Treat it exactly like an `AD`/`HOUSE` slot in the playback loop: render it for `durationSec` (normally `Config: freebie.billboardSlotSeconds`, default 15s, kept matching the banner ad duration — capped shorter if the code's `liveUntil` is closer than that), and still send the same `heartbeat`/`complete` calls on the same `slotId` mechanics as every other slot. There's no image/video file for it — build this as a graphic/animated takeover screen (code, `valueLabel`, a countdown, an Apply box or a direct route into one), not a media player. This mechanic is entirely unchanged by the video→banner revamp.
 - The code shown full-screen is the **same** code still pinned in the perimeter strip — both surfaces are live simultaneously, this isn't a separate/different code. It can still be claimed by a different viewer (via the strip, or their own billboard takeover) while it's showing on this screen; the Apply flow's existing `409 CODE_ALREADY_TAKEN` handling (see below) is how that race resolves — no special handling needed here beyond what the Apply box already does. If you want the takeover screen itself to flip to a "claimed" state before the user even tries, poll `GET /freebies/strip` during the slot (you're likely already polling it for the perimeter strip) and check that code's `codeId` for `state: "TAKEN"`.
 - A given freebie code takes over the billboard **at most once per session** — once shown, `GET /billboard/queue` won't hand you that same `codeId` as a `FREEBIE` slot again, even though it may still be live and pinned in the strip. If multiple codes are concurrently live, only one appears as a takeover per queue fetch; the others surface on a later fetch once this one's been consumed, not all at once.
 - A queue fetch can return zero `FREEBIE` slots — that's the normal case (nothing new live, or everything currently live has already taken over this session once). Don't build UI that assumes one shows up on every fetch.

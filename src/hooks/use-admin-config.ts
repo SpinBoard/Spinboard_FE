@@ -9,8 +9,22 @@ import { AdminConfigResponse } from "@/types";
 // for non-admin users these defaults are the only source of truth until a
 // public config-subset endpoint exists.
 export const ADMIN_CONFIG_DEFAULTS = {
+  // Still used by Promote & Earn's own campaign-media upload — that's a
+  // separate system, unaffected by the 2026-09-03 billboard ad-campaign
+  // video→banner switch below, and still supports video.
   "video.maxDurationSeconds": 60,
   "video.maxSizeBytes": 25 * 1024 * 1024,
+  // Billboard ad campaigns moved from video to a static banner image
+  // (2026-09-03) — hosting cost. Every campaign, both tiers, uploads a
+  // banner now.
+  "banner.targetWidthPx": 1200,
+  "banner.targetHeightPx": 675,
+  "banner.aspectRatioTolerance": 0.05,
+  "banner.maxSizeBytes": 5 * 1024 * 1024,
+  "billboard.bannerDisplaySeconds": 15,
+  // Admin-curated sponsored-ad panel creative — image or GIF, no aspect
+  // constraint (unlike the brand banner above).
+  "sponsoredAd.maxSizeBytes": 5 * 1024 * 1024,
   "campaign.tiers": {
     basic: { price: 20, weight: 1, analytics: false },
     premium: { price: 30, weight: 2, analytics: true },

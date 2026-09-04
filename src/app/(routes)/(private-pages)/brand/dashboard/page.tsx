@@ -26,12 +26,6 @@ import { PageLoader } from "@/components/ui/page-loader";
 import { PageError } from "@/components/ui/page-error";
 import { formatStatusLabel, STATUS_TONE } from "../campaigns/campaign-status";
 
-function formatDuration(seconds: number): string {
-  const m = Math.floor(seconds / 60);
-  const s = Math.floor(seconds % 60);
-  return `${m}:${String(s).padStart(2, "0")}`;
-}
-
 // design/freebiz-mockup.html data-screen="b-dash". Per DECISIONS.md #12,
 // this route gets the stats grid + first 4 table rows, truncated with a
 // "See all campaigns" link to /brand/campaigns (the full, filterable
@@ -152,7 +146,6 @@ export default function BrandDashboard() {
                 <TableHead>
                   <TableRow>
                     <TableHeadCell>Campaign</TableHeadCell>
-                    <TableHeadCell>Video</TableHeadCell>
                     <TableHeadCell>Slot</TableHeadCell>
                     <TableHeadCell>Created</TableHeadCell>
                     <TableHeadCell>Status</TableHeadCell>
@@ -164,9 +157,6 @@ export default function BrandDashboard() {
                     <TableRow key={campaign._id}>
                       <TableCell>
                         <b style={{ color: "var(--txt)" }}>{campaign.title}</b>
-                      </TableCell>
-                      <TableCell className="fb-hint" style={{ fontFamily: "var(--mono)" }}>
-                        {formatDuration(campaign.videoDurationSeconds)}
                       </TableCell>
                       <TableCell>
                         <Pill tone={campaign.tier === "premium" ? "brandish" : "default"}>
@@ -202,7 +192,7 @@ export default function BrandDashboard() {
                     <Pill tone={STATUS_TONE[campaign.status]} dot>{formatStatusLabel(campaign.status)}</Pill>
                   </div>
                   <p className="fb-hint mt-1">
-                    {campaign.tier === "premium" ? "Premium" : "Basic"} · {formatDuration(campaign.videoDurationSeconds)} ·{" "}
+                    {campaign.tier === "premium" ? "Premium" : "Basic"} ·{" "}
                     {new Date(campaign.createdAt).toLocaleDateString()}
                   </p>
                 </Link>

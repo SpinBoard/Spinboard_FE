@@ -30,7 +30,7 @@ Complete and validated against the actual final API surface (routes read directl
 
 One thing flagged as **not fully resolved on the backend side** — don't build UI assuming it works, and don't spend time trying to wire around it from the frontend:
 
-- **`billboard.houseFillers` video assets are placeholders** (`videoUrl: ""`) in every environment today, including production, until ops uploads real clips. Build a graceful empty state for a `type: "HOUSE"` slot with no `videoUrl`, don't assume it's always populated.
+- **`billboard.houseFillers` banner image assets are placeholders** (`bannerImageUrl: ""`) in every environment today, including production, until ops uploads real images. Build a graceful empty state for a `type: "HOUSE"` slot with no `bannerImageUrl`, don't assume it's always populated.
 - **Business KYC's automated CAC pre-check isn't yet wired against Interswitch's real API** — see `API_GUIDE.md`'s "Business KYC verification" section. Every submission still reaches the human review queue regardless (`automatedCheck.result: "provider_error"` is expected/normal right now, not a bug), so this doesn't block building the KYC UI, just don't expect `"match"` to be a common automated outcome yet.
 
 The marketplace's earlier wallet-spend gap no longer applies — the marketplace has no checkout of any kind now (business directory, not a store; see `BUSINESS_RULES.md` and `CHANGELOG_FOR_FRONTEND.md`).

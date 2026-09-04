@@ -1,4 +1,4 @@
-import { List, Settings, Store, ShieldCheck, Briefcase, MessageSquare, Star, MessagesSquare, Banknote } from "lucide-react";
+import { List, Settings, Store, ShieldCheck, Briefcase, MessageSquare, Star, MessagesSquare, Banknote, Image } from "lucide-react";
 
 // Inline stroke icons copied verbatim from design/freebiz-mockup.html's
 // sidebar nav items (same path data mockup uses for both the desktop
@@ -110,4 +110,5 @@ export {
   Star as RatingsIcon,
   MessagesSquare as ForumIcon,
   Banknote as PayoutsIcon,
+  Image as SponsoredAdsIcon,
 };
