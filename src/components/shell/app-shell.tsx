@@ -141,11 +141,14 @@ export function AppShell({ route, children }: AppShellProps) {
         <main className="fb-stage">{children}</main>
       </div>
 
-      {primaryItems.length > 1 && (
-        <nav
-          className="fb-tabbar"
-          style={{ gridTemplateColumns: `repeat(${primaryItems.length}, 1fr)` }}>
-          {primaryItems.map((item) => {
+      {/* Every nav item, not just the "primary" ones — previously this
+          only showed Billboard/My freebies/Wallet/Profile for a viewer,
+          with no mobile path to Forum/Promote & earn/Brands/Settings at
+          all. Four still show at a time (the .fb-tab width is fixed to a
+          quarter of the bar), the rest are a horizontal slide away. */}
+      {navItems.length > 1 && (
+        <nav className="fb-tabbar fb-scroll-x">
+          {navItems.map((item) => {
             const active = pathname === item.href;
             return (
               <Link

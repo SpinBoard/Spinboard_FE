@@ -98,7 +98,10 @@ export function ApplyBox({ initialCode }: ApplyBoxProps = {}) {
           variant="primary"
           aria-label="Apply code"
           disabled={applyMutation.isPending || !code.trim()}
-          style={{ marginTop: 24 }}>
+          // Explicitly kept at the pre-2026-09-04 default radius — every
+          // other button's roundedness was reduced (.fb-btn), but this one
+          // was called out to stay as-is.
+          style={{ marginTop: 24, borderRadius: 10 }}>
           {applyMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
         </Button>
       </form>
