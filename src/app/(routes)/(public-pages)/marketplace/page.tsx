@@ -81,12 +81,16 @@ export default function MarketplacePage() {
               />
             </div>
           </Field>
-          <div className="flex flex-wrap gap-2 sm:mt-6">
+          {/* Slidable, not wrapping — categories are user-generated (every
+              business's own free-text categories) and only grow over time,
+              so this needs to scale past a few rows/pills without pushing
+              the page taller. */}
+          <div className="flex flex-nowrap gap-2 sm:mt-6 overflow-x-auto fb-scroll-x">
             {categories.map((c) => (
               <button
                 key={c}
                 onClick={() => setCategory(c)}
-                className={`fb-pill${category === c ? " fb-pill--live" : ""}`}
+                className={`fb-pill flex-shrink-0${category === c ? " fb-pill--live" : ""}`}
                 style={{ cursor: "pointer", textTransform: "capitalize" }}>
                 {c}
               </button>

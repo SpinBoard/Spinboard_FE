@@ -109,8 +109,10 @@ export function BannerPlayer({
         className="w-full h-full object-contain"
       />
 
+      {/* Flush to the very bottom edge, no gap — was floating a few pixels
+          above it. */}
       <div
-        className="absolute bottom-0 inset-x-0 px-4 pt-6 pb-3 z-10"
+        className="absolute bottom-0 inset-x-0 px-4 pt-6 pb-0 z-10"
         style={{ background: "linear-gradient(to top, rgba(0,0,0,.55), transparent)" }}>
         <PlayingBar progress={progress} />
       </div>
@@ -119,10 +121,10 @@ export function BannerPlayer({
         <button
           type="button"
           onClick={onClickThrough}
-          className="absolute bottom-3 right-3 z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-colors"
-          style={{ background: "var(--accent)", color: "var(--ink-900)", fontSize: 12.5, fontWeight: 700 }}>
+          className="absolute bottom-1.5 right-1.5 z-10 flex items-center gap-1 px-2 py-1 transition-colors"
+          style={{ background: "var(--accent)", color: "var(--ink-900)", fontSize: 11, fontWeight: 700, borderRadius: 5 }}>
           Visit site
-          <ExternalLink className="h-3.5 w-3.5" />
+          <ExternalLink className="h-3 w-3" />
         </button>
       )}
     </div>

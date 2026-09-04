@@ -16,7 +16,7 @@
   align-items: center;
   gap: 8px;
   padding: 10px 16px;
-  border-radius: 10px;
+  border-radius: 6px;
   font-family: var(--body);
   font-weight: 600;
   font-size: 13px;
@@ -52,7 +52,7 @@
 .fb-btn--sm {
   padding: 6px 11px;
   font-size: 12px;
-  border-radius: 8px;
+  border-radius: 5px;
 }
 
 /* ---------- Pill ---------- */
@@ -356,6 +356,17 @@ button.fb-pill {
 .fb-limit--total b {
   font-size: 16px;
   color: var(--accent);
+}
+
+/* ---------- Horizontal scroll (slidable filter rows, tab bars) ---------- */
+/* Scrollable but scrollbar-free — the content itself (pill shapes, tab
+ * icons) is the affordance that there's more to slide to. */
+.fb-scroll-x {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.fb-scroll-x::-webkit-scrollbar {
+  display: none;
 }
 
 /* ---------- Steps ---------- */
