@@ -95,7 +95,13 @@ export function useAdminConfig() {
   const get = <K extends AdminConfigKey>(
     key: K
   ): (typeof ADMIN_CONFIG_DEFAULTS)[K] => {
-    const live = query.data?.[key]?.value;
+    // Fixed 2026-09-04 — GET /admin/config's `config` is a flat key→value
+    // map, not each entry wrapped in `{value, description?}` (that wrapper
+    // is only the PUT request body shape). Reading `?.value` here meant
+    // `live` was always undefined and every single call silently fell
+    // through to ADMIN_CONFIG_DEFAULTS, live backend config never actually
+    // took effect anywhere in the app despite `isFromServer` reporting true.
+    const live = query.data?.[key];
     return live !== undefined
       ? (live as (typeof ADMIN_CONFIG_DEFAULTS)[K])
       : ADMIN_CONFIG_DEFAULTS[key];

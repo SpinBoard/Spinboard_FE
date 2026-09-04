@@ -191,9 +191,15 @@ export interface CreateBankAccountRequest {
 // Admin config — the subset the frontend reads rather than hardcoding.
 // GET /admin/config is admin-only; most of these are read via
 // feature-specific fallbacks until a public config subset endpoint exists.
+// Verified live 2026-09-04: `config` is a flat key→value map (every key
+// merged, DB override if set else the default) — NOT each entry wrapped in
+// `{value, description?}`. That wrapper shape is only the PUT request
+// body, not what GET returns. This was previously modeled wrong here,
+// which meant useAdminConfig().get() always silently fell through to the
+// hardcoded ADMIN_CONFIG_DEFAULTS — see the fix note in use-admin-config.ts.
 export interface AdminConfigResponse {
   success: boolean;
-  config: Record<string, { value: unknown; description?: string }>;
+  config: Record<string, unknown>;
 }
 
 // ─────────────────────────────────────────────────────────────────────────
